@@ -9,12 +9,14 @@ import ParentDashboard from "./pages/ParentDashboard";
 import ChildDashboard from "./pages/ChildDashboard";
 import QuizPlay from "./pages/QuizPlay";
 import SubjectModules from "./pages/SubjectModules";
+import ChildLogin from "./pages/ChildLogin";
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/parent"} component={ParentDashboard} />
+      <Route path="/child-login" component={ChildLogin} />
       <Route path={"/child"} component={ChildDashboard} />
       <Route path={"/subject/:subjectId"} component={SubjectModules} />
       <Route path={"/quiz/:moduleId"} component={QuizPlay} />

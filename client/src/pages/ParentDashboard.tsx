@@ -19,6 +19,7 @@ export default function ParentDashboard() {
   const [selectedModule, setSelectedModule] = useState<number | null>(null);
   const [isAddQuestionOpen, setIsAddQuestionOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [isCreateChildOpen, setIsCreateChildOpen] = useState(false);
 
   const { data: subjects } = trpc.parent.getSubjects.useQuery();
   const { data: modules } = trpc.parent.getModules.useQuery(
@@ -52,6 +53,17 @@ export default function ParentDashboard() {
     onSuccess: () => {
       toast.success("Question deleted!");
       utils.parent.getQuestions.invalidate();
+    },
+  });
+
+  const createChildMutation = trpc.parent.createChild.useMutation({
+    onSuccess: () => {
+      toast.success("Child account created successfully!");
+      utils.parent.getChildren.invalidate();
+      setIsCreateChildOpen(false);
+    },
+    onError: (error) => {
+      toast.error("Failed to create child account: " + error.message);
     },
   });
 
@@ -330,21 +342,127 @@ export default function ParentDashboard() {
           <TabsContent value="progress" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Child Progress Monitoring</CardTitle>
-                <CardDescription>Track your child's learning journey</CardDescription>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Manage Child Accounts</CardTitle>
+                    <CardDescription>Create and manage accounts for your children</CardDescription>
+                  </div>
+                  <Dialog open={isCreateChildOpen} onOpenChange={setIsCreateChildOpen}>
+                    <DialogTrigger asChild>
+                      <Button>+ Create Child Account</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Create Child Account</DialogTitle>
+                        <DialogDescription>
+                          Create a new account for your child to access quizzes
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const formData = new FormData(e.currentTarget);
+                          const name = formData.get('name') as string;
+                          const username = formData.get('username') as string;
+                          const email = formData.get('email') as string;
+                          
+                          // Generate unique openId based on username
+                          const openId = `child_${username}_${Date.now()}`;
+                          
+                          createChildMutation.mutate({
+                            name,
+                            openId,
+                            email: email || undefined,
+                          });
+                        }}
+                        className="space-y-4"
+                      >
+                        <div>
+                          <Label htmlFor="name">Child's Name *</Label>
+                          <Input
+                            id="name"
+                            name="name"
+                            required
+                            placeholder="Enter child's full name"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="username">Username *</Label>
+                          <Input
+                            id="username"
+                            name="username"
+                            required
+                            placeholder="Choose a unique username"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            This will be used for login
+                          </p>
+                        </div>
+                        <div>
+                          <Label htmlFor="email">Email (Optional)</Label>
+                          <Input
+                            id="email"
+                            name="email"
+                            type="email"
+                            placeholder="child@example.com"
+                          />
+                        </div>
+                        <div className="bg-blue-50 p-3 rounded text-sm">
+                          <p className="font-semibold text-blue-900">Login Credentials:</p>
+                          <p className="text-blue-700 mt-1">
+                            Your child will use the same Manus login page. After creating the account,
+                            share the username with your child.
+                          </p>
+                        </div>
+                        <Button type="submit" className="w-full" disabled={createChildMutation.isPending}>
+                          {createChildMutation.isPending ? "Creating..." : "Create Account"}
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardHeader>
               <CardContent>
                 {children && children.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {children.map((child) => (
-                      <ChildProgressCard key={child.id} childId={child.id} childName={child.name || 'Child'} />
+                      <div key={child.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                        <div>
+                          <p className="font-semibold">{child.name}</p>
+                          <p className="text-sm text-gray-500">{child.email || 'No email'}</p>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => {
+                          // Scroll to progress section
+                          document.getElementById(`child-progress-${child.id}`)?.scrollIntoView({ behavior: 'smooth' });
+                        }}>
+                          View Progress
+                        </Button>
+                      </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500">No child accounts created yet.</p>
+                  <p className="text-gray-500 text-center py-4">No child accounts yet. Create one to get started!</p>
                 )}
               </CardContent>
             </Card>
+
+            {children && children.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Child Progress Monitoring</CardTitle>
+                  <CardDescription>Track your child's learning journey</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {children.map((child) => (
+                      <div key={child.id} id={`child-progress-${child.id}`}>
+                        <ChildProgressCard childId={child.id} childName={child.name || 'Child'} />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>

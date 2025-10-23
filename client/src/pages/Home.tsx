@@ -91,21 +91,49 @@ export default function Home() {
 
         {/* CTA Section */}
         <div className="text-center">
-          <Card className="max-w-md mx-auto bg-white/80 backdrop-blur">
+          <Card className="max-w-2xl mx-auto bg-white/80 backdrop-blur">
             <CardHeader>
               <CardTitle>Ready to Start Learning?</CardTitle>
               <CardDescription>
-                Sign in to access your personalized dashboard
+                Choose your login option below
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button 
-                size="lg" 
-                className="w-full bg-indigo-600 hover:bg-indigo-700"
-                onClick={() => window.location.href = getLoginUrl()}
-              >
-                Sign In to Continue
-              </Button>
+            <CardContent className="grid md:grid-cols-2 gap-4">
+              <Card className="border-2 border-indigo-200 hover:border-indigo-400 transition-colors">
+                <CardHeader>
+                  <CardTitle className="text-lg">👨‍👩‍👧 Parent Login</CardTitle>
+                  <CardDescription className="text-sm">
+                    Manage questions and monitor progress
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    size="lg" 
+                    className="w-full bg-indigo-600 hover:bg-indigo-700"
+                    onClick={() => window.location.href = getLoginUrl()}
+                  >
+                    Parent Sign In
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 border-purple-200 hover:border-purple-400 transition-colors">
+                <CardHeader>
+                  <CardTitle className="text-lg">🎓 Student Login</CardTitle>
+                  <CardDescription className="text-sm">
+                    Take quizzes and earn achievements
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    size="lg" 
+                    className="w-full bg-purple-600 hover:bg-purple-700"
+                    onClick={() => setLocation('/child-login')}
+                  >
+                    Student Sign In
+                  </Button>
+                </CardContent>
+              </Card>
             </CardContent>
           </Card>
         </div>

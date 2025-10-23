@@ -3,27 +3,49 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 
 export default function ChildDashboard() {
   const { user, loading, isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
-
-  const { data: subjects } = trpc.child.getSubjects.useQuery();
-  const { data: stats } = trpc.child.getMyStats.useQuery();
-  const { data: achievements } = trpc.child.getMyAchievements.useQuery();
-  const { data: allAchievements } = trpc.child.getAllAchievements.useQuery();
+  const [childUsername, setChildUsername] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && (!isAuthenticated || user?.role !== 'child')) {
-      setLocation('/');
+    // Check for simple child login
+    const username = localStorage.getItem('childUsername');
+    if (username) {
+      setChildUsername(username);
+    } else if (!loading && (!isAuthenticated || user?.role !== 'child')) {
+      setLocation('/child-login');
     }
   }, [loading, isAuthenticated, user, setLocation]);
 
-  if (loading) {
+  const { data: subjects } = trpc.child.getSubjects.useQuery(undefined, {
+    enabled: !!childUsername || (isAuthenticated && user?.role === 'child')
+  });
+  const { data: stats } = trpc.child.getMyStats.useQuery(undefined, {
+    enabled: !!childUsername || (isAuthenticated && user?.role === 'child')
+  });
+  const { data: achievements } = trpc.child.getMyAchievements.useQuery(undefined, {
+    enabled: !!childUsername || (isAuthenticated && user?.role === 'child')
+  });
+  const { data: allAchievements } = trpc.child.getAllAchievements.useQuery(undefined, {
+    enabled: !!childUsername || (isAuthenticated && user?.role === 'child')
+  });
+
+  if (loading || (!childUsername && !isAuthenticated)) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
+
+  const handleLogout = () => {
+    localStorage.removeItem('childUsername');
+    if (isAuthenticated) {
+      logout();
+    } else {
+      setLocation('/child-login');
+    }
+  };
 
   const earnedAchievementIds = new Set(achievements?.map(a => a.achievement.id));
 
@@ -35,10 +57,10 @@ export default function ChildDashboard() {
           <h1 className="text-2xl font-bold text-gray-900">🎓 My Learning Dashboard</h1>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
+              <p className="text-sm font-semibold text-gray-900">{childUsername || user?.name}</p>
               <p className="text-xs text-gray-500">{stats?.totalPoints || 0} points</p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => logout()}>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
               Logout
             </Button>
           </div>
