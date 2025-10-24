@@ -67,6 +67,16 @@ export default function ParentDashboard() {
     },
   });
 
+  const deleteChildMutation = trpc.parent.deleteChild.useMutation({
+    onSuccess: () => {
+      toast.success("Child account deleted successfully!");
+      utils.parent.getChildren.invalidate();
+    },
+    onError: (error) => {
+      toast.error("Failed to delete child account: " + error.message);
+    },
+  });
+
   useEffect(() => {
     if (!loading && (!isAuthenticated || (user?.role !== 'parent' && user?.role !== 'admin'))) {
       setLocation('/');
@@ -443,14 +453,28 @@ export default function ParentDashboard() {
                       <div key={child.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                         <div>
                           <p className="font-semibold">{child.name}</p>
-                          <p className="text-sm text-gray-500">{child.email || 'No email'}</p>
+                          <p className="text-sm text-gray-500">{child.username ? `@${child.username}` : child.email || 'No email'}</p>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => {
-                          // Scroll to progress section
-                          document.getElementById(`child-progress-${child.id}`)?.scrollIntoView({ behavior: 'smooth' });
-                        }}>
-                          View Progress
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => {
+                            // Scroll to progress section
+                            document.getElementById(`child-progress-${child.id}`)?.scrollIntoView({ behavior: 'smooth' });
+                          }}>
+                            View Progress
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to delete ${child.name}'s account? This action cannot be undone.`)) {
+                                deleteChildMutation.mutate({ childId: child.id });
+                              }
+                            }}
+                            disabled={deleteChildMutation.isPending}
+                          >
+                            Delete
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>

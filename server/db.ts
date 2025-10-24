@@ -115,6 +115,26 @@ export async function createChildAccount(data: InsertUser) {
   return result;
 }
 
+export async function deleteChildAccount(childId: number, parentId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  // Verify the child belongs to this parent
+  const child = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, childId))
+    .limit(1);
+
+  if (child.length === 0 || child[0].parentId !== parentId) {
+    throw new Error('Child account not found or access denied');
+  }
+
+  // Delete the child account
+  await db.delete(users).where(eq(users.id, childId));
+  return { success: true };
+}
+
 export async function updateUserPoints(userId: number, pointsToAdd: number) {
   const db = await getDb();
   if (!db) return;

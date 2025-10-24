@@ -69,6 +69,15 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Delete child account
+    deleteChild: parentProcedure
+      .input(z.object({
+        childId: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return db.deleteChildAccount(input.childId, ctx.user.id);
+      }),
+
     // Get all subjects
     getSubjects: parentProcedure.query(async () => {
       return db.getAllSubjects();
@@ -270,8 +279,8 @@ export const appRouter = router({
         };
       }),
 
-    // Submit answer
-    submitAnswer: childProcedure
+    // Submit answer (public for local auth)
+    submitAnswer: publicProcedure
       .input(z.object({
         sessionId: z.number(),
         questionId: z.number(),
@@ -305,10 +314,17 @@ export const appRouter = router({
         };
       }),
 
-    // Complete quiz session
-    completeQuiz: childProcedure
-      .input(z.object({ sessionId: z.number() }))
+    // Complete quiz session (public for local auth)
+    completeQuiz: publicProcedure
+      .input(z.object({ 
+        sessionId: z.number(),
+        childId: z.number().optional() // For local auth
+      }))
       .mutation(async ({ input, ctx }) => {
+        const userId = input.childId || ctx.user?.id;
+        if (!userId) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User ID required' });
+        }
         const session = await db.getQuizSessionById(input.sessionId);
         if (!session) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Session not found' });
@@ -333,11 +349,11 @@ export const appRouter = router({
         });
 
         // Update user points
-        await db.updateUserPoints(ctx.user.id, totalPoints);
+        await db.updateUserPoints(userId, totalPoints);
 
         // Log activity
         await db.logActivity({
-          userId: ctx.user.id,
+          userId,
           activityDate: new Date(),
           quizzesTaken: 1,
           questionsAnswered: responses.length,
@@ -346,7 +362,7 @@ export const appRouter = router({
         });
 
         // Update streak
-        const user = await db.getUserById(ctx.user.id);
+        const user = await db.getUserById(userId);
         if (user) {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
@@ -360,14 +376,14 @@ export const appRouter = router({
               // Consecutive day
               const newStreak = (user.currentStreak || 0) + 1;
               const newLongest = Math.max(newStreak, user.longestStreak || 0);
-              await db.updateUserStreak(ctx.user.id, newStreak, newLongest);
+              await db.updateUserStreak(userId, newStreak, newLongest);
             } else if (daysDiff > 1) {
               // Streak broken
-              await db.updateUserStreak(ctx.user.id, 1, user.longestStreak || 0);
+              await db.updateUserStreak(userId, 1, user.longestStreak || 0);
             }
           } else {
             // First activity
-            await db.updateUserStreak(ctx.user.id, 1, 1);
+            await db.updateUserStreak(userId, 1, 1);
           }
         }
 
@@ -380,36 +396,52 @@ export const appRouter = router({
         };
       }),
 
-    // Get user stats
-    getMyStats: childProcedure.query(async ({ ctx }) => {
-      return db.getUserStats(ctx.user.id);
-    }),
-
-    // Get quiz history
-    getMyQuizHistory: childProcedure
-      .input(z.object({ limit: z.number().optional() }))
-      .query(async ({ ctx, input }) => {
-        return db.getUserQuizHistory(ctx.user.id, input.limit);
+    // Get user stats (public for local auth)
+    getMyStats: publicProcedure
+      .input(z.object({ childId: z.number().optional() }))
+      .query(async ({ input, ctx }) => {
+        const userId = input.childId || ctx.user?.id;
+        if (!userId) return null;
+        return db.getUserStats(userId);
       }),
 
-    // Get achievements
-    getMyAchievements: childProcedure.query(async ({ ctx }) => {
-      return db.getUserAchievements(ctx.user.id);
-    }),
+    // Get quiz history (public for local auth)
+    getMyQuizHistory: publicProcedure
+      .input(z.object({ 
+        limit: z.number().optional(),
+        childId: z.number().optional()
+      }))
+      .query(async ({ ctx, input }) => {
+        const userId = input.childId || ctx.user?.id;
+        if (!userId) return [];
+        return db.getUserQuizHistory(userId, input.limit);
+      }),
 
-    // Get all available achievements
-    getAllAchievements: childProcedure.query(async () => {
+    // Get achievements (public for local auth)
+    getMyAchievements: publicProcedure
+      .input(z.object({ childId: z.number().optional() }))
+      .query(async ({ input, ctx }) => {
+        const userId = input.childId || ctx.user?.id;
+        if (!userId) return [];
+        return db.getUserAchievements(userId);
+      }),
+
+    // Get all available achievements (public for local auth)
+    getAllAchievements: publicProcedure.query(async () => {
       return db.getAllAchievements();
     }),
 
-    // Get activity log
-    getMyActivity: childProcedure
+    // Get activity log (public for local auth)
+    getMyActivity: publicProcedure
       .input(z.object({
         startDate: z.date(),
         endDate: z.date(),
+        childId: z.number().optional()
       }))
       .query(async ({ ctx, input }) => {
-        return db.getUserActivityLog(ctx.user.id, input.startDate, input.endDate);
+        const userId = input.childId || ctx.user?.id;
+        if (!userId) return [];
+        return db.getUserActivityLog(userId, input.startDate, input.endDate);
       }),
   }),
 

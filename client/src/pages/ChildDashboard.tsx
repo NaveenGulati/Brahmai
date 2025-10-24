@@ -16,23 +16,25 @@ export default function ChildDashboard() {
     const storedUser = localStorage.getItem('childUser');
     if (storedUser) {
       setChildUser(JSON.parse(storedUser));
-    } else if (!loading && (!isAuthenticated || user?.role !== 'child')) {
+    } else if (!loading && !isAuthenticated) {
+      // Only redirect if not authenticated AND no local user
       setLocation('/child-login');
     }
-  }, [loading, isAuthenticated, user, setLocation]);
+  }, [loading, isAuthenticated, setLocation]);
 
-  const { data: subjects } = trpc.child.getSubjects.useQuery(undefined, {
-    enabled: !!childUser || (isAuthenticated && user?.role === 'child')
-  });
-  const { data: stats } = trpc.child.getMyStats.useQuery(undefined, {
-    enabled: !!childUser || (isAuthenticated && user?.role === 'child')
-  });
-  const { data: achievements } = trpc.child.getMyAchievements.useQuery(undefined, {
-    enabled: !!childUser || (isAuthenticated && user?.role === 'child')
-  });
-  const { data: allAchievements } = trpc.child.getAllAchievements.useQuery(undefined, {
-    enabled: !!childUser || (isAuthenticated && user?.role === 'child')
-  });
+  const { data: subjects } = trpc.child.getSubjects.useQuery();
+  
+  const { data: stats } = trpc.child.getMyStats.useQuery(
+    { childId: childUser?.id },
+    { enabled: !!childUser || (isAuthenticated && user?.role === 'child') }
+  );
+  
+  const { data: achievements } = trpc.child.getMyAchievements.useQuery(
+    { childId: childUser?.id },
+    { enabled: !!childUser || (isAuthenticated && user?.role === 'child') }
+  );
+  
+  const { data: allAchievements } = trpc.child.getAllAchievements.useQuery();
 
   if (loading || (!childUser && !isAuthenticated)) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
