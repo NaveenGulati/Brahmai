@@ -10,32 +10,29 @@ import { toast } from "sonner";
 export default function ChildLogin() {
   const [, setLocation] = useLocation();
   const [username, setUsername] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [password, setPassword] = useState("");
+
+  const loginMutation = trpc.localAuth.childLogin.useMutation({
+    onSuccess: (data) => {
+      // Store user data in localStorage
+      localStorage.setItem('childUser', JSON.stringify(data.user));
+      toast.success("Login successful!");
+      setLocation('/child');
+    },
+    onError: (error) => {
+      toast.error(error.message || "Invalid username or password");
+    },
+  });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!username.trim()) {
-      toast.error("Please enter your username");
+    if (!username.trim() || !password.trim()) {
+      toast.error("Please enter both username and password");
       return;
     }
 
-    setIsLoading(true);
-    
-    // In a real implementation, this would validate against the database
-    // For now, we'll simulate a login by storing the username in localStorage
-    // and redirecting to the child dashboard
-    
-    try {
-      // Store username temporarily
-      localStorage.setItem('childUsername', username);
-      toast.success("Login successful!");
-      setLocation('/child');
-    } catch (error) {
-      toast.error("Login failed. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    loginMutation.mutate({ username, password });
   };
 
   return (
@@ -61,17 +58,30 @@ export default function ChildLogin() {
                 required
                 className="text-lg"
               />
+            </div>
+
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                className="text-lg"
+              />
               <p className="text-xs text-gray-500 mt-1">
-                Ask your parent if you don't know your username
+                Ask your parent if you forgot your credentials
               </p>
             </div>
 
             <Button 
               type="submit" 
               className="w-full py-6 text-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-              disabled={isLoading}
+              disabled={loginMutation.isPending}
             >
-              {isLoading ? "Logging in..." : "Start Learning →"}
+              {loginMutation.isPending ? "Logging in..." : "Start Learning →"}
             </Button>
           </form>
 

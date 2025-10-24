@@ -364,14 +364,13 @@ export default function ParentDashboard() {
                           const formData = new FormData(e.currentTarget);
                           const name = formData.get('name') as string;
                           const username = formData.get('username') as string;
+                          const password = formData.get('password') as string;
                           const email = formData.get('email') as string;
-                          
-                          // Generate unique openId based on username
-                          const openId = `child_${username}_${Date.now()}`;
                           
                           createChildMutation.mutate({
                             name,
-                            openId,
+                            username,
+                            password,
                             email: email || undefined,
                           });
                         }}
@@ -393,9 +392,24 @@ export default function ParentDashboard() {
                             name="username"
                             required
                             placeholder="Choose a unique username"
+                            minLength={3}
                           />
                           <p className="text-xs text-gray-500 mt-1">
-                            This will be used for login
+                            Minimum 3 characters
+                          </p>
+                        </div>
+                        <div>
+                          <Label htmlFor="password">Password *</Label>
+                          <Input
+                            id="password"
+                            name="password"
+                            type="password"
+                            required
+                            placeholder="Create a password"
+                            minLength={4}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Minimum 4 characters
                           </p>
                         </div>
                         <div>
@@ -408,10 +422,10 @@ export default function ParentDashboard() {
                           />
                         </div>
                         <div className="bg-blue-50 p-3 rounded text-sm">
-                          <p className="font-semibold text-blue-900">Login Credentials:</p>
+                          <p className="font-semibold text-blue-900">📝 Login Credentials:</p>
                           <p className="text-blue-700 mt-1">
-                            Your child will use the same Manus login page. After creating the account,
-                            share the username with your child.
+                            Your child will use these credentials on the Student Login page.
+                            Make sure to remember the username and password!
                           </p>
                         </div>
                         <Button type="submit" className="w-full" disabled={createChildMutation.isPending}>

@@ -15,6 +15,8 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   // Additional fields for parent-child relationship
   parentId: int("parentId"), // If this is a child account, reference to parent
+  username: varchar("username", { length: 50 }), // For local authentication
+  passwordHash: varchar("passwordHash", { length: 255 }), // Hashed password for local auth
   grade: int("grade").default(7), // Grade level
   totalPoints: int("totalPoints").default(0), // Gamification points
   currentStreak: int("currentStreak").default(0), // Daily streak

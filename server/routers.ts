@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
+import { authRouter } from "./authRouter";
 
 // Custom procedure for parent-only access
 const parentProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -30,6 +31,7 @@ const childProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 export const appRouter = router({
   system: systemRouter,
+  localAuth: authRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -47,20 +49,24 @@ export const appRouter = router({
       return db.getChildrenByParent(ctx.user.id);
     }),
 
-    // Create child account
+    // Create child account with password
     createChild: parentProcedure
       .input(z.object({
         name: z.string().min(1),
+        username: z.string().min(3),
+        password: z.string().min(4),
         email: z.string().email().optional(),
-        openId: z.string(),
       }))
       .mutation(async ({ input, ctx }) => {
-        return db.createChildAccount({
-          ...input,
-          role: 'child',
-          parentId: ctx.user.id,
-          grade: 7,
-        });
+        const { createChildWithPassword } = await import('./auth');
+        await createChildWithPassword(
+          ctx.user.id,
+          input.name,
+          input.username,
+          input.password,
+          input.email
+        );
+        return { success: true };
       }),
 
     // Get all subjects

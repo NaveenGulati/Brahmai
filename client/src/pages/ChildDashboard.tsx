@@ -9,37 +9,37 @@ import { useLocation } from "wouter";
 export default function ChildDashboard() {
   const { user, loading, isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
-  const [childUsername, setChildUsername] = useState<string | null>(null);
+  const [childUser, setChildUser] = useState<any>(null);
 
   useEffect(() => {
-    // Check for simple child login
-    const username = localStorage.getItem('childUsername');
-    if (username) {
-      setChildUsername(username);
+    // Check for local child login
+    const storedUser = localStorage.getItem('childUser');
+    if (storedUser) {
+      setChildUser(JSON.parse(storedUser));
     } else if (!loading && (!isAuthenticated || user?.role !== 'child')) {
       setLocation('/child-login');
     }
   }, [loading, isAuthenticated, user, setLocation]);
 
   const { data: subjects } = trpc.child.getSubjects.useQuery(undefined, {
-    enabled: !!childUsername || (isAuthenticated && user?.role === 'child')
+    enabled: !!childUser || (isAuthenticated && user?.role === 'child')
   });
   const { data: stats } = trpc.child.getMyStats.useQuery(undefined, {
-    enabled: !!childUsername || (isAuthenticated && user?.role === 'child')
+    enabled: !!childUser || (isAuthenticated && user?.role === 'child')
   });
   const { data: achievements } = trpc.child.getMyAchievements.useQuery(undefined, {
-    enabled: !!childUsername || (isAuthenticated && user?.role === 'child')
+    enabled: !!childUser || (isAuthenticated && user?.role === 'child')
   });
   const { data: allAchievements } = trpc.child.getAllAchievements.useQuery(undefined, {
-    enabled: !!childUsername || (isAuthenticated && user?.role === 'child')
+    enabled: !!childUser || (isAuthenticated && user?.role === 'child')
   });
 
-  if (loading || (!childUsername && !isAuthenticated)) {
+  if (loading || (!childUser && !isAuthenticated)) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('childUsername');
+    localStorage.removeItem('childUser');
     if (isAuthenticated) {
       logout();
     } else {
@@ -57,8 +57,8 @@ export default function ChildDashboard() {
           <h1 className="text-2xl font-bold text-gray-900">🎓 My Learning Dashboard</h1>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-sm font-semibold text-gray-900">{childUsername || user?.name}</p>
-              <p className="text-xs text-gray-500">{stats?.totalPoints || 0} points</p>
+              <p className="text-sm font-semibold text-gray-900">{childUser?.name || user?.name}</p>
+              <p className="text-xs text-gray-500">{childUser?.totalPoints || stats?.totalPoints || 0} points</p>
             </div>
             <Button variant="outline" size="sm" onClick={handleLogout}>
               Logout

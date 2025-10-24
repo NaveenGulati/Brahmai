@@ -1,0 +1,112 @@
+import bcrypt from 'bcryptjs';
+import { eq } from 'drizzle-orm';
+import { getDb } from './db';
+import { users } from '../drizzle/schema';
+
+/**
+ * Hash a password using bcrypt
+ */
+export async function hashPassword(password: string): Promise<string> {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
+}
+
+/**
+ * Verify a password against a hash
+ */
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
+
+/**
+ * Authenticate a child user with username and password
+ */
+export async function authenticateChild(username: string, password: string) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error('Database not available');
+  }
+
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.username, username))
+    .limit(1);
+
+  if (result.length === 0) {
+    return null;
+  }
+
+  const user = result[0];
+
+  // Check if user is a child
+  if (user.role !== 'child') {
+    return null;
+  }
+
+  // Verify password
+  if (!user.passwordHash) {
+    return null;
+  }
+
+  const isValid = await verifyPassword(password, user.passwordHash);
+  if (!isValid) {
+    return null;
+  }
+
+  // Update last signed in
+  await db
+    .update(users)
+    .set({ lastSignedIn: new Date() })
+    .where(eq(users.id, user.id));
+
+  return user;
+}
+
+/**
+ * Create a child user with username and password
+ */
+export async function createChildWithPassword(
+  parentId: number,
+  name: string,
+  username: string,
+  password: string,
+  email?: string
+) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error('Database not available');
+  }
+
+  // Check if username already exists
+  const existing = await db
+    .select()
+    .from(users)
+    .where(eq(users.username, username))
+    .limit(1);
+
+  if (existing.length > 0) {
+    throw new Error('Username already exists');
+  }
+
+  // Hash password
+  const passwordHash = await hashPassword(password);
+
+  // Create user
+  const result = await db.insert(users).values({
+    openId: `child_${username}_${Date.now()}`,
+    name,
+    username,
+    passwordHash,
+    email: email || null,
+    role: 'child',
+    parentId,
+    grade: 7,
+    totalPoints: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+  });
+
+  return result;
+}
+
