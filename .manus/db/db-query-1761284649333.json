@@ -1,0 +1,13 @@
+{
+  "query": "SELECT COUNT(*) as cnt FROM questions WHERE moduleId = 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute SELECT COUNT(*) as cnt FROM questions WHERE moduleId = 1;",
+  "rows": [
+    {
+      "cnt": "8"
+    }
+  ],
+  "messages": [],
+  "stdout": "cnt\n8\n",
+  "stderr": "",
+  "execution_time_ms": 1516
+}

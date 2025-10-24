@@ -2,26 +2,40 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useParams } from "wouter";
 
 export default function SubjectModules() {
   const { subjectId } = useParams<{ subjectId: string }>();
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading } = useAuth({ redirectOnUnauthenticated: false });
   const [, setLocation] = useLocation();
+  const [childUser, setChildUser] = useState<any>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Check for local child login first
+    const storedUser = localStorage.getItem('childUser');
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        setChildUser(parsed);
+        setIsReady(true);
+      } catch (e) {
+        setLocation('/child-login');
+      }
+    } else if (!loading && !user) {
+      setLocation('/child-login');
+    } else if (!loading && user?.role === 'child') {
+      setIsReady(true);
+    }
+  }, [loading, user, setLocation]);
 
   const { data: modules } = trpc.child.getModules.useQuery(
     { subjectId: parseInt(subjectId!) },
-    { enabled: !!subjectId }
+    { enabled: !!subjectId && isReady }
   );
 
-  useEffect(() => {
-    if (!loading && (!isAuthenticated || user?.role !== 'child')) {
-      setLocation('/');
-    }
-  }, [loading, isAuthenticated, user, setLocation]);
-
-  if (loading) {
+  if (!isReady) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 

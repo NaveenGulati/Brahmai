@@ -260,7 +260,7 @@ export async function createQuizSession(data: InsertQuizSession) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result = await db.insert(quizSessions).values(data);
-  return result;
+  return Number(result[0].insertId);
 }
 
 export async function getQuizSessionById(id: number) {

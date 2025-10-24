@@ -7,46 +7,56 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 
 export default function ChildDashboard() {
-  const { user, loading, isAuthenticated, logout } = useAuth();
+  const { user, loading, logout } = useAuth({ redirectOnUnauthenticated: false });
   const [, setLocation] = useLocation();
   const [childUser, setChildUser] = useState<any>(null);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Check for local child login
+    // Check for local child login first
     const storedUser = localStorage.getItem('childUser');
     if (storedUser) {
-      setChildUser(JSON.parse(storedUser));
-    } else if (!loading && !isAuthenticated) {
-      // Only redirect if not authenticated AND no local user
+      try {
+        const parsed = JSON.parse(storedUser);
+        setChildUser(parsed);
+        setIsReady(true);
+      } catch (e) {
+        // Invalid stored data, redirect to login
+        setLocation('/child-login');
+      }
+    } else if (!loading && !user) {
+      // No local user and no OAuth user, redirect to login
       setLocation('/child-login');
+    } else if (!loading && user?.role === 'child') {
+      // OAuth child user
+      setIsReady(true);
     }
-  }, [loading, isAuthenticated, setLocation]);
+  }, [loading, user, setLocation]);
 
   const { data: subjects } = trpc.child.getSubjects.useQuery();
   
   const { data: stats } = trpc.child.getMyStats.useQuery(
     { childId: childUser?.id },
-    { enabled: !!childUser || (isAuthenticated && user?.role === 'child') }
+    { enabled: isReady }
   );
   
   const { data: achievements } = trpc.child.getMyAchievements.useQuery(
     { childId: childUser?.id },
-    { enabled: !!childUser || (isAuthenticated && user?.role === 'child') }
+    { enabled: isReady }
   );
   
   const { data: allAchievements } = trpc.child.getAllAchievements.useQuery();
 
-  if (loading || (!childUser && !isAuthenticated)) {
+  if (!isReady) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
   const handleLogout = () => {
     localStorage.removeItem('childUser');
-    if (isAuthenticated) {
+    if (user) {
       logout();
-    } else {
-      setLocation('/child-login');
     }
+    setLocation('/child-login');
   };
 
   const earnedAchievementIds = new Set(achievements?.map(a => a.achievement.id));

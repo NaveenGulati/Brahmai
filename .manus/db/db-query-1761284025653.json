@@ -1,0 +1,17 @@
+{
+  "query": "SELECT id, name, username, email, role FROM users WHERE role = 'child';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute SELECT id, name, username, email, role FROM users WHERE role = 'child';",
+  "rows": [
+    {
+      "id": "90008",
+      "name": "Riddhansh",
+      "username": "Riddhu",
+      "email": "NULL",
+      "role": "child"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tusername\temail\trole\n90008\tRiddhansh\tRiddhu\tNULL\tchild\n",
+  "stderr": "",
+  "execution_time_ms": 1518
+}

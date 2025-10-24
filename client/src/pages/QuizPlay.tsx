@@ -12,8 +12,10 @@ import { toast } from "sonner";
 
 export default function QuizPlay() {
   const { moduleId } = useParams<{ moduleId: string }>();
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading } = useAuth({ redirectOnUnauthenticated: false });
   const [, setLocation] = useLocation();
+  const [childUser, setChildUser] = useState<any>(null);
+  const [isReady, setIsReady] = useState(false);
 
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);
@@ -26,11 +28,17 @@ export default function QuizPlay() {
 
   const startQuizMutation = trpc.child.startQuiz.useMutation({
     onSuccess: (data) => {
+      console.log('Quiz started:', data);
       setSessionId(data.sessionId);
       setQuestions(data.questions);
       setCurrentQuestionIndex(0);
       setTimeLeft(data.questions[0]?.timeLimit || 60);
       setQuestionStartTime(Date.now());
+    },
+    onError: (error) => {
+      console.error('Failed to start quiz:', error);
+      toast.error(`Failed to start quiz: ${error.message}`);
+      setLocation('/child');
     },
   });
 
@@ -50,7 +58,10 @@ export default function QuizPlay() {
         setQuestionStartTime(Date.now());
       } else {
         // Quiz complete
-        completeQuizMutation.mutate({ sessionId: sessionId! });
+        completeQuizMutation.mutate({ 
+          sessionId: sessionId!,
+          childId: childUser?.id
+        });
       }
     },
   });
@@ -64,16 +75,31 @@ export default function QuizPlay() {
   });
 
   useEffect(() => {
-    if (!loading && (!isAuthenticated || user?.role !== 'child')) {
-      setLocation('/');
+    // Check for local child login first
+    const storedUser = localStorage.getItem('childUser');
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        setChildUser(parsed);
+        setIsReady(true);
+      } catch (e) {
+        setLocation('/child-login');
+      }
+    } else if (!loading && !user) {
+      setLocation('/child-login');
+    } else if (!loading && user?.role === 'child') {
+      setIsReady(true);
     }
-  }, [loading, isAuthenticated, user, setLocation]);
+  }, [loading, user, setLocation]);
 
   useEffect(() => {
-    if (moduleId && !sessionId) {
-      startQuizMutation.mutate({ moduleId: parseInt(moduleId) });
+    if (moduleId && !sessionId && isReady) {
+      startQuizMutation.mutate({ 
+        moduleId: parseInt(moduleId),
+        childId: childUser?.id
+      });
     }
-  }, [moduleId]);
+  }, [moduleId, isReady]);
 
   // Timer countdown
   useEffect(() => {

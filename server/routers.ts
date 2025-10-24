@@ -232,22 +232,29 @@ export const appRouter = router({
 
   // ============= CHILD MODULE =============
   child: router({
-    // Get all subjects
-    getSubjects: childProcedure.query(async () => {
+    // Get all subjects (public for local auth)
+    getSubjects: publicProcedure.query(async () => {
       return db.getAllSubjects();
     }),
 
-    // Get modules by subject
-    getModules: childProcedure
+    // Get modules by subject (public for local auth)
+    getModules: publicProcedure
       .input(z.object({ subjectId: z.number() }))
       .query(async ({ input }) => {
         return db.getModulesBySubject(input.subjectId);
       }),
 
-    // Start quiz session
-    startQuiz: childProcedure
-      .input(z.object({ moduleId: z.number() }))
+    // Start quiz session (public for local auth)
+    startQuiz: publicProcedure
+      .input(z.object({ 
+        moduleId: z.number(),
+        childId: z.number().optional()
+      }))
       .mutation(async ({ input, ctx }) => {
+        const userId = input.childId || ctx.user?.id;
+        if (!userId) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User ID required' });
+        }
         const questions = await db.getQuestionsByModule(input.moduleId);
         
         // Select 10-15 random questions
@@ -255,14 +262,12 @@ export const appRouter = router({
         const shuffled = questions.sort(() => Math.random() - 0.5);
         const selectedQuestions = shuffled.slice(0, quizSize);
 
-        const session = await db.createQuizSession({
-          userId: ctx.user.id,
+        const sessionId = await db.createQuizSession({
+          userId,
           moduleId: input.moduleId,
           totalQuestions: selectedQuestions.length,
           isCompleted: false,
         });
-
-        const sessionId = Number((session as any).insertId);
 
         return {
           sessionId,
@@ -271,7 +276,7 @@ export const appRouter = router({
             questionType: q.questionType,
             questionText: q.questionText,
             questionImage: q.questionImage,
-            options: q.options,
+            options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options,
             points: q.points,
             timeLimit: q.timeLimit,
             difficulty: q.difficulty,
