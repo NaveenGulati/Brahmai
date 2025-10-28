@@ -47,3 +47,10 @@
 - [ ] Identify persistent weaknesses that need more practice
 - [ ] Add visual progress indicators (arrows, colors)
 
+
+
+## Bugs to Fix
+- [x] Remove "Reattempt Test" button from parent's quiz review view
+- [x] Only show "Reattempt Test" when child views their own quiz results
+- [x] Fix "Loading quiz..." stuck issue when parent clicks Reattempt Test
+
