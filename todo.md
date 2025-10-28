@@ -41,11 +41,11 @@
 
 
 
-- [ ] Show comparison with previous attempt after reattempting a test
-- [ ] Display side-by-side performance metrics (score, time, accuracy)
-- [ ] Highlight areas of improvement with positive indicators
-- [ ] Identify persistent weaknesses that need more practice
-- [ ] Add visual progress indicators (arrows, colors)
+- [x] Show comparison with previous attempt after reattempting a test
+- [x] Display side-by-side performance metrics (score, time, accuracy)
+- [x] Highlight areas of improvement with positive indicators
+- [x] Identify persistent weaknesses that need more practice
+- [x] Add visual progress indicators (arrows, colors)
 
 
 
@@ -53,4 +53,21 @@
 - [x] Remove "Reattempt Test" button from parent's quiz review view
 - [x] Only show "Reattempt Test" when child views their own quiz results
 - [x] Fix "Loading quiz..." stuck issue when parent clicks Reattempt Test
+
+
+
+
+## New Features to Implement
+- [x] Challenge system: Parent can assign specific quiz/module as challenge to child
+- [x] Backend API: createChallenge in parent router
+- [x] Database schema: challenges table with childId, moduleId, status, etc.
+- [x] Parent Dashboard UI: "Create Challenge" button in Child Progress cards
+- [x] Challenge creation modal with subject and module selection
+- [x] Child dashboard shows "New Challenge!" notification banner
+- [x] Track challenge completion status
+- [x] Backend API: getChallenges and completeChallenge in child router
+- [x] Password reset: Add "Reset Password" button in Parent Dashboard for each child
+- [x] Backend API: resetChildPassword in parent router
+- [x] Password reset modal with new password input
+- [x] Parent can set new password for child account
 

@@ -46,10 +46,24 @@ export default function ChildDashboard() {
   );
   
   const { data: allAchievements } = trpc.child.getAllAchievements.useQuery();
+  
+  const { data: challenges } = trpc.child.getChallenges.useQuery(
+    { childId: childUser?.id },
+    { enabled: isReady }
+  );
+  
+  const utils = trpc.useUtils();
+  const completeChallengeM = trpc.child.completeChallenge.useMutation({
+    onSuccess: () => {
+      utils.child.getChallenges.invalidate();
+    },
+  });
 
   if (!isReady) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
+  
+  const pendingChallenges = challenges?.filter(c => c.status === 'pending') || [];
 
   const handleLogout = () => {
     localStorage.removeItem('childUser');
@@ -80,6 +94,43 @@ export default function ChildDashboard() {
       </header>
 
       <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Challenges Section */}
+        {pendingChallenges.length > 0 && (
+          <div className="bg-gradient-to-r from-yellow-100 to-orange-100 border-2 border-yellow-400 rounded-lg p-6">
+            <h2 className="text-2xl font-bold mb-4 text-gray-900 flex items-center gap-2">
+              🎯 New Challenges from Your Parent!
+            </h2>
+            <div className="space-y-3">
+              {pendingChallenges.map((challenge) => (
+                <Card key={challenge.id} className="bg-white">
+                  <CardHeader>
+                    <CardTitle className="text-lg">{challenge.title}</CardTitle>
+                    {challenge.message && (
+                      <CardDescription>{challenge.message}</CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent className="flex justify-between items-center">
+                    <div className="text-sm text-gray-600">
+                      {challenge.expiresAt && (
+                        <p>Due: {new Date(challenge.expiresAt).toLocaleDateString()}</p>
+                      )}
+                    </div>
+                    <Button
+                      onClick={() => {
+                        // Start the quiz for this challenge
+                        setLocation(`/quiz?moduleId=${challenge.moduleId}&challengeId=${challenge.id}`);
+                      }}
+                      className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+                    >
+                      Start Challenge 🚀
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">

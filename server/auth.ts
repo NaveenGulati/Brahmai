@@ -110,3 +110,46 @@ export async function createChildWithPassword(
   return result;
 }
 
+
+/**
+ * Reset a child's password (parent only)
+ */
+export async function resetChildPassword(
+  childId: number,
+  parentId: number,
+  newPassword: string
+) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error('Database not available');
+  }
+
+  // Verify the child belongs to this parent
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, childId))
+    .limit(1);
+
+  if (result.length === 0) {
+    throw new Error('Child not found');
+  }
+
+  const child = result[0];
+
+  if (child.role !== 'child' || child.parentId !== parentId) {
+    throw new Error('Unauthorized: This child does not belong to you');
+  }
+
+  // Hash new password
+  const passwordHash = await hashPassword(newPassword);
+
+  // Update password
+  await db
+    .update(users)
+    .set({ passwordHash })
+    .where(eq(users.id, childId));
+
+  return { success: true };
+}
+

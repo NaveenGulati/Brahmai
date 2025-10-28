@@ -138,6 +138,23 @@ export const userAchievements = mysqlTable("userAchievements", {
 });
 
 /**
+ * Challenges - Parent-assigned quiz challenges for children
+ */
+export const challenges = mysqlTable("challenges", {
+  id: int("id").autoincrement().primaryKey(),
+  parentId: int("parentId").notNull(), // Parent who created the challenge
+  childId: int("childId").notNull(), // Child assigned to the challenge
+  moduleId: int("moduleId").notNull(), // Module to complete
+  title: varchar("title", { length: 200 }).notNull(),
+  message: text("message"), // Optional message from parent
+  status: mysqlEnum("status", ["pending", "completed", "expired"]).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  expiresAt: timestamp("expiresAt"), // Optional deadline
+  sessionId: int("sessionId"), // Quiz session ID when completed
+});
+
+/**
  * Daily activity log for streak tracking
  */
 export const activityLog = mysqlTable("activityLog", {
@@ -169,4 +186,6 @@ export type UserAchievement = typeof userAchievements.$inferSelect;
 export type InsertUserAchievement = typeof userAchievements.$inferInsert;
 export type ActivityLog = typeof activityLog.$inferSelect;
 export type InsertActivityLog = typeof activityLog.$inferInsert;
+export type Challenge = typeof challenges.$inferSelect;
+export type InsertChallenge = typeof challenges.$inferInsert;
 

@@ -355,6 +355,38 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
           aiAnalysis,
         };
       }),
+
+    // Create challenge for child
+    createChallenge: parentProcedure
+      .input(z.object({
+        childId: z.number(),
+        moduleId: z.number(),
+        title: z.string(),
+        message: z.string().optional(),
+        expiresAt: z.date().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return db.createChallenge({
+          parentId: ctx.user.id,
+          childId: input.childId,
+          moduleId: input.moduleId,
+          title: input.title,
+          message: input.message,
+          expiresAt: input.expiresAt,
+        });
+      }),
+
+    // Reset child password
+    resetChildPassword: parentProcedure
+      .input(z.object({
+        childId: z.number(),
+        newPassword: z.string().min(4),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { resetChildPassword } = await import('./auth');
+        await resetChildPassword(input.childId, ctx.user.id, input.newPassword);
+        return { success: true };
+      }),
   }),
 
   // ============= CHILD MODULE =============
@@ -574,6 +606,29 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
         const userId = input.childId || ctx.user?.id;
         if (!userId) return [];
         return db.getUserActivityLog(userId, input.startDate, input.endDate);
+      }),
+
+    // Get challenges for child (public for local auth)
+    getChallenges: publicProcedure
+      .input(z.object({ childId: z.number().optional() }))
+      .query(async ({ ctx, input }) => {
+        const userId = input.childId || ctx.user?.id;
+        if (!userId) return [];
+        return db.getChildChallenges(userId);
+      }),
+
+    // Complete challenge (public for local auth)
+    completeChallenge: publicProcedure
+      .input(z.object({ 
+        challengeId: z.number(),
+        childId: z.number().optional()
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const userId = input.childId || ctx.user?.id;
+        if (!userId) {
+          throw new TRPCError({ code: 'UNAUTHORIZED' });
+        }
+        return db.completeChallenge(input.challengeId, userId);
       }),
   }),
 

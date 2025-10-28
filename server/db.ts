@@ -9,7 +9,8 @@ import {
   quizResponses, InsertQuizResponse,
   achievements, InsertAchievement,
   userAchievements, InsertUserAchievement,
-  activityLog, InsertActivityLog
+  activityLog, InsertActivityLog,
+  challenges, InsertChallenge
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -411,5 +412,58 @@ export async function getUserStats(userId: number) {
     currentStreak: user?.currentStreak || 0,
     longestStreak: user?.longestStreak || 0,
   };
+}
+
+// ============= CHALLENGE OPERATIONS =============
+
+export async function createChallenge(data: InsertChallenge) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(challenges).values(data);
+  return { success: true };
+}
+
+export async function getChildChallenges(childId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(challenges)
+    .where(eq(challenges.childId, childId))
+    .orderBy(desc(challenges.createdAt));
+}
+
+export async function updateChallengeStatus(challengeId: number, status: string, sessionId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const updateData: any = { status };
+  if (status === 'completed') {
+    updateData.completedAt = new Date();
+    if (sessionId) updateData.sessionId = sessionId;
+  }
+  await db.update(challenges).set(updateData).where(eq(challenges.id, challengeId));
+}
+
+
+
+export async function completeChallenge(challengeId: number, childId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Verify the challenge belongs to this child
+  const challenge = await db.select().from(challenges)
+    .where(eq(challenges.id, challengeId))
+    .limit(1);
+  
+  if (challenge.length === 0 || challenge[0].childId !== childId) {
+    throw new Error("Challenge not found or unauthorized");
+  }
+  
+  await db.update(challenges)
+    .set({ 
+      status: 'completed',
+      completedAt: new Date()
+    })
+    .where(eq(challenges.id, challengeId));
+  
+  return { success: true };
 }
 

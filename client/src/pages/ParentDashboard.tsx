@@ -77,6 +77,15 @@ export default function ParentDashboard() {
     },
   });
 
+  const resetPasswordMutation = trpc.parent.resetChildPassword.useMutation({
+    onSuccess: () => {
+      toast.success("Password reset successfully!");
+    },
+    onError: (error) => {
+      toast.error("Failed to reset password: " + error.message);
+    },
+  });
+
   useEffect(() => {
     if (!loading && (!isAuthenticated || (user?.role !== 'parent' && user?.role !== 'admin'))) {
       setLocation('/');
@@ -463,6 +472,21 @@ export default function ParentDashboard() {
                             View Progress
                           </Button>
                           <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              const newPassword = prompt(`Enter new password for ${child.name}:`);
+                              if (newPassword && newPassword.length >= 4) {
+                                resetPasswordMutation.mutate({ childId: child.id, newPassword });
+                              } else if (newPassword) {
+                                toast.error('Password must be at least 4 characters');
+                              }
+                            }}
+                            disabled={resetPasswordMutation.isPending}
+                          >
+                            🔑 Reset Password
+                          </Button>
+                          <Button 
                             variant="destructive" 
                             size="sm" 
                             onClick={() => {
@@ -509,13 +533,156 @@ export default function ParentDashboard() {
 }
 
 function ChildProgressCard({ childId, childName }: { childId: number; childName: string }) {
+  const [isChallengeOpen, setIsChallengeOpen] = useState(false);
+  const [challengeModule, setChallengeModule] = useState<number | null>(null);
+  const [challengeSubject, setChallengeSubject] = useState<number | null>(null);
+  const [isPasswordResetOpen, setIsPasswordResetOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  
   const { data: stats } = trpc.parent.getChildProgress.useQuery({ childId });
   const { data: history } = trpc.parent.getChildQuizHistory.useQuery({ childId, limit: 5 });
+  const { data: subjects } = trpc.parent.getSubjects.useQuery();
+  const { data: modules } = trpc.parent.getModules.useQuery(
+    { subjectId: challengeSubject! },
+    { enabled: !!challengeSubject }
+  );
+  
+  const utils = trpc.useUtils();
+  const createChallengeMutation = trpc.parent.createChallenge.useMutation({
+    onSuccess: () => {
+      toast.success("Challenge created successfully!");
+      setIsChallengeOpen(false);
+      setChallengeModule(null);
+      setChallengeSubject(null);
+    },
+    onError: (error) => {
+      toast.error("Failed to create challenge: " + error.message);
+    },
+  });
+  
+  const resetPasswordMutation = trpc.parent.resetChildPassword.useMutation({
+    onSuccess: () => {
+      toast.success("Password reset successfully!");
+      setIsPasswordResetOpen(false);
+      setNewPassword('');
+    },
+    onError: (error) => {
+      toast.error("Failed to reset password: " + error.message);
+    },
+  });
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{childName}</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>{childName}</CardTitle>
+        </div>
+        <div className="flex gap-2">
+          <Dialog open={isPasswordResetOpen} onOpenChange={setIsPasswordResetOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">🔑 Reset Password</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Reset Password for {childName}</DialogTitle>
+                <DialogDescription>
+                  Enter a new password for this child account
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                <div>
+                  <Label>New Password</Label>
+                  <Input
+                    type="password"
+                    placeholder="Enter new password (min 4 characters)"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
+                <Button
+                  onClick={() => {
+                    if (newPassword.length >= 4) {
+                      resetPasswordMutation.mutate({
+                        childId,
+                        newPassword,
+                      });
+                    } else {
+                      toast.error("Password must be at least 4 characters");
+                    }
+                  }}
+                  disabled={!newPassword || resetPasswordMutation.isPending}
+                  className="w-full"
+                >
+                  Reset Password
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={isChallengeOpen} onOpenChange={setIsChallengeOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">🎯 Create Challenge</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Quiz Challenge for {childName}</DialogTitle>
+              <DialogDescription>
+                Assign a specific quiz module for your child to complete
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div>
+                <Label>Subject</Label>
+                <Select value={challengeSubject?.toString()} onValueChange={(v) => {
+                  setChallengeSubject(parseInt(v));
+                  setChallengeModule(null);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjects?.map((s) => (
+                      <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {challengeSubject && (
+                <div>
+                  <Label>Module</Label>
+                  <Select value={challengeModule?.toString()} onValueChange={(v) => setChallengeModule(parseInt(v))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose module" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {modules?.map((m) => (
+                        <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <Button 
+                onClick={() => {
+                  if (challengeModule) {
+                    const module = modules?.find(m => m.id === challengeModule);
+                    const subject = subjects?.find(s => s.id === challengeSubject);
+                    createChallengeMutation.mutate({
+                      childId,
+                      moduleId: challengeModule,
+                      title: `Complete ${module?.name} quiz`,
+                      message: `Your parent wants you to practice ${subject?.name} - ${module?.name}`,
+                    });
+                  }
+                }}
+                disabled={!challengeModule || createChallengeMutation.isPending}
+                className="w-full"
+              >
+                Create Challenge
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         {stats ? (
