@@ -27,3 +27,8 @@
 - [x] Improve AI analysis text formatting with HTML/Markdown rendering
 - [x] Add proper bullets, bold text, and visual structure to recommendations
 
+
+
+- [x] Remove confusing backtick symbols from AI analysis
+- [x] Replace code formatting with child-friendly visual styling for math expressions
+

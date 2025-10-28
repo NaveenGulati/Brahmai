@@ -291,11 +291,17 @@ Provide a structured analysis with THREE sections:
 (Use numbered list, provide actionable study suggestions)
 
 Format your response in clean markdown with:
-- Use **bold** for key concepts
+- Use **bold** for key concepts and mathematical terms
 - Use bullet points (-) for lists
 - Use numbered lists (1., 2., 3.) for steps
+- DO NOT use backticks or code blocks - write math expressions naturally
 - Keep it concise and encouraging
-- Focus on learning, not just scores`;
+- Focus on learning, not just scores
+
+IMPORTANT: When mentioning mathematical expressions, write them naturally without backticks. For example:
+- Write "(-5) + (-3)" instead of using code formatting
+- Write "a² - 2ab + b²" instead of using code formatting  
+- Use **bold** to emphasize important formulas`;
 
         const aiResponse = await invokeLLM({
           messages: [
