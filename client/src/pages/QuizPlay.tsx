@@ -66,11 +66,24 @@ export default function QuizPlay() {
     },
   });
 
+  const completeChallengeM = trpc.child.completeChallenge.useMutation();
+
   const completeQuizMutation = trpc.child.completeQuiz.useMutation({
     onSuccess: (results) => {
       setIsQuizComplete(true);
       setQuizResults(results);
       toast.success("Quiz completed!");
+      
+      // Check if this was a challenge and mark it complete
+      const challengeId = localStorage.getItem('currentChallengeId');
+      if (challengeId) {
+        completeChallengeM.mutate({ 
+          challengeId: parseInt(challengeId),
+          childId: childUser?.id
+        });
+        localStorage.removeItem('currentChallengeId');
+        toast.success("🎯 Challenge completed!");
+      }
     },
   });
 

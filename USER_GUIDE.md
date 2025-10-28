@@ -129,9 +129,43 @@ Click "Bulk Upload (JSON)" and paste questions in this format:
    - Current streak (consecutive days)
 3. Check recent quiz history with scores
 
+### Creating Quiz Challenges
+
+Assign specific quizzes to your child:
+
+1. In the "Child Progress" tab, find your child's progress card
+2. Click the **"🎯 Create Challenge"** button
+3. Select the subject (e.g., Mathematics, Science)
+4. Choose the specific module/topic
+5. Click "Create Challenge" to assign
+
+Your child will see a highlighted notification on their dashboard with a "Start Challenge" button.
+
+### Resetting Child Password
+
+If your child forgets their password:
+
+1. Go to the "Child Progress" tab
+2. Find your child's progress card
+3. Click the **"🔑 Reset Password"** button
+4. Enter a new password (minimum 4 characters)
+5. Click "Reset Password" to confirm
+
+Your child can immediately log in with the new password.
+
 ---
 
 ## 🎮 Child Dashboard Guide
+
+### Responding to Challenges
+
+When your parent assigns a challenge:
+
+1. You'll see a **yellow notification banner** at the top of your dashboard
+2. The banner shows "🎯 New Challenges from Your Parent!"
+3. Read the challenge details (subject, module, due date)
+4. Click **"Start Challenge 🚀"** to begin the quiz
+5. Complete the quiz to mark the challenge as done
 
 ### Taking a Quiz
 

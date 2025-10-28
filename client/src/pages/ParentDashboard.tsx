@@ -670,7 +670,7 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
                       childId,
                       moduleId: challengeModule,
                       title: `Complete ${module?.name} quiz`,
-                      message: `Your parent wants you to practice ${subject?.name} - ${module?.name}`,
+                      message: `Your parent wants you to practice **${subject?.name} - ${module?.name}**`,
                     });
                   }
                 }}

@@ -71,3 +71,16 @@
 - [x] Password reset modal with new password input
 - [x] Parent can set new password for child account
 
+
+
+## New Bugs to Fix
+- [x] Make subject and module names bold in challenge notification (e.g., "Mathematics - Integers")
+- [x] Fix 404 error when starting challenge - challengeId not being passed correctly in URL
+- [x] Store challengeId in localStorage and use correct route format (/quiz/:moduleId)
+- [x] Mark challenge as completed when quiz is finished
+
+
+
+## New Features
+- [x] Add dismiss (X) button to challenge notifications so children can manually remove them after reading
+

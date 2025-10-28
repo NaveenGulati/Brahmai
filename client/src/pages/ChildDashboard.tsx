@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { toast } from "sonner";
 
 export default function ChildDashboard() {
   const { user, loading, logout } = useAuth({ redirectOnUnauthenticated: false });
@@ -64,6 +65,10 @@ export default function ChildDashboard() {
   }
   
   const pendingChallenges = challenges?.filter(c => c.status === 'pending') || [];
+  
+  // Debug: Log challenge data
+  console.log('All challenges:', challenges);
+  console.log('Pending challenges:', pendingChallenges);
 
   const handleLogout = () => {
     localStorage.removeItem('childUser');
@@ -102,11 +107,30 @@ export default function ChildDashboard() {
             </h2>
             <div className="space-y-3">
               {pendingChallenges.map((challenge) => (
-                <Card key={challenge.id} className="bg-white">
+                <Card key={challenge.id} className="bg-white relative">
+                  <button
+                    onClick={() => {
+                      completeChallengeM.mutate({ 
+                        challengeId: challenge.id,
+                        childId: childUser?.id
+                      });
+                      toast.success("Challenge dismissed");
+                    }}
+                    className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Dismiss challenge"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                   <CardHeader>
-                    <CardTitle className="text-lg">{challenge.title}</CardTitle>
+                    <CardTitle className="text-lg pr-8">{challenge.title}</CardTitle>
                     {challenge.message && (
-                      <CardDescription>{challenge.message}</CardDescription>
+                      <CardDescription className="text-base">
+                        {challenge.message.split(/\*\*(.+?)\*\*/).map((part, i) => 
+                          i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
+                        )}
+                      </CardDescription>
                     )}
                   </CardHeader>
                   <CardContent className="flex justify-between items-center">
@@ -117,8 +141,10 @@ export default function ChildDashboard() {
                     </div>
                     <Button
                       onClick={() => {
-                        // Start the quiz for this challenge
-                        setLocation(`/quiz?moduleId=${challenge.moduleId}&challengeId=${challenge.id}`);
+                        // Store challenge ID in localStorage for the quiz page to access
+                        localStorage.setItem('currentChallengeId', challenge.id.toString());
+                        // Navigate to quiz with path parameter
+                        setLocation(`/quiz/${challenge.moduleId}`);
                       }}
                       className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
                     >
