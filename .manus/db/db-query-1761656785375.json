@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO quizSessions (userId, moduleId, startedAt, completedAt, totalQuestions, correctAnswers, wrongAnswers, totalPoints, timeTaken, scorePercentage, isCompleted) VALUES (180013, 1, NOW(), NOW(), 8, 5, 3, 65, 95, 63, 1);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute INSERT INTO quizSessions (userId, moduleId, startedAt, completedAt, totalQuestions, correctAnswers, wrongAnswers, totalPoints, timeTaken, scorePercentage, isCompleted) VALUES (180013, 1, NOW(), NOW(), 8, 5, 3, 65, 95, 63, 1);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1519
+}

@@ -16,6 +16,14 @@ export default function QuizReview() {
     { enabled: !!sessionId }
   );
 
+  const { data: previousAttempt } = trpc.parent.getPreviousAttempt.useQuery(
+    { 
+      moduleId: reviewData?.session.moduleId || 0,
+      currentSessionId: parseInt(sessionId!) 
+    },
+    { enabled: !!reviewData?.session.moduleId }
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -100,6 +108,128 @@ export default function QuizReview() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Progress Comparison */}
+        {previousAttempt && (
+          <Card className="mb-6 border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-indigo-900">
+                📊 Progress Comparison
+              </CardTitle>
+              <p className="text-sm text-gray-600">Comparing with previous attempt</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Score Comparison */}
+                <div className="bg-white p-4 rounded-lg border border-indigo-100">
+                  <p className="text-sm text-gray-600 mb-2">Score</p>
+                  <div className="flex items-center justify-between">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-gray-400">{previousAttempt.scorePercentage}%</p>
+                      <p className="text-xs text-gray-500">Previous</p>
+                    </div>
+                    <div className="text-2xl">
+                      {(session.scorePercentage || 0) > (previousAttempt.scorePercentage || 0) ? (
+                        <span className="text-green-500">↗</span>
+                      ) : (session.scorePercentage || 0) < (previousAttempt.scorePercentage || 0) ? (
+                        <span className="text-red-500">↘</span>
+                      ) : (
+                        <span className="text-gray-400">→</span>
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-indigo-600">{session.scorePercentage}%</p>
+                      <p className="text-xs text-gray-500">Current</p>
+                    </div>
+                  </div>
+                  {(session.scorePercentage || 0) > (previousAttempt.scorePercentage || 0) && (
+                    <p className="text-xs text-green-600 mt-2 text-center font-medium">
+                      +{(session.scorePercentage || 0) - (previousAttempt.scorePercentage || 0)}% improvement! 🎉
+                    </p>
+                  )}
+                  {(session.scorePercentage || 0) < (previousAttempt.scorePercentage || 0) && (
+                    <p className="text-xs text-orange-600 mt-2 text-center font-medium">
+                      {(previousAttempt.scorePercentage || 0) - (session.scorePercentage || 0)}% lower - keep practicing!
+                    </p>
+                  )}
+                </div>
+
+                {/* Time Comparison */}
+                <div className="bg-white p-4 rounded-lg border border-indigo-100">
+                  <p className="text-sm text-gray-600 mb-2">Time Taken</p>
+                  <div className="flex items-center justify-between">
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-gray-400">
+                        {Math.floor((previousAttempt.timeTaken || 0) / 60)}:{String((previousAttempt.timeTaken || 0) % 60).padStart(2, '0')}
+                      </p>
+                      <p className="text-xs text-gray-500">Previous</p>
+                    </div>
+                    <div className="text-2xl">
+                      {(session.timeTaken || 0) < (previousAttempt.timeTaken || 0) ? (
+                        <span className="text-green-500">⚡</span>
+                      ) : (
+                        <span className="text-gray-400">🕐</span>
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-indigo-600">
+                        {Math.floor((session.timeTaken || 0) / 60)}:{String((session.timeTaken || 0) % 60).padStart(2, '0')}
+                      </p>
+                      <p className="text-xs text-gray-500">Current</p>
+                    </div>
+                  </div>
+                  {(session.timeTaken || 0) < (previousAttempt.timeTaken || 0) && (
+                    <p className="text-xs text-green-600 mt-2 text-center font-medium">
+                      {Math.floor(((previousAttempt.timeTaken || 0) - (session.timeTaken || 0)) / 60)}m {((previousAttempt.timeTaken || 0) - (session.timeTaken || 0)) % 60}s faster!
+                    </p>
+                  )}
+                </div>
+
+                {/* Accuracy Comparison */}
+                <div className="bg-white p-4 rounded-lg border border-indigo-100">
+                  <p className="text-sm text-gray-600 mb-2">Correct Answers</p>
+                  <div className="flex items-center justify-between">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-gray-400">{previousAttempt.correctAnswers}/{previousAttempt.totalQuestions}</p>
+                      <p className="text-xs text-gray-500">Previous</p>
+                    </div>
+                    <div className="text-2xl">
+                      {(session.correctAnswers || 0) > (previousAttempt.correctAnswers || 0) ? (
+                        <span className="text-green-500">✓</span>
+                      ) : (session.correctAnswers || 0) < (previousAttempt.correctAnswers || 0) ? (
+                        <span className="text-red-500">✗</span>
+                      ) : (
+                        <span className="text-gray-400">≈</span>
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-indigo-600">{session.correctAnswers}/{session.totalQuestions}</p>
+                      <p className="text-xs text-gray-500">Current</p>
+                    </div>
+                  </div>
+                  {(session.correctAnswers || 0) > (previousAttempt.correctAnswers || 0) && (
+                    <p className="text-xs text-green-600 mt-2 text-center font-medium">
+                      +{(session.correctAnswers || 0) - (previousAttempt.correctAnswers || 0)} more correct! 💪
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Overall Progress Message */}
+              <div className="mt-4 p-3 bg-white rounded-lg border border-indigo-100">
+                <p className="text-sm font-medium text-indigo-900">
+                  {(session.scorePercentage || 0) > (previousAttempt.scorePercentage || 0) ? (
+                    <span className="text-green-600">🌟 Great improvement! Keep up the excellent work!</span>
+                  ) : (session.scorePercentage || 0) === (previousAttempt.scorePercentage || 0) ? (
+                    <span className="text-blue-600">📚 Consistent performance. Try to improve speed or tackle harder questions!</span>
+                  ) : (
+                    <span className="text-orange-600">💡 Don't worry! Review the AI analysis below and practice the weak areas.</span>
+                  )}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* AI Analysis */}
         {aiAnalysis && (

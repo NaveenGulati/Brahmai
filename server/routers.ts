@@ -5,6 +5,9 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
+import { getDb } from "./db";
+import { quizSessions } from "../drizzle/schema";
+import { eq, and, lt, desc } from "drizzle-orm";
 import { authRouter } from "./authRouter";
 
 // Custom procedure for parent-only access
@@ -230,6 +233,30 @@ export const appRouter = router({
       }),
 
     // Get quiz review with AI analysis
+    getPreviousAttempt: parentProcedure
+      .input(z.object({ moduleId: z.number(), currentSessionId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+
+        // Get the previous session for this module (before current session)
+        const sessions = await db.select()
+          .from(quizSessions)
+          .where(
+            and(
+              eq(quizSessions.moduleId, input.moduleId),
+              lt(quizSessions.id, input.currentSessionId),
+              eq(quizSessions.isCompleted, true)
+            )
+          )
+          .orderBy(desc(quizSessions.completedAt))
+          .limit(1);
+
+        if (sessions.length === 0) return null;
+
+        return sessions[0];
+      }),
+
     getQuizReview: parentProcedure
       .input(z.object({ sessionId: z.number() }))
       .query(async ({ input }) => {

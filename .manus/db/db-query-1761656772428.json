@@ -1,0 +1,19 @@
+{
+  "query": "SELECT id, userId, moduleId, scorePercentage, correctAnswers, totalQuestions, completedAt FROM quizSessions WHERE isCompleted = 1 ORDER BY moduleId, completedAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute SELECT id, userId, moduleId, scorePercentage, correctAnswers, totalQuestions, completedAt FROM quizSessions WHERE isCompleted = 1 ORDER BY moduleId, completedAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "60001",
+      "userId": "90008",
+      "moduleId": "1",
+      "scorePercentage": "38",
+      "correctAnswers": "3",
+      "totalQuestions": "8",
+      "completedAt": "2025-10-24 06:42:51"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tmoduleId\tscorePercentage\tcorrectAnswers\ttotalQuestions\tcompletedAt\n60001\t90008\t1\t38\t3\t8\t2025-10-24 06:42:51\n",
+  "stderr": "",
+  "execution_time_ms": 1529
+}

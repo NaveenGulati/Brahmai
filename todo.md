@@ -39,3 +39,11 @@
 - [x] Create new quiz session with same module and complexity
 - [x] Pull fresh questions from question bank for reattempt
 
+
+
+- [ ] Show comparison with previous attempt after reattempting a test
+- [ ] Display side-by-side performance metrics (score, time, accuracy)
+- [ ] Highlight areas of improvement with positive indicators
+- [ ] Identify persistent weaknesses that need more practice
+- [ ] Add visual progress indicators (arrows, colors)
+

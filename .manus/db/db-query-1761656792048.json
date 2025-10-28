@@ -1,0 +1,22 @@
+{
+  "query": "SELECT id, moduleId, scorePercentage, correctAnswers FROM quizSessions WHERE userId = 180013 AND moduleId = 1 ORDER BY id DESC LIMIT 2;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute SELECT id, moduleId, scorePercentage, correctAnswers FROM quizSessions WHERE userId = 180013 AND moduleId = 1 ORDER BY id DESC LIMIT 2;",
+  "rows": [
+    {
+      "id": "360005",
+      "moduleId": "1",
+      "scorePercentage": "63",
+      "correctAnswers": "5"
+    },
+    {
+      "id": "360004",
+      "moduleId": "1",
+      "scorePercentage": "0",
+      "correctAnswers": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tmoduleId\tscorePercentage\tcorrectAnswers\n360005\t1\t63\t5\n360004\t1\t0\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1558
+}
