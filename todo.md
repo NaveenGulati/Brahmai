@@ -32,3 +32,10 @@
 - [x] Remove confusing backtick symbols from AI analysis
 - [x] Replace code formatting with child-friendly visual styling for math expressions
 
+
+
+- [x] Add "Reattempt Test" button in quiz review page
+- [x] Place button under stats (time and question count)
+- [x] Create new quiz session with same module and complexity
+- [x] Pull fresh questions from question bank for reattempt
+
