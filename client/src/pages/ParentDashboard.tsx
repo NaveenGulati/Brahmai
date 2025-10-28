@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
 
 export default function ParentDashboard() {
@@ -546,10 +546,12 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
             <h4 className="font-semibold mb-2">Recent Quizzes</h4>
             <div className="space-y-2">
               {history.map((quiz) => (
-                <div key={quiz.id} className="flex justify-between text-sm p-2 bg-gray-50 rounded">
-                  <span>Quiz #{quiz.id}</span>
-                  <span className="font-semibold">{quiz.scorePercentage}%</span>
-                </div>
+                <Link key={quiz.id} href={`/quiz-review/${quiz.id}`}>
+                  <div className="flex justify-between text-sm p-2 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition-colors">
+                    <span className="text-blue-600 hover:underline">Quiz #{quiz.id}</span>
+                    <span className="font-semibold">{quiz.scorePercentage}%</span>
+                  </div>
+                </Link>
               ))}
             </div>
           </div>

@@ -228,6 +228,95 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return db.getUserActivityLog(input.childId, input.startDate, input.endDate);
       }),
+
+    // Get quiz review with AI analysis
+    getQuizReview: parentProcedure
+      .input(z.object({ sessionId: z.number() }))
+      .query(async ({ input }) => {
+        const session = await db.getQuizSessionById(input.sessionId);
+        if (!session) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Quiz session not found' });
+        }
+
+        const responses = await db.getSessionResponses(input.sessionId);
+        const module = await db.getModuleById(session.moduleId);
+        const subject = module ? await db.getSubjectById(module.subjectId) : null;
+
+        // Get detailed response data with questions
+        const detailedResponses = await Promise.all(
+          responses.map(async (r: any) => {
+            const question = await db.getQuestionById(r.questionId);
+            return {
+              ...r,
+              questionText: question?.questionText || '',
+              questionType: question?.questionType || 'mcq',
+              questionImage: question?.questionImage,
+              options: typeof question?.options === 'string' ? JSON.parse(question.options) : question?.options,
+              correctAnswer: question?.correctAnswer || '',
+              explanation: question?.explanation,
+              difficulty: question?.difficulty,
+              maxPoints: question?.points || 0,
+            };
+          })
+        );
+
+        // Generate AI analysis
+        const { invokeLLM } = await import('./_core/llm');
+        
+        const analysisPrompt = `Analyze this Grade 7 student's quiz performance and provide insights:
+
+Quiz: ${module?.name || 'Unknown'} (${subject?.name || 'Unknown'})
+Score: ${session.scorePercentage}%
+Correct: ${session.correctAnswers}/${session.totalQuestions}
+Time: ${session.timeTaken}s
+
+Questions and Answers:
+        ${detailedResponses.map((r: any, i: number) => `
+${i + 1}. ${r.questionText}
+   Difficulty: ${r.difficulty}
+   Student Answer: ${r.userAnswer}
+   Correct Answer: ${r.correctAnswer}
+   Result: ${r.isCorrect ? 'Correct' : 'Wrong'}
+   Time: ${r.timeSpent}s`).join('\n')}
+
+Provide:
+1. Strengths (what concepts they understand well)
+2. Weaknesses (what topics need more practice)
+3. Specific recommendations for improvement
+
+Be encouraging but honest. Focus on learning, not just scores.`;
+
+        const aiResponse = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'You are an educational AI assistant analyzing student quiz performance. Provide constructive, encouraging feedback.' },
+            { role: 'user', content: analysisPrompt }
+          ]
+        });
+
+        const aiContent = aiResponse.choices[0]?.message?.content || '';
+        const aiText = typeof aiContent === 'string' ? aiContent : '';
+        
+        // Parse AI response into sections
+        const strengthsMatch = aiText.match(/(?:Strengths?|Strong Points?)[:\s]*([\s\S]*?)(?=(?:Weaknesses?|Areas? for Improvement|Recommendations?)|$)/i);
+        const weaknessesMatch = aiText.match(/(?:Weaknesses?|Areas? for Improvement)[:\s]*([\s\S]*?)(?=(?:Recommendations?|Strengths?)|$)/i);
+        const recommendationsMatch = aiText.match(/(?:Recommendations?|Suggestions?)[:\s]*([\s\S]*?)$/i);
+
+        const aiAnalysis = {
+          strengths: strengthsMatch?.[1]?.trim() || 'Good effort on this quiz!',
+          weaknesses: weaknessesMatch?.[1]?.trim() || 'Keep practicing to improve.',
+          recommendations: recommendationsMatch?.[1]?.trim() || 'Continue regular practice and review difficult topics.',
+        };
+
+        return {
+          session: {
+            ...session,
+            moduleName: module?.name || 'Unknown Module',
+            subjectName: subject?.name || 'Unknown Subject',
+          },
+          responses: detailedResponses,
+          aiAnalysis,
+        };
+      }),
   }),
 
   // ============= CHILD MODULE =============

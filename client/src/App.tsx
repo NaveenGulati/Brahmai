@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import QuizReview from "./pages/QuizReview";
 import ParentDashboard from "./pages/ParentDashboard";
 import ChildDashboard from "./pages/ChildDashboard";
 import QuizPlay from "./pages/QuizPlay";
@@ -16,6 +17,7 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/parent"} component={ParentDashboard} />
+      <Route path={"/quiz-review/:sessionId"} component={QuizReview} />
       <Route path="/child-login" component={ChildLogin} />
       <Route path={"/child"} component={ChildDashboard} />
       <Route path={"/subject/:subjectId"} component={SubjectModules} />
