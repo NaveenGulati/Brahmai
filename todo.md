@@ -21,3 +21,9 @@
 - [x] AI-generated summary of strengths and weaknesses
 - [x] Overall performance analysis per quiz
 
+
+
+## New Tasks
+- [x] Improve AI analysis text formatting with HTML/Markdown rendering
+- [x] Add proper bullets, bold text, and visual structure to recommendations
+

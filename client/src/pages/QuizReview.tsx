@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useLocation, useParams } from "wouter";
-import { CheckCircle2, XCircle, Clock, Award, TrendingUp, TrendingDown } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Award, Brain } from "lucide-react";
+import ReactMarkdown from 'react-markdown';
 
 export default function QuizReview() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -94,31 +95,16 @@ export default function QuizReview() {
 
         {/* AI Analysis */}
         {aiAnalysis && (
-          <Card className="mb-6 border-blue-200 bg-blue-50">
+          <Card className="mb-6 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-blue-600" />
+              <CardTitle className="flex items-center gap-2 text-blue-900">
+                <Brain className="w-6 h-6 text-blue-600" />
                 AI Performance Analysis
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-semibold text-green-700 mb-2 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  Strengths
-                </h4>
-                <p className="text-gray-700 whitespace-pre-line">{aiAnalysis.strengths}</p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-orange-700 mb-2 flex items-center gap-2">
-                  <TrendingDown className="w-4 h-4" />
-                  Areas for Improvement
-                </h4>
-                <p className="text-gray-700 whitespace-pre-line">{aiAnalysis.weaknesses}</p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-blue-700 mb-2">Recommendations</h4>
-                <p className="text-gray-700 whitespace-pre-line">{aiAnalysis.recommendations}</p>
+            <CardContent>
+              <div className="prose prose-sm max-w-none prose-headings:text-blue-900 prose-strong:text-blue-800 prose-li:text-gray-700 prose-p:text-gray-700">
+                <ReactMarkdown>{aiAnalysis.fullAnalysis}</ReactMarkdown>
               </div>
             </CardContent>
           </Card>

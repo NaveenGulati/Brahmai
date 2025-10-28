@@ -263,7 +263,7 @@ export const appRouter = router({
         // Generate AI analysis
         const { invokeLLM } = await import('./_core/llm');
         
-        const analysisPrompt = `Analyze this Grade 7 student's quiz performance and provide insights:
+        const analysisPrompt = `Analyze this Grade 7 student's quiz performance and provide insights in clean, well-formatted markdown:
 
 Quiz: ${module?.name || 'Unknown'} (${subject?.name || 'Unknown'})
 Score: ${session.scorePercentage}%
@@ -279,12 +279,23 @@ ${i + 1}. ${r.questionText}
    Result: ${r.isCorrect ? 'Correct' : 'Wrong'}
    Time: ${r.timeSpent}s`).join('\n')}
 
-Provide:
-1. Strengths (what concepts they understand well)
-2. Weaknesses (what topics need more practice)
-3. Specific recommendations for improvement
+Provide a structured analysis with THREE sections:
 
-Be encouraging but honest. Focus on learning, not just scores.`;
+### Strengths
+(Use bullet points, be specific about which concepts they mastered)
+
+### Areas for Improvement  
+(Use bullet points, identify specific topics that need practice)
+
+### Recommendations
+(Use numbered list, provide actionable study suggestions)
+
+Format your response in clean markdown with:
+- Use **bold** for key concepts
+- Use bullet points (-) for lists
+- Use numbered lists (1., 2., 3.) for steps
+- Keep it concise and encouraging
+- Focus on learning, not just scores`;
 
         const aiResponse = await invokeLLM({
           messages: [
@@ -296,15 +307,9 @@ Be encouraging but honest. Focus on learning, not just scores.`;
         const aiContent = aiResponse.choices[0]?.message?.content || '';
         const aiText = typeof aiContent === 'string' ? aiContent : '';
         
-        // Parse AI response into sections
-        const strengthsMatch = aiText.match(/(?:Strengths?|Strong Points?)[:\s]*([\s\S]*?)(?=(?:Weaknesses?|Areas? for Improvement|Recommendations?)|$)/i);
-        const weaknessesMatch = aiText.match(/(?:Weaknesses?|Areas? for Improvement)[:\s]*([\s\S]*?)(?=(?:Recommendations?|Strengths?)|$)/i);
-        const recommendationsMatch = aiText.match(/(?:Recommendations?|Suggestions?)[:\s]*([\s\S]*?)$/i);
-
+        // Return full markdown text for rendering
         const aiAnalysis = {
-          strengths: strengthsMatch?.[1]?.trim() || 'Good effort on this quiz!',
-          weaknesses: weaknessesMatch?.[1]?.trim() || 'Keep practicing to improve.',
-          recommendations: recommendationsMatch?.[1]?.trim() || 'Continue regular practice and review difficult topics.',
+          fullAnalysis: aiText || 'Analysis not available. Please try again.',
         };
 
         return {
