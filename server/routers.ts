@@ -616,6 +616,106 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
         return db.getPointsHistory(userId);
       }),
 
+    // Get quiz review (public for local auth)
+    getQuizReview: publicProcedure
+      .input(z.object({ sessionId: z.number() }))
+      .query(async ({ input }) => {
+        const session = await db.getQuizSessionById(input.sessionId);
+        if (!session) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Quiz session not found' });
+        }
+
+        const responses = await db.getSessionResponses(input.sessionId);
+        const module = await db.getModuleById(session.moduleId);
+        const subject = module ? await db.getSubjectById(module.subjectId) : null;
+
+        // Get detailed response data with questions
+        const detailedResponses = await Promise.all(
+          responses.map(async (r: any) => {
+            const question = await db.getQuestionById(r.questionId);
+            return {
+              ...r,
+              questionText: question?.questionText || '',
+              questionType: question?.questionType || 'mcq',
+              questionImage: question?.questionImage,
+              options: typeof question?.options === 'string' ? JSON.parse(question.options) : question?.options,
+              correctAnswer: question?.correctAnswer || '',
+              explanation: question?.explanation,
+              difficulty: question?.difficulty,
+              maxPoints: question?.points || 0,
+            };
+          })
+        );
+
+        // Generate AI analysis
+        const { invokeLLM } = await import('./_core/llm');
+        
+        const analysisPrompt = `Analyze this Grade 7 student's quiz performance and provide insights in clean, well-formatted markdown:
+
+Quiz: ${module?.name || 'Unknown'} (${subject?.name || 'Unknown'})
+Score: ${session.scorePercentage}%
+Correct: ${session.correctAnswers}/${session.totalQuestions}
+Time: ${session.timeTaken}s
+
+Questions and Answers:
+        ${detailedResponses.map((r: any, i: number) => `
+${i + 1}. ${r.questionText}
+   Difficulty: ${r.difficulty}
+   Student Answer: ${r.userAnswer}
+   Correct Answer: ${r.correctAnswer}
+   Result: ${r.isCorrect ? 'Correct' : 'Wrong'}
+   Time: ${r.timeSpent}s`).join('\n')}
+
+Provide a structured analysis with THREE sections:
+
+### Strengths
+(Use bullet points, be specific about which concepts they mastered)
+
+### Areas for Improvement  
+(Use bullet points, identify specific topics that need practice)
+
+### Recommendations
+(Use numbered list, provide actionable study suggestions)
+
+Format your response in clean markdown with:
+- Use **bold** for key concepts and mathematical terms
+- Use bullet points (-) for lists
+- Use numbered lists (1., 2., 3.) for steps
+- DO NOT use backticks or code blocks - write math expressions naturally
+- Keep it concise and encouraging
+- Focus on learning, not just scores
+
+IMPORTANT: When mentioning mathematical expressions, write them naturally without backticks. For example:
+- Write "(-5) + (-3)" instead of using code formatting
+- Write "a² - 2ab + b²" instead of using code formatting  
+- Use **bold** to emphasize important formulas`;
+
+        const aiResponse = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'You are an educational AI assistant analyzing student quiz performance. Provide constructive, encouraging feedback.' },
+            { role: 'user', content: analysisPrompt }
+          ]
+        });
+
+        const aiContent = aiResponse.choices[0]?.message?.content || '';
+        const aiText = typeof aiContent === 'string' ? aiContent : '';
+        
+        // Return full markdown text for rendering
+        const aiAnalysis = {
+          fullAnalysis: aiText || 'Analysis not available. Please try again.',
+        };
+
+        return {
+          session: {
+            ...session,
+            moduleName: module?.name || 'Unknown Module',
+            subjectName: subject?.name || 'Unknown Subject',
+          },
+          responses: detailedResponses,
+          aiAnalysis,
+        };
+      }),
+
     // Get achievements (public for local auth)
     getMyAchievements: publicProcedure
       .input(z.object({ childId: z.number().optional() }))

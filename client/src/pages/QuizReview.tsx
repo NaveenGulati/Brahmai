@@ -9,22 +9,34 @@ import ReactMarkdown from 'react-markdown';
 export default function QuizReview() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { user } = useAuth({ redirectOnUnauthenticated: false });
+  
+  // Check if child is logged in via localStorage
+  const childUser = localStorage.getItem('childUser') ? JSON.parse(localStorage.getItem('childUser')!) : null;
+  const isChild = !!childUser;
 
   const { data: reviewData, isLoading } = trpc.parent.getQuizReview.useQuery(
     { sessionId: parseInt(sessionId!) },
-    { enabled: !!sessionId }
+    { enabled: !!sessionId && !isChild }
   );
+  
+  const { data: childReviewData, isLoading: isChildLoading } = trpc.child.getQuizReview.useQuery(
+    { sessionId: parseInt(sessionId!) },
+    { enabled: !!sessionId && isChild }
+  );
+  
+  const actualReviewData = isChild ? childReviewData : reviewData;
+  const actualLoading = isChild ? isChildLoading : isLoading;
 
   const { data: previousAttempt } = trpc.parent.getPreviousAttempt.useQuery(
     { 
-      moduleId: reviewData?.session.moduleId || 0,
+      moduleId: actualReviewData?.session.moduleId || 0,
       currentSessionId: parseInt(sessionId!) 
     },
-    { enabled: !!reviewData?.session.moduleId }
+    { enabled: !!actualReviewData?.session.moduleId && !isChild }
   );
 
-  if (isLoading) {
+  if (actualLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -35,7 +47,7 @@ export default function QuizReview() {
     );
   }
 
-  if (!reviewData) {
+  if (!actualReviewData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -48,7 +60,7 @@ export default function QuizReview() {
     );
   }
 
-  const { session, responses, aiAnalysis } = reviewData;
+  const { session, responses, aiAnalysis } = actualReviewData;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">

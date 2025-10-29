@@ -132,3 +132,11 @@
 - [x] Set "Child Progress" as default tab on Parent Dashboard
 - [x] Fix child points ledger quiz links to use child-quiz-review route instead of parent route
 
+
+
+## Critical Bug
+- [x] Fix QuizReview to support both parent and child authentication - currently only works for parents
+- [x] Revert child points ledger link back to /quiz-review/:id after fixing QuizReview
+- [x] Added getQuizReview procedure to child router with AI analysis
+- [x] QuizReview now detects child vs parent login and uses appropriate API
+
