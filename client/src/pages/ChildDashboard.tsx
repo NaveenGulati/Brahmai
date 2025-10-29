@@ -287,7 +287,7 @@ export default function ChildDashboard() {
           <div className="space-y-2">
             {pointsHistory && pointsHistory.length > 0 ? (
               pointsHistory.map((entry, index) => (
-                <Link key={entry.id} href={`/quiz-review/${entry.id}`}>
+                <Link key={entry.id} href={`/child-quiz-review/${entry.id}`}>
                   <Card className="p-3 hover:bg-gray-50 cursor-pointer transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">

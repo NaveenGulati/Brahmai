@@ -177,10 +177,10 @@ export default function ParentDashboard() {
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="questions" className="space-y-6">
+        <Tabs defaultValue="progress" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="questions">Question Bank</TabsTrigger>
             <TabsTrigger value="progress">Child Progress</TabsTrigger>
+            <TabsTrigger value="questions">Question Bank</TabsTrigger>
           </TabsList>
 
           {/* Question Bank Tab */}

@@ -125,3 +125,10 @@
 - [x] Make ledger line items clickable to navigate to quiz review page
 - [x] Add backend API to fetch points history with quiz details
 
+
+
+## UI/UX Improvements
+- [x] Swap Parent Dashboard tab order: "Child Progress" first, "Question Bank" second
+- [x] Set "Child Progress" as default tab on Parent Dashboard
+- [x] Fix child points ledger quiz links to use child-quiz-review route instead of parent route
+
