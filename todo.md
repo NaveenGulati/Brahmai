@@ -149,3 +149,9 @@
 - [x] Make chart responsive and visually appealing with purple theme
 - [x] Added to both Child Dashboard and Parent Dashboard
 
+
+
+## Chart Bug
+- [x] Points chart showing blank/empty - fixed by using correct field name 'totalPoints' instead of 'pointsEarned'
+- [x] Updated both Child and Parent dashboard charts
+

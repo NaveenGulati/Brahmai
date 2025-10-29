@@ -306,7 +306,7 @@ export default function ChildDashboard() {
                   />
                   <Line 
                     type="monotone" 
-                    dataKey="pointsEarned" 
+                    dataKey="totalPoints" 
                     stroke="#8b5cf6" 
                     strokeWidth={2}
                     dot={{ fill: '#8b5cf6', r: 4 }}
