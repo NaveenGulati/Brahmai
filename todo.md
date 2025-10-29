@@ -180,3 +180,15 @@
 - [x] Run database migration (pnpm db:push)
 - [x] Provide revised JSON format for question generation (question-format.json)
 
+
+
+## Question Generator Web Page
+- [x] Create standalone HTML page with form for question generation
+- [x] Include all metadata fields (board, grade, subject, topic, subTopic, scope)
+- [x] Support all question types (MCQ, True/False, Fill in Blank)
+- [x] Allow adding multiple questions to JSON array
+- [x] Provide download functionality for generated JSON
+- [x] Include validation for required fields
+- [x] Beautiful gradient UI with live preview
+- [x] Question cards with metadata badges
+

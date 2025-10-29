@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Bank Generator - ICSE Grade 7</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        .form-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+        }
+        
+        .form-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        .options-container {
+            display: none;
+        }
+        
+        .options-container.active {
+            display: block;
+        }
+        
+        .option-input {
+            margin-bottom: 10px;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .preview-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .preview-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .question-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .question-card h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .question-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-board {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .badge-grade {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        
+        .badge-difficulty {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+        
+        .badge-scope {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .count-badge {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Question Bank Generator</h1>
+            <p>Create and manage questions for ICSE Grade 7 Quiz Application</p>
+        </div>
+        
+        <div class="content">
+            <!-- Form Section -->
+            <div class="form-section">
+                <h2>Add New Question</h2>
+                <form id="questionForm">
+                    <!-- Metadata Fields -->
+                    <div class="form-group">
+                        <label for="board">Board *</label>
+                        <select id="board" required>
+                            <option value="ICSE">ICSE</option>
+                            <option value="CBSE">CBSE</option>
+                            <option value="IB">IB</option>
+                            <option value="State">State</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="grade">Grade *</label>
+                        <input type="number" id="grade" min="1" max="12" value="7" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="subject">Subject *</label>
+                        <input type="text" id="subject" placeholder="e.g., Mathematics, Science" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="topic">Topic *</label>
+                        <input type="text" id="topic" placeholder="e.g., Algebra, Geometry" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="subTopic">Sub-Topic</label>
+                        <input type="text" id="subTopic" placeholder="e.g., Simple Equations">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="scope">Scope *</label>
+                        <select id="scope" required>
+                            <option value="School">School</option>
+                            <option value="Olympiad">Olympiad</option>
+                            <option value="Competitive">Competitive</option>
+                            <option value="Advanced">Advanced</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="questionType">Question Type *</label>
+                        <select id="questionType" required>
+                            <option value="mcq">Multiple Choice (MCQ)</option>
+                            <option value="true_false">True/False</option>
+                            <option value="fill_blank">Fill in the Blank</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="questionText">Question Text *</label>
+                        <textarea id="questionText" placeholder="Enter the question..." required></textarea>
+                    </div>
+                    
+                    <!-- MCQ Options -->
+                    <div id="mcqOptions" class="options-container">
+                        <div class="form-group">
+                            <label>Options (4 choices) *</label>
+                            <input type="text" id="option1" class="option-input" placeholder="Option 1">
+                            <input type="text" id="option2" class="option-input" placeholder="Option 2">
+                            <input type="text" id="option3" class="option-input" placeholder="Option 3">
+                            <input type="text" id="option4" class="option-input" placeholder="Option 4">
+                        </div>
+                    </div>
+                    
+                    <!-- True/False Options -->
+                    <div id="trueFalseOptions" class="options-container">
+                        <div class="form-group">
+                            <label>Options *</label>
+                            <input type="text" value="True" readonly class="option-input">
+                            <input type="text" value="False" readonly class="option-input">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="correctAnswer">Correct Answer *</label>
+                        <input type="text" id="correctAnswer" placeholder="Enter the correct answer" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="explanation">Explanation</label>
+                        <textarea id="explanation" placeholder="Explain why this is the correct answer..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="difficulty">Difficulty *</label>
+                        <select id="difficulty" required>
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                            <option value="olympiad">Olympiad</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="points">Points</label>
+                        <input type="number" id="points" value="10" min="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="timeLimit">Time Limit (seconds)</label>
+                        <input type="number" id="timeLimit" value="60" min="10">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">➕ Add Question</button>
+                </form>
+            </div>
+            
+            <!-- Preview Section -->
+            <div class="preview-section">
+                <h2>Question Bank Preview</h2>
+                <div class="count-badge">Total Questions: <span id="questionCount">0</span></div>
+                <div id="questionsList"></div>
+                <div class="actions">
+                    <button id="downloadBtn" class="btn btn-success">💾 Download JSON</button>
+                    <button id="clearBtn" class="btn btn-danger">🗑️ Clear All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let questions = [];
+        
+        // Question type change handler
+        document.getElementById('questionType').addEventListener('change', function() {
+            const type = this.value;
+            document.getElementById('mcqOptions').classList.remove('active');
+            document.getElementById('trueFalseOptions').classList.remove('active');
+            
+            if (type === 'mcq') {
+                document.getElementById('mcqOptions').classList.add('active');
+            } else if (type === 'true_false') {
+                document.getElementById('trueFalseOptions').classList.add('active');
+            }
+        });
+        
+        // Form submission
+        document.getElementById('questionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const questionType = document.getElementById('questionType').value;
+            let options = null;
+            
+            if (questionType === 'mcq') {
+                options = [
+                    document.getElementById('option1').value,
+                    document.getElementById('option2').value,
+                    document.getElementById('option3').value,
+                    document.getElementById('option4').value
+                ];
+            } else if (questionType === 'true_false') {
+                options = ['True', 'False'];
+            }
+            
+            const question = {
+                board: document.getElementById('board').value,
+                grade: parseInt(document.getElementById('grade').value),
+                subject: document.getElementById('subject').value,
+                topic: document.getElementById('topic').value,
+                subTopic: document.getElementById('subTopic').value || null,
+                scope: document.getElementById('scope').value,
+                questionType: questionType,
+                questionText: document.getElementById('questionText').value,
+                options: options,
+                correctAnswer: document.getElementById('correctAnswer').value,
+                explanation: document.getElementById('explanation').value || null,
+                difficulty: document.getElementById('difficulty').value,
+                points: parseInt(document.getElementById('points').value),
+                timeLimit: parseInt(document.getElementById('timeLimit').value)
+            };
+            
+            questions.push(question);
+            updatePreview();
+            this.reset();
+            document.getElementById('grade').value = 7;
+            document.getElementById('points').value = 10;
+            document.getElementById('timeLimit').value = 60;
+        });
+        
+        // Update preview
+        function updatePreview() {
+            const list = document.getElementById('questionsList');
+            const count = document.getElementById('questionCount');
+            
+            count.textContent = questions.length;
+            
+            if (questions.length === 0) {
+                list.innerHTML = '<p style="color: #999; text-align: center;">No questions added yet</p>';
+                return;
+            }
+            
+            list.innerHTML = questions.map((q, index) => `
+                <div class="question-card">
+                    <h4>${index + 1}. ${q.questionText}</h4>
+                    <div class="question-meta">
+                        <span class="badge badge-board">${q.board}</span>
+                        <span class="badge badge-grade">Grade ${q.grade}</span>
+                        <span class="badge badge-difficulty">${q.difficulty}</span>
+                        <span class="badge badge-scope">${q.scope}</span>
+                    </div>
+                    <p style="margin-top: 10px;"><strong>Subject:</strong> ${q.subject} | <strong>Topic:</strong> ${q.topic}</p>
+                    <p><strong>Correct Answer:</strong> ${q.correctAnswer}</p>
+                </div>
+            `).join('');
+        }
+        
+        // Download JSON
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            if (questions.length === 0) {
+                alert('No questions to download!');
+                return;
+            }
+            
+            const dataStr = JSON.stringify(questions, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `question-bank-${Date.now()}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        });
+        
+        // Clear all
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear all questions?')) {
+                questions = [];
+                updatePreview();
+            }
+        });
+        
+        // Initialize
+        updatePreview();
+    </script>
+</body>
+</html>
+
