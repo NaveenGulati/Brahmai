@@ -607,6 +607,15 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
         return db.getUserQuizHistory(userId, input.limit);
       }),
 
+    // Get points ledger history (public for local auth)
+    getPointsHistory: publicProcedure
+      .input(z.object({ childId: z.number().optional() }))
+      .query(async ({ ctx, input }) => {
+        const userId = input.childId || ctx.user?.id;
+        if (!userId) return [];
+        return db.getPointsHistory(userId);
+      }),
+
     // Get achievements (public for local auth)
     getMyAchievements: publicProcedure
       .input(z.object({ childId: z.number().optional() }))

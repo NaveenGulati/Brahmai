@@ -115,3 +115,13 @@
 ## UI Improvements
 - [x] Change completed challenge date format from "10/29/2025" to "29th Oct 2025, 11:22 AM"
 
+
+
+## Points Ledger Feature
+- [x] Make "Total Points" clickable on Child Dashboard
+- [x] Make "Total Points" clickable on Parent Dashboard (in Child Progress cards)
+- [x] Create Points Ledger modal showing transaction history
+- [x] Display date/time, subject, module, points earned for each quiz
+- [x] Make ledger line items clickable to navigate to quiz review page
+- [x] Add backend API to fetch points history with quiz details
+

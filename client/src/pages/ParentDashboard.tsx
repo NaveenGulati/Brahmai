@@ -557,11 +557,16 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
   const [challengeSubject, setChallengeSubject] = useState<number | null>(null);
   const [isPasswordResetOpen, setIsPasswordResetOpen] = useState(false);
   const [newPassword, setNewPassword] = useState('');
+  const [isPointsLedgerOpen, setIsPointsLedgerOpen] = useState(false);
   
   const { data: stats } = trpc.parent.getChildProgress.useQuery({ childId });
   const { data: history } = trpc.parent.getChildQuizHistory.useQuery({ childId, limit: 5 });
   const { data: completedChallenges } = trpc.parent.getCompletedChallenges.useQuery({ childId });
   const { data: subjects } = trpc.parent.getSubjects.useQuery();
+  const { data: pointsHistory } = trpc.child.getPointsHistory.useQuery(
+    { childId },
+    { enabled: isPointsLedgerOpen }
+  );
   const { data: modules } = trpc.parent.getModules.useQuery(
     { subjectId: challengeSubject! },
     { enabled: !!challengeSubject }
@@ -715,9 +720,13 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
               <p className="text-2xl font-bold text-green-600">{stats.averageScore}%</p>
               <p className="text-sm text-gray-600">Avg Score</p>
             </div>
-            <div className="text-center p-3 bg-purple-50 rounded">
-              <p className="text-2xl font-bold text-purple-600">{stats.totalPoints}</p>
+            <div 
+              className="text-center p-3 bg-purple-50 rounded cursor-pointer hover:bg-purple-100 transition-colors"
+              onClick={() => setIsPointsLedgerOpen(true)}
+            >
+              <p className="text-2xl font-bold text-purple-600">{stats.totalPoints} 📊</p>
               <p className="text-sm text-gray-600">Total Points</p>
+              <p className="text-xs text-gray-400 mt-1">Click for ledger</p>
             </div>
             <div className="text-center p-3 bg-orange-50 rounded">
               <p className="text-2xl font-bold text-orange-600">{stats.currentStreak} 🔥</p>
@@ -773,6 +782,42 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
           </div>
         )}
       </CardContent>
+
+      {/* Points Ledger Modal */}
+      <Dialog open={isPointsLedgerOpen} onOpenChange={setIsPointsLedgerOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>📊 Points Ledger - {childName}</DialogTitle>
+            <DialogDescription>
+              Complete history of points earned from quizzes
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            {pointsHistory && pointsHistory.length > 0 ? (
+              pointsHistory.map((entry) => (
+                <Link key={entry.id} href={`/quiz-review/${entry.id}`}>
+                  <Card className="p-3 hover:bg-gray-50 cursor-pointer transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm">{entry.subjectName} - {entry.moduleName}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {entry.completedAt ? formatCompletedDate(entry.completedAt) : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-purple-600">+{entry.totalPoints}</p>
+                        <p className="text-xs text-gray-500">{entry.scorePercentage}%</p>
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-8">No points history yet. Complete quizzes to earn points!</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

@@ -2,9 +2,10 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
 
 export default function ChildDashboard() {
@@ -12,6 +13,7 @@ export default function ChildDashboard() {
   const [, setLocation] = useLocation();
   const [childUser, setChildUser] = useState<any>(null);
   const [isReady, setIsReady] = useState(false);
+  const [isPointsLedgerOpen, setIsPointsLedgerOpen] = useState(false);
 
   useEffect(() => {
     // Check for local child login first
@@ -51,6 +53,11 @@ export default function ChildDashboard() {
   const { data: challenges } = trpc.child.getChallenges.useQuery(
     { childId: childUser?.id },
     { enabled: isReady }
+  );
+  
+  const { data: pointsHistory } = trpc.child.getPointsHistory.useQuery(
+    { childId: childUser?.id },
+    { enabled: isReady && isPointsLedgerOpen }
   );
   
   const utils = trpc.useUtils();
@@ -144,12 +151,16 @@ export default function ChildDashboard() {
 
         {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+          <Card 
+            className="bg-gradient-to-br from-blue-500 to-blue-600 text-white cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => setIsPointsLedgerOpen(true)}
+          >
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium opacity-90">Total Points</CardTitle>
+              <CardTitle className="text-sm font-medium opacity-90">Total Points 📊</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">{stats?.totalPoints || 0}</p>
+              <p className="text-xs opacity-75 mt-1">Click to view ledger</p>
             </CardContent>
           </Card>
 
@@ -263,6 +274,49 @@ export default function ChildDashboard() {
           </Card>
         )}
       </div>
+
+      {/* Points Ledger Modal */}
+      <Dialog open={isPointsLedgerOpen} onOpenChange={setIsPointsLedgerOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>📊 Points Ledger</DialogTitle>
+            <DialogDescription>
+              Complete history of points earned from quizzes
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            {pointsHistory && pointsHistory.length > 0 ? (
+              pointsHistory.map((entry, index) => (
+                <Link key={entry.id} href={`/quiz-review/${entry.id}`}>
+                  <Card className="p-3 hover:bg-gray-50 cursor-pointer transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm">{entry.subjectName} - {entry.moduleName}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {entry.completedAt ? new Date(entry.completedAt).toLocaleString('en-US', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          }) : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-blue-600">+{entry.totalPoints}</p>
+                        <p className="text-xs text-gray-500">{entry.scorePercentage}%</p>
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-8">No points history yet. Complete quizzes to earn points!</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

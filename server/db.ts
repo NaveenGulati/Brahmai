@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lte, isNotNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, users, 
@@ -465,5 +465,33 @@ export async function completeChallenge(challengeId: number, childId: number) {
     .where(eq(challenges.id, challengeId));
   
   return { success: true };
+}
+
+
+
+export async function getPointsHistory(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const sessions = await db
+    .select({
+      id: quizSessions.id,
+      completedAt: quizSessions.completedAt,
+      totalPoints: quizSessions.totalPoints,
+      scorePercentage: quizSessions.scorePercentage,
+      moduleName: modules.name,
+      subjectName: subjects.name,
+    })
+    .from(quizSessions)
+    .leftJoin(modules, eq(quizSessions.moduleId, modules.id))
+    .leftJoin(subjects, eq(modules.subjectId, subjects.id))
+    .where(and(
+      eq(quizSessions.userId, userId),
+      eq(quizSessions.isCompleted, true),
+      isNotNull(quizSessions.totalPoints)
+    ))
+    .orderBy(desc(quizSessions.completedAt));
+  
+  return sessions;
 }
 
