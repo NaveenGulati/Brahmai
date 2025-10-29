@@ -56,6 +56,13 @@ export const modules = mysqlTable("modules", {
 export const questions = mysqlTable("questions", {
   id: int("id").autoincrement().primaryKey(),
   moduleId: int("moduleId").notNull(),
+  // New metadata fields for enhanced categorization
+  board: mysqlEnum("board", ["CBSE", "ICSE", "IB", "State", "Other"]).default("ICSE").notNull(),
+  grade: int("grade").default(7).notNull(), // Grade level (1-12)
+  subject: varchar("subject", { length: 100 }), // Subject name (redundant with modules but useful for quick filtering)
+  topic: varchar("topic", { length: 200 }), // Main topic
+  subTopic: varchar("subTopic", { length: 200 }), // Sub-topic for granular categorization
+  scope: mysqlEnum("scope", ["School", "Olympiad", "Competitive", "Advanced"]).default("School").notNull(),
   questionType: mysqlEnum("questionType", [
     "mcq",           // Multiple choice
     "true_false",    // True/False

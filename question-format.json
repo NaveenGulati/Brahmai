@@ -1,0 +1,219 @@
+{
+  "questionBankFormat": {
+    "description": "Enhanced question bank format with comprehensive metadata for ICSE Grade 7 Quiz Application",
+    "version": "2.0",
+    "fields": {
+      "board": {
+        "type": "enum",
+        "values": ["CBSE", "ICSE", "IB", "State", "Other"],
+        "required": true,
+        "default": "ICSE",
+        "description": "Educational board/curriculum"
+      },
+      "grade": {
+        "type": "integer",
+        "range": [1, 12],
+        "required": true,
+        "default": 7,
+        "description": "Grade level (1-12)"
+      },
+      "subject": {
+        "type": "string",
+        "maxLength": 100,
+        "required": true,
+        "examples": ["Mathematics", "Science", "English", "Social Studies", "Hindi"],
+        "description": "Subject name"
+      },
+      "topic": {
+        "type": "string",
+        "maxLength": 200,
+        "required": true,
+        "examples": ["Algebra", "Geometry", "Number System", "Mensuration"],
+        "description": "Main topic within the subject"
+      },
+      "subTopic": {
+        "type": "string",
+        "maxLength": 200,
+        "required": false,
+        "examples": ["Linear Equations", "Simple Equations", "Quadratic Equations"],
+        "description": "Sub-topic for granular categorization"
+      },
+      "scope": {
+        "type": "enum",
+        "values": ["School", "Olympiad", "Competitive", "Advanced"],
+        "required": true,
+        "default": "School",
+        "description": "Question scope/difficulty level context"
+      },
+      "questionType": {
+        "type": "enum",
+        "values": ["mcq", "true_false", "fill_blank", "match", "image_based"],
+        "required": true,
+        "description": "Type of question"
+      },
+      "questionText": {
+        "type": "text",
+        "required": true,
+        "description": "The actual question text"
+      },
+      "questionImage": {
+        "type": "string",
+        "maxLength": 500,
+        "required": false,
+        "description": "URL to question image (if applicable)"
+      },
+      "options": {
+        "type": "json",
+        "required": false,
+        "description": "Options for MCQ, match, etc. Format varies by questionType",
+        "formats": {
+          "mcq": ["Option A", "Option B", "Option C", "Option D"],
+          "match": [
+            {"left": "Item 1", "right": "Match 1"},
+            {"left": "Item 2", "right": "Match 2"}
+          ],
+          "fill_blank": ["answer1", "answer2"]
+        }
+      },
+      "correctAnswer": {
+        "type": "text",
+        "required": true,
+        "description": "Correct answer (JSON string for complex answers)",
+        "examples": {
+          "mcq": "Option B",
+          "true_false": "true",
+          "fill_blank": "[\"answer1\", \"answer2\"]",
+          "match": "{\"Item 1\": \"Match 1\", \"Item 2\": \"Match 2\"}"
+        }
+      },
+      "explanation": {
+        "type": "text",
+        "required": false,
+        "description": "Detailed explanation for the correct answer"
+      },
+      "difficulty": {
+        "type": "enum",
+        "values": ["easy", "medium", "hard", "olympiad"],
+        "required": true,
+        "default": "medium",
+        "description": "Question difficulty level"
+      },
+      "points": {
+        "type": "integer",
+        "required": false,
+        "default": 10,
+        "description": "Points awarded for correct answer"
+      },
+      "timeLimit": {
+        "type": "integer",
+        "required": false,
+        "default": 60,
+        "description": "Time limit in seconds"
+      }
+    }
+  },
+  "exampleQuestions": [
+    {
+      "board": "ICSE",
+      "grade": 7,
+      "subject": "Mathematics",
+      "topic": "Algebra",
+      "subTopic": "Simple Equations",
+      "scope": "School",
+      "questionType": "mcq",
+      "questionText": "Solve for x: 2x + 5 = 15",
+      "options": ["x = 3", "x = 5", "x = 7", "x = 10"],
+      "correctAnswer": "x = 5",
+      "explanation": "Subtract 5 from both sides: 2x = 10. Then divide by 2: x = 5",
+      "difficulty": "easy",
+      "points": 10,
+      "timeLimit": 60
+    },
+    {
+      "board": "ICSE",
+      "grade": 7,
+      "subject": "Mathematics",
+      "topic": "Integers",
+      "subTopic": "Operations on Integers",
+      "scope": "School",
+      "questionType": "fill_blank",
+      "questionText": "(-15) + 23 = ___",
+      "options": null,
+      "correctAnswer": "8",
+      "explanation": "When adding a negative and positive integer, subtract the smaller absolute value from the larger and take the sign of the larger: 23 - 15 = 8",
+      "difficulty": "easy",
+      "points": 10,
+      "timeLimit": 45
+    },
+    {
+      "board": "ICSE",
+      "grade": 7,
+      "subject": "Mathematics",
+      "topic": "Fractions and Decimals",
+      "subTopic": "Decimal Operations",
+      "scope": "School",
+      "questionType": "mcq",
+      "questionText": "What is 0.75 expressed as a fraction in simplest form?",
+      "options": ["3/4", "7/10", "15/20", "75/100"],
+      "correctAnswer": "3/4",
+      "explanation": "0.75 = 75/100. Dividing both numerator and denominator by 25 gives 3/4",
+      "difficulty": "medium",
+      "points": 15,
+      "timeLimit": 60
+    },
+    {
+      "board": "ICSE",
+      "grade": 7,
+      "subject": "Science",
+      "topic": "Physics",
+      "subTopic": "Motion and Time",
+      "scope": "School",
+      "questionType": "true_false",
+      "questionText": "Speed is measured in meters per second (m/s).",
+      "options": ["True", "False"],
+      "correctAnswer": "true",
+      "explanation": "Speed is indeed measured in m/s in the SI system, though other units like km/h are also commonly used",
+      "difficulty": "easy",
+      "points": 10,
+      "timeLimit": 30
+    },
+    {
+      "board": "ICSE",
+      "grade": 7,
+      "subject": "Mathematics",
+      "topic": "Geometry",
+      "subTopic": "Triangles",
+      "scope": "Olympiad",
+      "questionType": "mcq",
+      "questionText": "In a triangle ABC, if angle A = 50° and angle B = 60°, what is angle C?",
+      "options": ["60°", "70°", "80°", "90°"],
+      "correctAnswer": "70°",
+      "explanation": "The sum of angles in a triangle is 180°. So angle C = 180° - 50° - 60° = 70°",
+      "difficulty": "medium",
+      "points": 20,
+      "timeLimit": 90
+    }
+  ],
+  "bulkUploadFormat": {
+    "description": "JSON array format for bulk question upload",
+    "example": [
+      {
+        "board": "ICSE",
+        "grade": 7,
+        "subject": "Mathematics",
+        "topic": "Algebra",
+        "subTopic": "Simple Equations",
+        "scope": "School",
+        "questionType": "mcq",
+        "questionText": "Question text here",
+        "options": ["Option A", "Option B", "Option C", "Option D"],
+        "correctAnswer": "Option B",
+        "explanation": "Explanation here",
+        "difficulty": "medium",
+        "points": 10,
+        "timeLimit": 60
+      }
+    ]
+  }
+}
+

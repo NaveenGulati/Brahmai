@@ -168,3 +168,15 @@
 ## Recent Quizzes Enhancement
 - [x] Add completion date to Recent Quizzes format: "Quiz #450001 | Subject | Module | 29th Oct'25, 11:20 AM"
 
+
+
+## Question Bank Metadata Enhancement
+- [x] Add Board field (CBSE, ICSE, IB, State, Other) to questions table
+- [x] Add Grade field to questions table
+- [x] Add Topic field to questions table (in addition to existing Subject)
+- [x] Add SubTopic field to questions table
+- [x] Add Scope field (School, Olympiad, Competitive, Advanced) to questions table
+- [x] Update database schema with new fields
+- [x] Run database migration (pnpm db:push)
+- [x] Provide revised JSON format for question generation (question-format.json)
+
