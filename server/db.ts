@@ -280,7 +280,25 @@ export async function updateQuizSession(id: number, data: Partial<InsertQuizSess
 export async function getUserQuizHistory(userId: number, limit: number = 20) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(quizSessions)
+  return db.select({
+    id: quizSessions.id,
+    userId: quizSessions.userId,
+    moduleId: quizSessions.moduleId,
+    startedAt: quizSessions.startedAt,
+    completedAt: quizSessions.completedAt,
+    totalQuestions: quizSessions.totalQuestions,
+    correctAnswers: quizSessions.correctAnswers,
+    wrongAnswers: quizSessions.wrongAnswers,
+    scorePercentage: quizSessions.scorePercentage,
+    totalPoints: quizSessions.totalPoints,
+    timeTaken: quizSessions.timeTaken,
+    isCompleted: quizSessions.isCompleted,
+    moduleName: modules.name,
+    subjectName: subjects.name,
+  })
+    .from(quizSessions)
+    .leftJoin(modules, eq(quizSessions.moduleId, modules.id))
+    .leftJoin(subjects, eq(modules.subjectId, subjects.id))
     .where(eq(quizSessions.userId, userId))
     .orderBy(desc(quizSessions.startedAt))
     .limit(limit);
@@ -493,5 +511,25 @@ export async function getPointsHistory(userId: number) {
     .orderBy(desc(quizSessions.completedAt));
   
   return sessions;
+}
+
+
+
+export async function deleteChallenge(challengeId: number, parentId: number) {
+  const db = await getDb();
+  if (!db) return;
+  
+  // Verify the challenge belongs to this parent's child
+  const challenge = await db
+    .select({ childId: challenges.childId, parentId: challenges.parentId })
+    .from(challenges)
+    .where(eq(challenges.id, challengeId))
+    .limit(1);
+  
+  if (challenge.length === 0 || challenge[0].parentId !== parentId) {
+    throw new Error("Challenge not found or unauthorized");
+  }
+  
+  await db.delete(challenges).where(eq(challenges.id, challengeId));
 }
 

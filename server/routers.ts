@@ -376,6 +376,16 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
         });
       }),
 
+    // Dismiss completed challenge
+    dismissChallenge: parentProcedure
+      .input(z.object({
+        challengeId: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        await db.deleteChallenge(input.challengeId, ctx.user.id);
+        return { success: true };
+      }),
+
     // Reset child password
     resetChildPassword: parentProcedure
       .input(z.object({

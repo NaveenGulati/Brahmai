@@ -155,3 +155,11 @@
 - [x] Points chart showing blank/empty - fixed by using correct field name 'totalPoints' instead of 'pointsEarned'
 - [x] Updated both Child and Parent dashboard charts
 
+
+
+## Parent Dashboard UI Improvements
+- [x] Add close button to completed challenge cards so parents can dismiss them
+- [x] Added dismissChallenge mutation and backend API
+- [x] Improve Recent Quizzes format to show: "Quiz #450001 | Subject | Topics" instead of just quiz number
+- [x] Updated getUserQuizHistory to include subject and module names
+

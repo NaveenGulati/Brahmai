@@ -586,6 +586,16 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
     },
   });
   
+  const dismissChallengeMutation = trpc.parent.dismissChallenge.useMutation({
+    onSuccess: () => {
+      toast.success("Challenge dismissed");
+      utils.parent.getCompletedChallenges.invalidate({ childId });
+    },
+    onError: (error) => {
+      toast.error("Failed to dismiss challenge: " + error.message);
+    },
+  });
+  
   const resetPasswordMutation = trpc.parent.resetChildPassword.useMutation({
     onSuccess: () => {
       toast.success("Password reset successfully!");
@@ -743,25 +753,37 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
             <h4 className="font-semibold mb-2 text-green-700">✅ Completed Challenges</h4>
             <div className="space-y-3">
               {completedChallenges.map((challenge) => (
-                <Link key={challenge.id} href={`/quiz-review/${challenge.sessionId}`}>
-                  <Card className="p-3 bg-green-50 border-green-200 hover:bg-green-100 cursor-pointer transition-colors">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <p className="font-semibold text-sm text-gray-900">{challenge.subject?.name} - {challenge.module?.name}</p>
-                        <p className="text-xs text-gray-600 mt-1">Completed: {formatCompletedDate(challenge.completedAt!)}</p>
+                <Card key={challenge.id} className="p-3 bg-green-50 border-green-200 relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      dismissChallengeMutation.mutate({ challengeId: challenge.id });
+                    }}
+                    className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Dismiss challenge"
+                  >
+                    ✕
+                  </button>
+                  <Link href={`/quiz-review/${challenge.sessionId}`}>
+                    <div className="hover:bg-green-100 cursor-pointer transition-colors p-1 -m-1 rounded">
+                      <div className="flex justify-between items-start mb-2 pr-6">
+                        <div className="flex-1">
+                          <p className="font-semibold text-sm text-gray-900">{challenge.subject?.name} - {challenge.module?.name}</p>
+                          <p className="text-xs text-gray-600 mt-1">Completed: {formatCompletedDate(challenge.completedAt!)}</p>
+                        </div>
+                        <span className="text-lg font-bold text-green-600">{challenge.session?.scorePercentage}%</span>
                       </div>
-                      <span className="text-lg font-bold text-green-600">{challenge.session?.scorePercentage}%</span>
+                      {challenge.session && (
+                        <div className="flex gap-4 text-xs text-gray-600">
+                          <span>✓ {challenge.session.correctAnswers}/{challenge.session.totalQuestions} correct</span>
+                          {challenge.session.timeTaken && (
+                            <span>⏱️ {Math.floor(challenge.session.timeTaken / 60)}m {challenge.session.timeTaken % 60}s</span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {challenge.session && (
-                      <div className="flex gap-4 text-xs text-gray-600">
-                        <span>✓ {challenge.session.correctAnswers}/{challenge.session.totalQuestions} correct</span>
-                        {challenge.session.timeTaken && (
-                          <span>⏱️ {Math.floor(challenge.session.timeTaken / 60)}m {challenge.session.timeTaken % 60}s</span>
-                        )}
-                      </div>
-                    )}
-                  </Card>
-                </Link>
+                  </Link>
+                </Card>
               ))}
             </div>
           </div>
@@ -773,9 +795,11 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
             <div className="space-y-2">
               {history.map((quiz) => (
                 <Link key={quiz.id} href={`/quiz-review/${quiz.id}`}>
-                  <div className="flex justify-between text-sm p-2 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition-colors">
-                    <span className="text-blue-600 hover:underline">Quiz #{quiz.id}</span>
-                    <span className="font-semibold">{quiz.scorePercentage}%</span>
+                  <div className="flex justify-between items-center text-sm p-2 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition-colors">
+                    <span className="text-blue-600 hover:underline flex-1">
+                      Quiz #{quiz.id} | {quiz.subjectName || 'Unknown'} | {quiz.moduleName || 'Unknown'}
+                    </span>
+                    <span className="font-semibold ml-2">{quiz.scorePercentage}%</span>
                   </div>
                 </Link>
               ))}
