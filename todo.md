@@ -140,3 +140,12 @@
 - [x] Added getQuizReview procedure to child router with AI analysis
 - [x] QuizReview now detects child vs parent login and uses appropriate API
 
+
+
+## Points Ledger Enhancement
+- [x] Add graphical chart to visualize points earned over time in Points Ledger modal
+- [x] Use line chart to show points progression with Recharts
+- [x] Display chart above the transaction list in the modal
+- [x] Make chart responsive and visually appealing with purple theme
+- [x] Added to both Child Dashboard and Parent Dashboard
+

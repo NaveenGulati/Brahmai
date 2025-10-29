@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
@@ -284,6 +285,38 @@ export default function ChildDashboard() {
               Complete history of points earned from quizzes
             </DialogDescription>
           </DialogHeader>
+          
+          {/* Points Chart */}
+          {pointsHistory && pointsHistory.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold mb-3 text-gray-700">Points Progress Over Time</h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={pointsHistory.slice().reverse()}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis 
+                    dataKey="completedAt" 
+                    tickFormatter={(value) => new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    stroke="#666"
+                    fontSize={12}
+                  />
+                  <YAxis stroke="#666" fontSize={12} label={{ value: 'Points', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip 
+                    labelFormatter={(value) => new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    formatter={(value: any) => [`${value} points`, 'Earned']}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="pointsEarned" 
+                    stroke="#8b5cf6" 
+                    strokeWidth={2}
+                    dot={{ fill: '#8b5cf6', r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          
           <div className="space-y-2">
             {pointsHistory && pointsHistory.length > 0 ? (
               pointsHistory.map((entry, index) => (
