@@ -153,10 +153,16 @@ export const appRouter = router({
         });
       }),
 
-    // Update question
+    // Update question (enhanced with metadata fields)
     updateQuestion: parentProcedure
       .input(z.object({
         id: z.number(),
+        board: z.string().optional(),
+        grade: z.number().optional(),
+        subject: z.string().optional(),
+        topic: z.string().optional(),
+        subTopic: z.string().optional(),
+        scope: z.string().optional(),
         questionType: z.enum(['mcq', 'true_false', 'fill_blank', 'match', 'image_based']).optional(),
         questionText: z.string().optional(),
         questionImage: z.string().optional(),
@@ -168,8 +174,8 @@ export const appRouter = router({
         timeLimit: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        const { id, ...data } = input;
-        return db.updateQuestion(id, data);
+        const { id, ...updates } = input;
+        return db.updateQuestion(id, updates);
       }),
 
     // Delete question
@@ -179,11 +185,16 @@ export const appRouter = router({
         return db.deleteQuestion(input.id);
       }),
 
-    // Bulk upload questions from JSON
+    // Bulk upload questions from JSON with auto-creation of subjects/modules
     bulkUploadQuestions: parentProcedure
       .input(z.object({
-        moduleId: z.number(),
         questions: z.array(z.object({
+          board: z.string(),
+          grade: z.number(),
+          subject: z.string(),
+          topic: z.string(),
+          subTopic: z.string().optional(),
+          scope: z.string(),
           questionType: z.enum(['mcq', 'true_false', 'fill_blank', 'match', 'image_based']),
           questionText: z.string(),
           questionImage: z.string().optional(),
@@ -196,12 +207,43 @@ export const appRouter = router({
         }))
       }))
       .mutation(async ({ input, ctx }) => {
-        const questionsWithCreator = input.questions.map(q => ({
-          ...q,
-          moduleId: input.moduleId,
-          createdBy: ctx.user.id,
-        }));
-        return db.bulkCreateQuestions(questionsWithCreator);
+        return db.bulkUploadQuestionsWithMetadata(input.questions, ctx.user.id);
+      }),
+
+
+
+    // Delete a question
+    deleteQuestionPermanent: parentProcedure
+      .input(z.object({ questionId: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteQuestion(input.questionId);
+      }),
+
+    // Get all questions with optional filters
+    getAllQuestions: parentProcedure
+      .input(z.object({
+        subject: z.string().optional(),
+        topic: z.string().optional(),
+        board: z.string().optional(),
+        grade: z.number().optional(),
+        scope: z.string().optional(),
+        difficulty: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        return db.getAllQuestionsWithFilters(input || {});
+      }),
+
+    // Get unique subjects from question bank
+    getUniqueSubjects: parentProcedure
+      .query(async () => {
+        return db.getUniqueSubjects();
+      }),
+
+    // Get unique topics for a subject
+    getUniqueTopics: parentProcedure
+      .input(z.object({ subject: z.string() }))
+      .query(async ({ input }) => {
+        return db.getUniqueTopicsForSubject(input.subject);
       }),
 
     // Get child progress

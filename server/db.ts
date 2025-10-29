@@ -237,17 +237,7 @@ export async function createQuestion(data: InsertQuestion) {
   return db.insert(questions).values(data);
 }
 
-export async function updateQuestion(id: number, data: Partial<InsertQuestion>) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  return db.update(questions).set(data).where(eq(questions.id, id));
-}
-
-export async function deleteQuestion(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  return db.update(questions).set({ isActive: false }).where(eq(questions.id, id));
-}
+// updateQuestion and deleteQuestion moved to end of file with enhanced signatures
 
 export async function bulkCreateQuestions(questionsData: InsertQuestion[]) {
   const db = await getDb();
@@ -531,5 +521,242 @@ export async function deleteChallenge(challengeId: number, parentId: number) {
   }
   
   await db.delete(challenges).where(eq(challenges.id, challengeId));
+}
+
+
+
+
+// Bulk upload questions with metadata (auto-create subjects/modules)
+export async function bulkUploadQuestionsWithMetadata(
+  questionsData: Array<{
+    board: string;
+    grade: number;
+    subject: string;
+    topic: string;
+    subTopic?: string;
+    scope: string;
+    questionType: string;
+    questionText: string;
+    questionImage?: string;
+    options: any;
+    correctAnswer: string;
+    explanation?: string;
+    difficulty: string;
+    points: number;
+    timeLimit: number;
+  }>,
+  createdBy: number
+) {
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
+  const results = {
+    created: 0,
+    subjectsCreated: 0,
+    modulesCreated: 0,
+    errors: [] as string[],
+  };
+
+  // Group questions by subject and topic
+  const groupedQuestions = new Map<string, Map<string, typeof questionsData>>();
+  
+  for (const q of questionsData) {
+    if (!groupedQuestions.has(q.subject)) {
+      groupedQuestions.set(q.subject, new Map());
+    }
+    const subjectMap = groupedQuestions.get(q.subject)!;
+    if (!subjectMap.has(q.topic)) {
+      subjectMap.set(q.topic, []);
+    }
+    subjectMap.get(q.topic)!.push(q);
+  }
+
+  // Process each subject and topic
+  for (const [subjectName, topicsMap] of Array.from(groupedQuestions.entries())) {
+    try {
+      // Find or create subject
+      let subjectResult = await database.select().from(subjects)
+        .where(eq(subjects.name, subjectName))
+        .limit(1);
+      let subject = subjectResult.length > 0 ? subjectResult[0] : undefined;
+
+      if (!subject) {
+        // Create subject with minimal required fields
+        await database.insert(subjects).values({
+          name: subjectName,
+          code: subjectName.substring(0, 3).toUpperCase(), // Generate simple code
+        });
+        // Query the newly created subject
+        subjectResult = await database.select().from(subjects)
+          .where(eq(subjects.name, subjectName))
+          .limit(1);
+        subject = subjectResult[0];
+        results.subjectsCreated++;
+      }
+
+      // Process each topic (module)
+      for (const [topicName, questionsForTopic] of Array.from(topicsMap.entries())) {
+        try {
+          // Find or create module
+          let moduleResult = await database.select().from(modules)
+            .where(and(
+              eq(modules.subjectId, subject!.id),
+              eq(modules.name, topicName)
+            ))
+            .limit(1);
+          let module = moduleResult.length > 0 ? moduleResult[0] : undefined;
+
+          if (!module) {
+            await database.insert(modules).values({
+              subjectId: subject!.id,
+              name: topicName,
+            });
+            // Query the newly created module
+            moduleResult = await database.select().from(modules)
+              .where(and(
+                eq(modules.subjectId, subject!.id),
+                eq(modules.name, topicName)
+              ))
+              .limit(1);
+            module = moduleResult[0];
+            results.modulesCreated++;
+          }
+
+          // Insert questions for this module
+          for (const q of questionsForTopic) {
+            try {
+              await database.insert(questions).values({
+                moduleId: module!.id,
+                board: q.board as any,
+                grade: q.grade,
+                subject: q.subject,
+                topic: q.topic,
+                subTopic: q.subTopic || null,
+                scope: q.scope as any,
+                questionType: q.questionType as any,
+                questionText: q.questionText,
+                questionImage: q.questionImage || null,
+                options: q.options,
+                correctAnswer: q.correctAnswer,
+                explanation: q.explanation || null,
+                difficulty: q.difficulty as any,
+                points: q.points,
+                timeLimit: q.timeLimit,
+                createdBy,
+              });
+              results.created++;
+            } catch (error) {
+              results.errors.push(`Failed to create question: ${q.questionText.substring(0, 50)}...`);
+            }
+          }
+        } catch (error) {
+          results.errors.push(`Failed to process topic: ${topicName}`);
+        }
+      }
+    } catch (error) {
+      results.errors.push(`Failed to process subject: ${subjectName}`);
+    }
+  }
+
+  return results;
+}
+
+
+// Update a question
+export async function updateQuestion(
+  questionId: number,
+  updates: {
+    board?: string;
+    grade?: number;
+    subject?: string;
+    topic?: string;
+    subTopic?: string;
+    scope?: string;
+    questionType?: string;
+    questionText?: string;
+    questionImage?: string;
+    options?: any;
+    correctAnswer?: string;
+    explanation?: string;
+    difficulty?: string;
+    points?: number;
+    timeLimit?: number;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return db.update(questions)
+    .set({
+      ...updates,
+      board: updates.board as any,
+      scope: updates.scope as any,
+      questionType: updates.questionType as any,
+      difficulty: updates.difficulty as any,
+    })
+    .where(eq(questions.id, questionId));
+}
+
+// Delete a question
+export async function deleteQuestion(questionId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return db.delete(questions).where(eq(questions.id, questionId));
+}
+
+// Get all questions with optional filtering
+export async function getAllQuestionsWithFilters(filters?: {
+  subject?: string;
+  topic?: string;
+  board?: string;
+  grade?: number;
+  scope?: string;
+  difficulty?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  let query = db.select().from(questions);
+  
+  const conditions = [];
+  if (filters?.subject) conditions.push(eq(questions.subject, filters.subject));
+  if (filters?.topic) conditions.push(eq(questions.topic, filters.topic));
+  if (filters?.board) conditions.push(eq(questions.board, filters.board as any));
+  if (filters?.grade) conditions.push(eq(questions.grade, filters.grade));
+  if (filters?.scope) conditions.push(eq(questions.scope, filters.scope as any));
+  if (filters?.difficulty) conditions.push(eq(questions.difficulty, filters.difficulty as any));
+  
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+  
+  return query.orderBy(questions.createdAt);
+}
+
+// Get unique subjects from questions
+export async function getUniqueSubjects() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const results = await db.selectDistinct({ subject: questions.subject })
+    .from(questions)
+    .where(eq(questions.isActive, true));
+  
+  return results.map(r => r.subject).filter(Boolean);
+}
+
+// Get unique topics for a subject
+export async function getUniqueTopicsForSubject(subject: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const results = await db.selectDistinct({ topic: questions.topic })
+    .from(questions)
+    .where(and(
+      eq(questions.subject, subject),
+      eq(questions.isActive, true)
+    ));
+  
+  return results.map(r => r.topic).filter(Boolean);
 }
 

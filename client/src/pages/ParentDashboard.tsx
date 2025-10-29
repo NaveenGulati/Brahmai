@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import QuestionBankManager from '@/components/QuestionBankManager';
 
 // Format date as "29th Oct 2025, 11:22 AM"
 function formatCompletedDate(date: Date | string): string {
@@ -154,7 +155,6 @@ export default function ParentDashboard() {
     try {
       const questions = JSON.parse(jsonText);
       bulkUploadMutation.mutate({
-        moduleId: selectedModule!,
         questions,
       });
     } catch (error) {
@@ -186,195 +186,7 @@ export default function ParentDashboard() {
 
           {/* Question Bank Tab */}
           <TabsContent value="questions" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Manage Question Bank</CardTitle>
-                <CardDescription>Add, edit, or upload questions for your child</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Subject Selection */}
-                <div>
-                  <Label>Select Subject</Label>
-                  <Select onValueChange={(val) => { setSelectedSubject(parseInt(val)); setSelectedModule(null); }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subjects?.map((subject) => (
-                        <SelectItem key={subject.id} value={subject.id.toString()}>
-                          {subject.icon} {subject.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Module Selection */}
-                {selectedSubject && (
-                  <div>
-                    <Label>Select Module/Topic</Label>
-                    <Select onValueChange={(val) => setSelectedModule(parseInt(val))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose a module" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {modules?.map((module) => (
-                          <SelectItem key={module.id} value={module.id.toString()}>
-                            {module.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                {selectedModule && (
-                  <div className="flex gap-2">
-                    <Dialog open={isAddQuestionOpen} onOpenChange={setIsAddQuestionOpen}>
-                      <DialogTrigger asChild>
-                        <Button>Add Question</Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Add New Question</DialogTitle>
-                          <DialogDescription>Create a new question for this module</DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={handleAddQuestion} className="space-y-4">
-                          <div>
-                            <Label>Question Type</Label>
-                            <Select name="questionType" defaultValue="mcq">
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="mcq">Multiple Choice</SelectItem>
-                                <SelectItem value="true_false">True/False</SelectItem>
-                                <SelectItem value="fill_blank">Fill in the Blank</SelectItem>
-                                <SelectItem value="match">Match the Following</SelectItem>
-                                <SelectItem value="image_based">Image Based</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div>
-                            <Label>Question Text</Label>
-                            <Textarea name="questionText" required placeholder="Enter the question..." />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label>Option 1</Label>
-                              <Input name="option1" placeholder="First option" />
-                            </div>
-                            <div>
-                              <Label>Option 2</Label>
-                              <Input name="option2" placeholder="Second option" />
-                            </div>
-                            <div>
-                              <Label>Option 3</Label>
-                              <Input name="option3" placeholder="Third option" />
-                            </div>
-                            <div>
-                              <Label>Option 4</Label>
-                              <Input name="option4" placeholder="Fourth option" />
-                            </div>
-                          </div>
-
-                          <div>
-                            <Label>Correct Answer</Label>
-                            <Input name="correctAnswer" required placeholder="Enter correct answer" />
-                          </div>
-
-                          <div>
-                            <Label>Explanation</Label>
-                            <Textarea name="explanation" placeholder="Explain the answer..." />
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4">
-                            <div>
-                              <Label>Difficulty</Label>
-                              <Select name="difficulty" defaultValue="medium">
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="easy">Easy</SelectItem>
-                                  <SelectItem value="medium">Medium</SelectItem>
-                                  <SelectItem value="hard">Hard</SelectItem>
-                                  <SelectItem value="olympiad">Olympiad</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label>Points</Label>
-                              <Input name="points" type="number" defaultValue="10" />
-                            </div>
-                            <div>
-                              <Label>Time Limit (sec)</Label>
-                              <Input name="timeLimit" type="number" defaultValue="60" />
-                            </div>
-                          </div>
-
-                          <Button type="submit" className="w-full">Add Question</Button>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-
-                    <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline">Bulk Upload (JSON)</Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Bulk Upload Questions</DialogTitle>
-                          <DialogDescription>Upload multiple questions using JSON format</DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={handleBulkUpload} className="space-y-4">
-                          <div>
-                            <Label>JSON Data</Label>
-                            <Textarea 
-                              name="jsonData" 
-                              rows={15}
-                              placeholder={`[\n  {\n    "questionType": "mcq",\n    "questionText": "What is 2+2?",\n    "options": ["2", "3", "4", "5"],\n    "correctAnswer": "4",\n    "explanation": "2+2 equals 4",\n    "difficulty": "easy",\n    "points": 10,\n    "timeLimit": 60\n  }\n]`}
-                            />
-                          </div>
-                          <Button type="submit" className="w-full">Upload Questions</Button>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                )}
-
-                {/* Questions List */}
-                {questions && questions.length > 0 && (
-                  <div className="space-y-2 mt-6">
-                    <h3 className="font-semibold">Questions ({questions.length})</h3>
-                    {questions.map((q) => (
-                      <Card key={q.id} className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <p className="font-medium">{q.questionText}</p>
-                            <div className="flex gap-2 mt-2 text-xs text-gray-500">
-                              <span className="bg-blue-100 px-2 py-1 rounded">{q.questionType}</span>
-                              <span className="bg-green-100 px-2 py-1 rounded">{q.difficulty}</span>
-                              <span className="bg-purple-100 px-2 py-1 rounded">{q.points} pts</span>
-                            </div>
-                          </div>
-                          <Button 
-                            variant="destructive" 
-                            size="sm"
-                            onClick={() => deleteQuestionMutation.mutate({ id: q.id })}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <QuestionBankManager />
           </TabsContent>
 
           {/* Child Progress Tab */}

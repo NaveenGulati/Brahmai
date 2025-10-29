@@ -192,3 +192,25 @@
 - [x] Beautiful gradient UI with live preview
 - [x] Question cards with metadata badges
 
+
+
+## Question Bank Upload & Management Redesign
+- [x] Add backend API for bulk question upload with auto-parsing (bulkUploadQuestionsWithMetadata)
+- [x] Auto-create subjects and modules from uploaded question metadata
+- [x] Add backend API for question update (updateQuestion with all metadata fields)
+- [x] Add backend API for question delete (deleteQuestion)
+- [x] Add backend API to get all questions with filters (getAllQuestionsWithFilters)
+- [x] Add backend API to get unique subjects (getUniqueSubjects)
+- [x] Add backend API to get unique topics for a subject (getUniqueTopics)
+- [x] Replace current manual question entry form with JSON file upload UI
+- [x] Add file upload input with JSON validation
+- [x] Parse uploaded JSON and call bulkUploadQuestions API
+- [x] Create browse interface: Subject → Topic hierarchy
+- [x] Display questions organized by subject and topic with metadata badges
+- [x] Make questions editable by clicking on them (inline editing)
+- [x] Add delete button for each question with confirmation
+- [x] Auto-refresh subject and topic dropdowns when new data is added
+- [x] Show success/error messages for upload operations
+- [x] Created QuestionBankManager component with upload and browse/edit features
+- [x] Integrated QuestionBankManager into Parent Dashboard
+
