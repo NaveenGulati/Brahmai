@@ -387,6 +387,32 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
         await resetChildPassword(input.childId, ctx.user.id, input.newPassword);
         return { success: true };
       }),
+
+    // Get completed challenges with quiz results
+    getCompletedChallenges: parentProcedure
+      .input(z.object({ childId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const challenges = await db.getChildChallenges(input.childId);
+        const completed = challenges.filter(c => c.status === 'completed' && c.sessionId);
+        
+        // Fetch quiz session details for each completed challenge
+        const challengesWithResults = await Promise.all(
+          completed.map(async (challenge) => {
+            const session = challenge.sessionId ? await db.getQuizSessionById(challenge.sessionId) : null;
+            const module = challenge.moduleId ? await db.getModuleById(challenge.moduleId) : null;
+            const subject = module?.subjectId ? await db.getSubjectById(module.subjectId) : null;
+            
+            return {
+              ...challenge,
+              session,
+              module,
+              subject,
+            };
+          })
+        );
+        
+        return challengesWithResults;
+      }),
   }),
 
   // ============= CHILD MODULE =============
@@ -621,14 +647,16 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
     completeChallenge: publicProcedure
       .input(z.object({ 
         challengeId: z.number(),
-        childId: z.number().optional()
+        childId: z.number().optional(),
+        sessionId: z.number().optional()
       }))
       .mutation(async ({ ctx, input }) => {
         const userId = input.childId || ctx.user?.id;
         if (!userId) {
           throw new TRPCError({ code: 'UNAUTHORIZED' });
         }
-        return db.completeChallenge(input.challengeId, userId);
+        await db.updateChallengeStatus(input.challengeId, 'completed', input.sessionId);
+        return { success: true };
       }),
   }),
 

@@ -26,6 +26,8 @@ export default function QuizPlay() {
   const [isQuizComplete, setIsQuizComplete] = useState(false);
   const [quizResults, setQuizResults] = useState<any>(null);
 
+  const utils = trpc.useUtils();
+
   const startQuizMutation = trpc.child.startQuiz.useMutation({
     onSuccess: (data) => {
       console.log('Quiz started:', data);
@@ -74,12 +76,18 @@ export default function QuizPlay() {
       setQuizResults(results);
       toast.success("Quiz completed!");
       
+      // Invalidate queries to refresh stats and challenges
+      utils.child.getMyStats.invalidate();
+      utils.child.getChallenges.invalidate();
+      utils.parent.getCompletedChallenges.invalidate();
+      
       // Check if this was a challenge and mark it complete
       const challengeId = localStorage.getItem('currentChallengeId');
       if (challengeId) {
         completeChallengeM.mutate({ 
           challengeId: parseInt(challengeId),
-          childId: childUser?.id
+          childId: childUser?.id,
+          sessionId: sessionId!
         });
         localStorage.removeItem('currentChallengeId');
         toast.success("🎯 Challenge completed!");

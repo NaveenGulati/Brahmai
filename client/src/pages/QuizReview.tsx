@@ -101,14 +101,16 @@ export default function QuizReview() {
                 <span>{session.totalQuestions} questions</span>
               </div>
             </div>
-            <div className="mt-4 flex justify-center">
-              <Button 
-                onClick={() => setLocation(`/quiz/${session.moduleId}`)}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                🔄 Reattempt Test
-              </Button>
-            </div>
+            {user?.role === 'child' && (
+              <div className="mt-4 flex justify-center">
+                <Button 
+                  onClick={() => setLocation(`/quiz/${session.moduleId}`)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  🔄 Reattempt Test
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

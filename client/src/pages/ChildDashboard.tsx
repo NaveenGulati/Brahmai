@@ -89,7 +89,7 @@ export default function ChildDashboard() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-sm font-semibold text-gray-900">{childUser?.name || user?.name}</p>
-              <p className="text-xs text-gray-500">{childUser?.totalPoints || stats?.totalPoints || 0} points</p>
+              <p className="text-xs text-gray-500">{stats?.totalPoints || 0} points</p>
             </div>
             <Button variant="outline" size="sm" onClick={handleLogout}>
               Logout
@@ -107,24 +107,9 @@ export default function ChildDashboard() {
             </h2>
             <div className="space-y-3">
               {pendingChallenges.map((challenge) => (
-                <Card key={challenge.id} className="bg-white relative">
-                  <button
-                    onClick={() => {
-                      completeChallengeM.mutate({ 
-                        challengeId: challenge.id,
-                        childId: childUser?.id
-                      });
-                      toast.success("Challenge dismissed");
-                    }}
-                    className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors"
-                    title="Dismiss challenge"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                <Card key={challenge.id} className="bg-white">
                   <CardHeader>
-                    <CardTitle className="text-lg pr-8">{challenge.title}</CardTitle>
+                    <CardTitle className="text-lg">{challenge.title}</CardTitle>
                     {challenge.message && (
                       <CardDescription className="text-base">
                         {challenge.message.split(/\*\*(.+?)\*\*/).map((part, i) => 

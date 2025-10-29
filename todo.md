@@ -84,3 +84,29 @@
 ## New Features
 - [x] Add dismiss (X) button to challenge notifications so children can manually remove them after reading
 
+
+
+## Challenge System Improvements
+- [x] Remove X dismiss button from child challenge notifications
+- [x] Challenges should only disappear when quiz is completed successfully
+- [x] If quiz is incomplete (child left in between), notification should stay
+- [x] Add completed challenges section in Parent Dashboard
+- [x] Show brief summary of challenge results (score, time, accuracy)
+- [x] Make completed challenges clickable to redirect to quiz review page
+- [x] Display challenge results in well-formatted cards
+
+
+
+## Reattempt Quiz Fixes
+- [x] Fix "Reattempt Test" button in quiz review - only show to children, not parents
+- [x] Ensure reattempt uses random questions from the same module pool, not the exact same questions (already implemented)
+- [x] Add completed challenges section in Parent Dashboard showing results summary
+- [x] Make completed challenges clickable to view full quiz review
+
+
+
+## New Bugs Found
+- [x] Points mismatch: Header shows 40 points but dashboard shows 60 points - fixed by using live stats query instead of cached localStorage
+- [x] Completed challenges not showing in Parent Dashboard - fixed by passing sessionId and invalidating queries
+- [ ] Numeric input validation: Questions expecting numeric answers should only accept numbers, not alphabets (requires question metadata enhancement)
+

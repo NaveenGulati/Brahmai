@@ -541,6 +541,7 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
   
   const { data: stats } = trpc.parent.getChildProgress.useQuery({ childId });
   const { data: history } = trpc.parent.getChildQuizHistory.useQuery({ childId, limit: 5 });
+  const { data: completedChallenges } = trpc.parent.getCompletedChallenges.useQuery({ childId });
   const { data: subjects } = trpc.parent.getSubjects.useQuery();
   const { data: modules } = trpc.parent.getModules.useQuery(
     { subjectId: challengeSubject! },
@@ -706,6 +707,35 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
           </div>
         ) : (
           <p className="text-gray-500">No data available</p>
+        )}
+
+        {completedChallenges && completedChallenges.length > 0 && (
+          <div className="mt-4">
+            <h4 className="font-semibold mb-2 text-green-700">✅ Completed Challenges</h4>
+            <div className="space-y-3">
+              {completedChallenges.map((challenge) => (
+                <Link key={challenge.id} href={`/quiz-review/${challenge.sessionId}`}>
+                  <Card className="p-3 bg-green-50 border-green-200 hover:bg-green-100 cursor-pointer transition-colors">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm text-gray-900">{challenge.subject?.name} - {challenge.module?.name}</p>
+                        <p className="text-xs text-gray-600 mt-1">Completed: {new Date(challenge.completedAt!).toLocaleDateString()}</p>
+                      </div>
+                      <span className="text-lg font-bold text-green-600">{challenge.session?.scorePercentage}%</span>
+                    </div>
+                    {challenge.session && (
+                      <div className="flex gap-4 text-xs text-gray-600">
+                        <span>✓ {challenge.session.correctAnswers}/{challenge.session.totalQuestions} correct</span>
+                        {challenge.session.timeTaken && (
+                          <span>⏱️ {Math.floor(challenge.session.timeTaken / 60)}m {challenge.session.timeTaken % 60}s</span>
+                        )}
+                      </div>
+                    )}
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
         )}
 
         {history && history.length > 0 && (
