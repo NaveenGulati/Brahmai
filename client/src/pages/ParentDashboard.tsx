@@ -797,7 +797,7 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
                 <Link key={quiz.id} href={`/quiz-review/${quiz.id}`}>
                   <div className="flex justify-between items-center text-sm p-2 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition-colors">
                     <span className="text-blue-600 hover:underline flex-1">
-                      Quiz #{quiz.id} | {quiz.subjectName || 'Unknown'} | {quiz.moduleName || 'Unknown'}
+                      Quiz #{quiz.id} | {quiz.subjectName || 'Unknown'} | {quiz.moduleName || 'Unknown'} | {formatCompletedDate(quiz.completedAt!)}
                     </span>
                     <span className="font-semibold ml-2">{quiz.scorePercentage}%</span>
                   </div>

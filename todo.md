@@ -163,3 +163,8 @@
 - [x] Improve Recent Quizzes format to show: "Quiz #450001 | Subject | Topics" instead of just quiz number
 - [x] Updated getUserQuizHistory to include subject and module names
 
+
+
+## Recent Quizzes Enhancement
+- [x] Add completion date to Recent Quizzes format: "Quiz #450001 | Subject | Module | 29th Oct'25, 11:20 AM"
+
