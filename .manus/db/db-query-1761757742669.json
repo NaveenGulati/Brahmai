@@ -1,0 +1,70 @@
+{
+  "query": "SELECT id, subject, topic, questionText FROM questions LIMIT 10",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute SELECT id, subject, topic, questionText FROM questions LIMIT 10",
+  "rows": [
+    {
+      "id": "1",
+      "subject": "Maths",
+      "topic": "Integers",
+      "questionText": "What is the value of (-15) + 8?"
+    },
+    {
+      "id": "2",
+      "subject": "NULL",
+      "topic": "NULL",
+      "questionText": "What is (-6) × (-4)?"
+    },
+    {
+      "id": "3",
+      "subject": "NULL",
+      "topic": "NULL",
+      "questionText": "The product of two negative integers is always negative."
+    },
+    {
+      "id": "4",
+      "subject": "NULL",
+      "topic": "NULL",
+      "questionText": "(-48) ÷ 6 = ?"
+    },
+    {
+      "id": "5",
+      "subject": "NULL",
+      "topic": "NULL",
+      "questionText": "What is the value of: (-5) + (-3) - (-8)?"
+    },
+    {
+      "id": "6",
+      "subject": "NULL",
+      "topic": "NULL",
+      "questionText": "If a = -3 and b = 5, what is the value of a² - 2ab + b²?"
+    },
+    {
+      "id": "7",
+      "subject": "NULL",
+      "topic": "NULL",
+      "questionText": "The temperature at 6 AM was -5°C. It increased by 3°C every hour until noon. What was the temperature at noon?"
+    },
+    {
+      "id": "8",
+      "subject": "NULL",
+      "topic": "NULL",
+      "questionText": "Which of the following is the largest? (-1)⁵⁰, (-1)⁵¹, 0, 1"
+    },
+    {
+      "id": "9",
+      "subject": "NULL",
+      "topic": "NULL",
+      "questionText": "What is 3/4 + 1/2?"
+    },
+    {
+      "id": "10",
+      "subject": "NULL",
+      "topic": "NULL",
+      "questionText": "Convert 0.625 to a fraction in simplest form."
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsubject\ttopic\tquestionText\n1\tMaths\tIntegers\tWhat is the value of (-15) + 8?\n2\tNULL\tNULL\tWhat is (-6) × (-4)?\n3\tNULL\tNULL\tThe product of two negative integers is always negative.\n4\tNULL\tNULL\t(-48) ÷ 6 = ?\n5\tNULL\tNULL\tWhat is the value of: (-5) + (-3) - (-8)?\n6\tNULL\tNULL\tIf a = -3 and b = 5, what is the value of a² - 2ab + b²?\n7\tNULL\tNULL\tThe temperature at 6 AM was -5°C. It increased by 3°C every hour until noon. What was the temperature at noon?\n8\tNULL\tNULL\tWhich of the following is the largest? (-1)⁵⁰, (-1)⁵¹, 0, 1\n9\tNULL\tNULL\tWhat is 3/4 + 1/2?\n10\tNULL\tNULL\tConvert 0.625 to a fraction in simplest form.\n",
+  "stderr": "",
+  "execution_time_ms": 2196
+}

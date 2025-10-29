@@ -214,3 +214,25 @@
 - [x] Created QuestionBankManager component with upload and browse/edit features
 - [x] Integrated QuestionBankManager into Parent Dashboard
 
+
+
+
+## Parent OAuth Login Issue on Manus iPad App
+- [ ] Investigate OAuth login behavior on Manus iPad app vs web browser
+- [ ] Check if cookie handling differs in native app WebView
+- [ ] Test parent login in regular web browser (Safari/Chrome) to isolate issue
+- [ ] Check if OAuth redirect flow needs special handling for Manus app
+- [ ] Verify session cookie persistence in native app environment
+- [ ] Child login works fine - need to understand why parent OAuth differs
+
+
+
+
+## Bug: Subject Dropdown Not Showing Subjects
+- [x] Subject dropdown only shows "All Subjects" option
+- [x] Questions display with subject badges (Maths, etc.) but dropdown doesn't populate
+- [x] Root cause: Old questions didn't have subject field populated (was NULL)
+- [x] Fix: Updated existing questions to populate subject and topic from modules/subjects tables
+- [x] Subject dropdown now shows actual subjects from database
+
+

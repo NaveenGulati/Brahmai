@@ -1,0 +1,15 @@
+{
+  "query": "SELECT \n  COUNT(*) as total,\n  SUM(CASE WHEN subject IS NULL THEN 1 ELSE 0 END) as null_subjects,\n  SUM(CASE WHEN subject IS NOT NULL THEN 1 ELSE 0 END) as has_subjects\nFROM questions WHERE isActive = 1",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute SELECT \n  COUNT(*) as total,\n  SUM(CASE WHEN subject IS NULL THEN 1 ELSE 0 END) as null_subjects,\n  SUM(CASE WHEN subject IS NOT NULL THEN 1 ELSE 0 END) as has_subjects\nFROM questions WHERE isActive = 1",
+  "rows": [
+    {
+      "total": "19",
+      "null_subjects": "18",
+      "has_subjects": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\tnull_subjects\thas_subjects\n19\t18\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1532
+}
