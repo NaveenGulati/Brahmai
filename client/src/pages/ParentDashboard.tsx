@@ -12,6 +12,25 @@ import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
 
+// Format date as "29th Oct 2025, 11:22 AM"
+function formatCompletedDate(date: Date | string): string {
+  const d = new Date(date);
+  const day = d.getDate();
+  const suffix = (day: number) => {
+    if (day > 3 && day < 21) return 'th';
+    switch (day % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
+  };
+  const month = d.toLocaleString('en-US', { month: 'short' });
+  const year = d.getFullYear();
+  const time = d.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return `${day}${suffix(day)} ${month} ${year}, ${time}`;
+}
+
 export default function ParentDashboard() {
   const { user, loading, isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
@@ -719,7 +738,7 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1">
                         <p className="font-semibold text-sm text-gray-900">{challenge.subject?.name} - {challenge.module?.name}</p>
-                        <p className="text-xs text-gray-600 mt-1">Completed: {new Date(challenge.completedAt!).toLocaleDateString()}</p>
+                        <p className="text-xs text-gray-600 mt-1">Completed: {formatCompletedDate(challenge.completedAt!)}</p>
                       </div>
                       <span className="text-lg font-bold text-green-600">{challenge.session?.scorePercentage}%</span>
                     </div>

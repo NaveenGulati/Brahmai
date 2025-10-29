@@ -105,8 +105,13 @@
 
 
 
-## New Bugs Found
+## Bugs Fixed
 - [x] Points mismatch: Header shows 40 points but dashboard shows 60 points - fixed by using live stats query instead of cached localStorage
 - [x] Completed challenges not showing in Parent Dashboard - fixed by passing sessionId and invalidating queries
-- [ ] Numeric input validation: Questions expecting numeric answers should only accept numbers, not alphabets (requires question metadata enhancement)
+- [x] Input validation: Keeping alphanumeric input (not restricting to numbers only) to support diverse answer formats: negative numbers, percentages, powers, fractions, decimals, and variables
+
+
+
+## UI Improvements
+- [x] Change completed challenge date format from "10/29/2025" to "29th Oct 2025, 11:22 AM"
 
