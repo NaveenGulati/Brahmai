@@ -349,9 +349,16 @@ export default function QuizPlay() {
             <Button 
               className="w-full py-6 text-lg" 
               onClick={handleSubmitAnswer}
-              disabled={submitAnswerMutation.isPending}
+              disabled={submitAnswerMutation.isPending || getNextQuestionMutation.isPending}
             >
-              {currentQuestionNumber === totalQuestions ? "Finish Quiz" : "Next Question"} →
+              {submitAnswerMutation.isPending || getNextQuestionMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2 inline-block"></div>
+                  Loading next question...
+                </>
+              ) : (
+                <>{currentQuestionNumber === totalQuestions ? "Finish Quiz" : "Next Question"} →</>
+              )}
             </Button>
           </CardContent>
         </Card>

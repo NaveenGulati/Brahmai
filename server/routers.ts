@@ -610,31 +610,43 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
           throw new TRPCError({ code: 'NOT_FOUND', message: 'No more questions available' });
         }
 
-        // Calculate current performance for AI analysis
+        // Calculate current performance for fast rule-based adaptation
         const correctAnswers = responses.filter(r => r.isCorrect).length;
         const questionsAnswered = responses.length;
-        const avgTimePerQuestion = questionsAnswered > 0 
-          ? responses.reduce((sum, r) => sum + (r.timeSpent || 0), 0) / questionsAnswered 
-          : 30;
+        const accuracyRate = questionsAnswered > 0 ? correctAnswers / questionsAnswered : 0.5;
         
-        const lastDifficulty = responses.length > 0 
-          ? await db.getQuestionById(responses[responses.length - 1].questionId).then(q => q?.difficulty || 'medium')
-          : 'medium';
+        // Get last 3 responses for recent performance
+        const recentResponses = responses.slice(-3);
+        const recentCorrect = recentResponses.filter(r => r.isCorrect).length;
+        const recentAccuracy = recentResponses.length > 0 ? recentCorrect / recentResponses.length : 0.5;
 
-        // Use AI to determine next difficulty
-        const { getNextQuestionDifficulty } = await import('./_core/adaptive-quiz');
-        const { difficulty, reasoning } = await getNextQuestionDifficulty(
-          session.userId,
-          session.moduleId,
-          {
-            questionsAnswered,
-            correctAnswers,
-            currentDifficulty: lastDifficulty,
-            timePerQuestion: avgTimePerQuestion
-          }
-        );
+        // Fast rule-based adaptive algorithm (instant, no AI delay)
+        let difficulty: string;
+        let reasoning: string;
 
-        console.log(`AI selected difficulty: ${difficulty} - Reasoning: ${reasoning}`);
+        if (questionsAnswered === 0) {
+          // Start with medium
+          difficulty = 'medium';
+          reasoning = 'Starting difficulty';
+        } else if (recentAccuracy >= 0.8) {
+          // Doing great recently - increase difficulty
+          difficulty = 'hard';
+          reasoning = `High recent accuracy (${Math.round(recentAccuracy * 100)}%) - challenging with harder question`;
+        } else if (recentAccuracy <= 0.3) {
+          // Struggling recently - decrease difficulty
+          difficulty = 'easy';
+          reasoning = `Low recent accuracy (${Math.round(recentAccuracy * 100)}%) - building confidence with easier question`;
+        } else if (accuracyRate >= 0.7) {
+          // Overall doing well - medium to hard
+          difficulty = Math.random() > 0.5 ? 'medium' : 'hard';
+          reasoning = `Good overall accuracy (${Math.round(accuracyRate * 100)}%) - maintaining challenge`;
+        } else {
+          // Average performance - medium
+          difficulty = 'medium';
+          reasoning = `Average accuracy (${Math.round(accuracyRate * 100)}%) - keeping steady difficulty`;
+        }
+
+        console.log(`Adaptive difficulty: ${difficulty} - ${reasoning}`);
 
         // Select a random question from the chosen difficulty pool
         const questionsOfDifficulty = availableQuestions.filter(q => q.difficulty === difficulty);
@@ -664,7 +676,7 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
             timeLimit: selectedQuestion.timeLimit,
             difficulty: selectedQuestion.difficulty,
           },
-          aiReasoning: reasoning, // For debugging/transparency
+          adaptiveReasoning: reasoning, // For debugging/transparency
         };
       }),
 
