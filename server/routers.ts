@@ -484,7 +484,7 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
         return db.getModulesBySubject(input.subjectId);
       }),
 
-    // Start quiz session (public for local auth)
+    // Start AI-powered adaptive quiz (public for local auth)
     startQuiz: publicProcedure
       .input(z.object({ 
         moduleId: z.number(),
@@ -495,68 +495,62 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
         if (!userId) {
           throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User ID required' });
         }
-        // Adaptive Testing: Pre-select questions with progressive difficulty
+
+        // Get all available questions for this module
         const allQuestions = await db.getQuestionsByModule(input.moduleId);
-        
+        if (allQuestions.length === 0) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'No questions found for this module' });
+        }
+
         // Determine quiz size (10-15 questions)
         const quizSize = Math.min(allQuestions.length, Math.floor(Math.random() * 6) + 10);
 
-        // Separate questions by difficulty
-        const easyQuestions = allQuestions.filter(q => q.difficulty === 'easy');
-        const mediumQuestions = allQuestions.filter(q => q.difficulty === 'medium');
-        const hardQuestions = allQuestions.filter(q => q.difficulty === 'hard');
-
-        // Adaptive pattern: Start medium, then mix based on typical performance
-        // Pattern: M, M, M, H, M, H, E, M, H, H (adapts as quiz progresses)
-        const selectedQuestions: any[] = [];
-        const difficultyPattern = ['medium', 'medium', 'easy', 'medium', 'hard', 'medium', 'hard', 'easy', 'medium', 'hard', 'hard', 'medium', 'hard', 'hard', 'hard'];
-        
-        for (let i = 0; i < quizSize; i++) {
-          const targetDifficulty = difficultyPattern[i] || 'medium';
-          let pool = mediumQuestions;
-          
-          if (targetDifficulty === 'easy' && easyQuestions.length > 0) pool = easyQuestions;
-          else if (targetDifficulty === 'hard' && hardQuestions.length > 0) pool = hardQuestions;
-          
-          // Pick random question from pool that hasn't been selected
-          const available = pool.filter(q => !selectedQuestions.find(sq => sq.id === q.id));
-          if (available.length > 0) {
-            selectedQuestions.push(available[Math.floor(Math.random() * available.length)]);
-          } else {
-            // Fallback to any unselected question
-            const remaining = allQuestions.filter(q => !selectedQuestions.find(sq => sq.id === q.id));
-            if (remaining.length > 0) {
-              selectedQuestions.push(remaining[Math.floor(Math.random() * remaining.length)]);
-            }
-          }
-        }
-
+        // Create quiz session
         const sessionId = await db.createQuizSession({
           userId,
           moduleId: input.moduleId,
-          totalQuestions: selectedQuestions.length,
+          totalQuestions: quizSize,
           isCompleted: false,
         });
 
-        // Adjust points based on difficulty
-        const pointsByDifficulty = {
-          easy: 5,
-          medium: 10,
-          hard: 15,
+        // Store available questions in session metadata (for adaptive selection)
+        // In production, this could be stored in Redis or database
+        const questionPool = {
+          easy: allQuestions.filter(q => q.difficulty === 'easy').map(q => q.id),
+          medium: allQuestions.filter(q => q.difficulty === 'medium').map(q => q.id),
+          hard: allQuestions.filter(q => q.difficulty === 'hard').map(q => q.id),
         };
+
+        // Start with medium difficulty (AI will adapt from here)
+        const startingDifficulty = 'medium';
+        const firstQuestionPool = questionPool.medium.length > 0 ? questionPool.medium : 
+                                  questionPool.easy.length > 0 ? questionPool.easy : 
+                                  questionPool.hard;
+        
+        const firstQuestionId = firstQuestionPool[Math.floor(Math.random() * firstQuestionPool.length)];
+        const firstQuestion = allQuestions.find(q => q.id === firstQuestionId);
+
+        if (!firstQuestion) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to select first question' });
+        }
+
+        // Points based on difficulty
+        const pointsByDifficulty = { easy: 5, medium: 10, hard: 15 };
 
         return {
           sessionId,
-          questions: selectedQuestions.map(q => ({
-            id: q.id,
-            questionType: q.questionType,
-            questionText: q.questionText,
-            questionImage: q.questionImage,
-            options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options,
-            points: pointsByDifficulty[q.difficulty as keyof typeof pointsByDifficulty] || q.points || 10,
-            timeLimit: q.timeLimit,
-            difficulty: q.difficulty,
-          })),
+          totalQuestions: quizSize,
+          currentQuestionNumber: 1,
+          question: {
+            id: firstQuestion.id,
+            questionType: firstQuestion.questionType,
+            questionText: firstQuestion.questionText,
+            questionImage: firstQuestion.questionImage,
+            options: typeof firstQuestion.options === 'string' ? JSON.parse(firstQuestion.options) : firstQuestion.options,
+            points: pointsByDifficulty[firstQuestion.difficulty as keyof typeof pointsByDifficulty] || 10,
+            timeLimit: firstQuestion.timeLimit,
+            difficulty: firstQuestion.difficulty,
+          },
         };
       }),
 
@@ -592,6 +586,85 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
           pointsEarned,
           correctAnswer: question.correctAnswer,
           explanation: question.explanation,
+        };
+      }),
+
+    // Get next adaptive question based on AI analysis (public for local auth)
+    getNextQuestion: publicProcedure
+      .input(z.object({ sessionId: z.number() }))
+      .mutation(async ({ input }) => {
+        const session = await db.getQuizSessionById(input.sessionId);
+        if (!session) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Session not found' });
+        }
+
+        // Get all responses so far
+        const responses = await db.getSessionResponses(input.sessionId);
+        const answeredQuestionIds = responses.map(r => r.questionId);
+
+        // Get all available questions for this module
+        const allQuestions = await db.getQuestionsByModule(session.moduleId);
+        const availableQuestions = allQuestions.filter(q => !answeredQuestionIds.includes(q.id));
+
+        if (availableQuestions.length === 0) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'No more questions available' });
+        }
+
+        // Calculate current performance for AI analysis
+        const correctAnswers = responses.filter(r => r.isCorrect).length;
+        const questionsAnswered = responses.length;
+        const avgTimePerQuestion = questionsAnswered > 0 
+          ? responses.reduce((sum, r) => sum + (r.timeSpent || 0), 0) / questionsAnswered 
+          : 30;
+        
+        const lastDifficulty = responses.length > 0 
+          ? await db.getQuestionById(responses[responses.length - 1].questionId).then(q => q?.difficulty || 'medium')
+          : 'medium';
+
+        // Use AI to determine next difficulty
+        const { getNextQuestionDifficulty } = await import('./_core/adaptive-quiz');
+        const { difficulty, reasoning } = await getNextQuestionDifficulty(
+          session.userId,
+          session.moduleId,
+          {
+            questionsAnswered,
+            correctAnswers,
+            currentDifficulty: lastDifficulty,
+            timePerQuestion: avgTimePerQuestion
+          }
+        );
+
+        console.log(`AI selected difficulty: ${difficulty} - Reasoning: ${reasoning}`);
+
+        // Select a random question from the chosen difficulty pool
+        const questionsOfDifficulty = availableQuestions.filter(q => q.difficulty === difficulty);
+        let selectedQuestion;
+
+        if (questionsOfDifficulty.length > 0) {
+          selectedQuestion = questionsOfDifficulty[Math.floor(Math.random() * questionsOfDifficulty.length)];
+        } else {
+          // Fallback: pick any available question
+          selectedQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+        }
+
+        // Points based on difficulty
+        const pointsByDifficulty = { easy: 5, medium: 10, hard: 15 };
+
+        return {
+          currentQuestionNumber: questionsAnswered + 2, // Next question number
+          question: {
+            id: selectedQuestion.id,
+            questionType: selectedQuestion.questionType,
+            questionText: selectedQuestion.questionText,
+            questionImage: selectedQuestion.questionImage,
+            options: typeof selectedQuestion.options === 'string' 
+              ? JSON.parse(selectedQuestion.options) 
+              : selectedQuestion.options,
+            points: pointsByDifficulty[selectedQuestion.difficulty as keyof typeof pointsByDifficulty] || 10,
+            timeLimit: selectedQuestion.timeLimit,
+            difficulty: selectedQuestion.difficulty,
+          },
+          aiReasoning: reasoning, // For debugging/transparency
         };
       }),
 

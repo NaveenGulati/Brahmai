@@ -18,8 +18,9 @@ export default function QuizPlay() {
   const [isReady, setIsReady] = useState(false);
 
   const [sessionId, setSessionId] = useState<number | null>(null);
-  const [questions, setQuestions] = useState<any[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [currentQuestion, setCurrentQuestion] = useState<any>(null);
+  const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
+  const [totalQuestions, setTotalQuestions] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
   const [timeLeft, setTimeLeft] = useState(0);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
@@ -32,9 +33,10 @@ export default function QuizPlay() {
     onSuccess: (data) => {
       console.log('Quiz started:', data);
       setSessionId(data.sessionId);
-      setQuestions(data.questions);
-      setCurrentQuestionIndex(0);
-      setTimeLeft(data.questions[0]?.timeLimit || 60);
+      setCurrentQuestion(data.question);
+      setCurrentQuestionNumber(data.currentQuestionNumber);
+      setTotalQuestions(data.totalQuestions);
+      setTimeLeft(data.question?.timeLimit || 60);
       setQuestionStartTime(Date.now());
     },
     onError: (error) => {
@@ -52,19 +54,31 @@ export default function QuizPlay() {
         toast.error(`Wrong! Correct answer: ${result.correctAnswer}`);
       }
       
-      // Move to next question
-      if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
-        setUserAnswer("");
-        setTimeLeft(questions[currentQuestionIndex + 1]?.timeLimit || 60);
-        setQuestionStartTime(Date.now());
-      } else {
+      // Check if quiz is complete
+      if (currentQuestionNumber >= totalQuestions) {
         // Quiz complete
         completeQuizMutation.mutate({ 
           sessionId: sessionId!,
           childId: childUser?.id
         });
+      } else {
+        // Fetch next adaptive question
+        getNextQuestionMutation.mutate({ sessionId: sessionId! });
       }
+    },
+  });
+
+  const getNextQuestionMutation = trpc.child.getNextQuestion.useMutation({
+    onSuccess: (data) => {
+      setCurrentQuestion(data.question);
+      setCurrentQuestionNumber(data.currentQuestionNumber);
+      setUserAnswer("");
+      setTimeLeft(data.question?.timeLimit || 60);
+      setQuestionStartTime(Date.now());
+    },
+    onError: (error: any) => {
+      console.error('Failed to get next question:', error);
+      toast.error('Failed to load next question');
     },
   });
 
@@ -133,7 +147,7 @@ export default function QuizPlay() {
     }
   }, [timeLeft, isQuizComplete]);
 
-  if (loading || !sessionId || questions.length === 0) {
+  if (loading || !sessionId || !currentQuestion) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50">
         <div className="text-center">
@@ -202,8 +216,18 @@ export default function QuizPlay() {
     );
   }
 
-  const currentQuestion = questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  if (!currentQuestion) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading question...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const progress = (currentQuestionNumber / totalQuestions) * 100;
 
   const handleSubmitAnswer = () => {
     if (!userAnswer.trim() && currentQuestion.questionType !== 'true_false') {
@@ -228,7 +252,7 @@ export default function QuizPlay() {
         <div className="mb-6">
           <div className="flex justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">
-              Question {currentQuestionIndex + 1} of {questions.length}
+              Question {currentQuestionNumber} of {totalQuestions}
             </span>
             <span className={`text-sm font-bold ${timeLeft < 10 ? 'text-red-600' : 'text-gray-700'}`}>
               ⏱️ {timeLeft}s
@@ -327,7 +351,7 @@ export default function QuizPlay() {
               onClick={handleSubmitAnswer}
               disabled={submitAnswerMutation.isPending}
             >
-              {currentQuestionIndex === questions.length - 1 ? "Finish Quiz" : "Next Question"} →
+              {currentQuestionNumber === totalQuestions ? "Finish Quiz" : "Next Question"} →
             </Button>
           </CardContent>
         </Card>
