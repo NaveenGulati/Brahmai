@@ -1,0 +1,13 @@
+{
+  "query": "SELECT COUNT(*) as fill_blank_count FROM questions WHERE questionType = 'fill_blank'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute SELECT COUNT(*) as fill_blank_count FROM questions WHERE questionType = 'fill_blank'",
+  "rows": [
+    {
+      "fill_blank_count": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "fill_blank_count\n0\n",
+  "stderr": "",
+  "execution_time_ms": 1751
+}

@@ -248,3 +248,27 @@
 - [x] Created Recent Quizzes section with beautiful gradient cards showing quiz details
 
 
+
+
+## CRITICAL BUG: Child Login Broken
+- [ ] Child login showing "Unexpected token '<', '<!doctype'... is not valid JSON" error
+- [ ] API returning HTML instead of JSON response
+- [ ] Investigate child login endpoint and authentication flow
+- [ ] Check if recent changes broke the child login API
+
+
+
+
+## Convert Fill-in-the-Blank Questions to MCQ
+- [x] Review all questions in database and identify fill-in-the-blank questions (found 70)
+- [x] Convert fill-in-the-blank questions to MCQ format with 4 options
+- [x] Generate plausible distractors (wrong options) for each question using AI
+- [x] Ensure correct answer is included in the 4 options
+- [x] Update questionType field from 'fill_blank' to 'mcq' for converted questions
+- [x] Successfully converted all 70 fill-in-the-blank questions to MCQ
+- [x] Created AI-powered conversion script (convert-to-mcq-ai.ts)
+- [ ] Test quiz interface to ensure all questions display as MCQ
+- [ ] Verify grading system works correctly with converted questions
+- [ ] Update question-generator.html tool to only generate MCQ questions
+
+

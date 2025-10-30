@@ -1,0 +1,150 @@
+{
+  "query": "SELECT id, questionText, questionType, correctAnswer, options FROM questions WHERE questionType = 'fill_blank' OR questionType = 'fill-blank' OR questionType = 'fillblank' LIMIT 20",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute SELECT id, questionText, questionType, correctAnswer, options FROM questions WHERE questionType = 'fill_blank' OR questionType = 'fill-blank' OR questionType = 'fillblank' LIMIT 20",
+  "rows": [
+    {
+      "id": "4",
+      "questionText": "(-48) ÷ 6 = ?",
+      "questionType": "fill_blank",
+      "correctAnswer": "-8",
+      "options": "NULL"
+    },
+    {
+      "id": "12",
+      "questionText": "What is 2.5 × 0.4?",
+      "questionType": "fill_blank",
+      "correctAnswer": "1",
+      "options": "NULL"
+    },
+    {
+      "id": "15",
+      "questionText": "Solve for x: 3x = 24",
+      "questionType": "fill_blank",
+      "correctAnswer": "8",
+      "options": "NULL"
+    },
+    {
+      "id": "30003",
+      "questionText": "Area is a ___ quantity because it is derived from length and breadth.",
+      "questionType": "fill_blank",
+      "correctAnswer": "derived",
+      "options": "NULL"
+    },
+    {
+      "id": "30007",
+      "questionText": "In the displacement method, the volume of an irregular solid is equal to the ___ in water level.",
+      "questionType": "fill_blank",
+      "correctAnswer": "rise",
+      "options": "NULL"
+    },
+    {
+      "id": "30010",
+      "questionText": "The area of an irregular lamina can be found using the ___ paper method.",
+      "questionType": "fill_blank",
+      "correctAnswer": "graph",
+      "options": "NULL"
+    },
+    {
+      "id": "30014",
+      "questionText": "When a measuring scale starts from a worn-out edge, it introduces a ___ error.",
+      "questionType": "fill_blank",
+      "correctAnswer": "zero",
+      "options": "NULL"
+    },
+    {
+      "id": "30018",
+      "questionText": "1 kilometre = ___ metres.",
+      "questionType": "fill_blank",
+      "correctAnswer": "1000",
+      "options": "NULL"
+    },
+    {
+      "id": "30021",
+      "questionText": "The symbol for kilogram is ___ .",
+      "questionType": "fill_blank",
+      "correctAnswer": "kg",
+      "options": "NULL"
+    },
+    {
+      "id": "30024",
+      "questionText": "The volume of a cube is found using the formula V = ___ .",
+      "questionType": "fill_blank",
+      "correctAnswer": "a³",
+      "options": "NULL"
+    },
+    {
+      "id": "30027",
+      "questionText": "1 millilitre (mL) of water has a volume of ___ cm³.",
+      "questionType": "fill_blank",
+      "correctAnswer": "1",
+      "options": "NULL"
+    },
+    {
+      "id": "30029",
+      "questionText": "Density (d) = Mass (m) ÷ ___ .",
+      "questionType": "fill_blank",
+      "correctAnswer": "Volume",
+      "options": "NULL"
+    },
+    {
+      "id": "30031",
+      "questionText": "If your eye is not level with the reading mark, a ___ error occurs.",
+      "questionType": "fill_blank",
+      "correctAnswer": "parallax",
+      "options": "NULL"
+    },
+    {
+      "id": "30034",
+      "questionText": "Always place the measuring cylinder on a ___ surface while taking readings.",
+      "questionType": "fill_blank",
+      "correctAnswer": "flat",
+      "options": "NULL"
+    },
+    {
+      "id": "30036",
+      "questionText": "The speed of light is 3 × 10⁸ ___ per second.",
+      "questionType": "fill_blank",
+      "correctAnswer": "metres",
+      "options": "NULL"
+    },
+    {
+      "id": "30039",
+      "questionText": "When measuring with a ruler, keep it ___ along the object.",
+      "questionType": "fill_blank",
+      "correctAnswer": "aligned",
+      "options": "NULL"
+    },
+    {
+      "id": "30042",
+      "questionText": "To quickly guess a value without measuring, we make an ___ .",
+      "questionType": "fill_blank",
+      "correctAnswer": "estimation",
+      "options": "NULL"
+    },
+    {
+      "id": "30048",
+      "questionText": "Motion in a straight line is called ___ motion.",
+      "questionType": "fill_blank",
+      "correctAnswer": "rectilinear",
+      "options": "NULL"
+    },
+    {
+      "id": "30051",
+      "questionText": "Speed = Distance ÷ ___",
+      "questionType": "fill_blank",
+      "correctAnswer": "Time",
+      "options": "NULL"
+    },
+    {
+      "id": "30054",
+      "questionText": "The SI unit of speed is ___ .",
+      "questionType": "fill_blank",
+      "correctAnswer": "metre per second",
+      "options": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tquestionText\tquestionType\tcorrectAnswer\toptions\n4\t(-48) ÷ 6 = ?\tfill_blank\t-8\tNULL\n12\tWhat is 2.5 × 0.4?\tfill_blank\t1\tNULL\n15\tSolve for x: 3x = 24\tfill_blank\t8\tNULL\n30003\tArea is a ___ quantity because it is derived from length and breadth.\tfill_blank\tderived\tNULL\n30007\tIn the displacement method, the volume of an irregular solid is equal to the ___ in water level.\tfill_blank\trise\tNULL\n30010\tThe area of an irregular lamina can be found using the ___ paper method.\tfill_blank\tgraph\tNULL\n30014\tWhen a measuring scale starts from a worn-out edge, it introduces a ___ error.\tfill_blank\tzero\tNULL\n30018\t1 kilometre = ___ metres.\tfill_blank\t1000\tNULL\n30021\tThe symbol for kilogram is ___ .\tfill_blank\tkg\tNULL\n30024\tThe volume of a cube is found using the formula V = ___ .\tfill_blank\ta³\tNULL\n30027\t1 millilitre (mL) of water has a volume of ___ cm³.\tfill_blank\t1\tNULL\n30029\tDensity (d) = Mass (m) ÷ ___ .\tfill_blank\tVolume\tNULL\n30031\tIf your eye is not level with the reading mark, a ___ error occurs.\tfill_blank\tparallax\tNULL\n30034\tAlways place the measuring cylinder on a ___ surface while taking readings.\tfill_blank\tflat\tNULL\n30036\tThe speed of light is 3 × 10⁸ ___ per second.\tfill_blank\tmetres\tNULL\n30039\tWhen measuring with a ruler, keep it ___ along the object.\tfill_blank\taligned\tNULL\n30042\tTo quickly guess a value without measuring, we make an ___ .\tfill_blank\testimation\tNULL\n30048\tMotion in a straight line is called ___ motion.\tfill_blank\trectilinear\tNULL\n30051\tSpeed = Distance ÷ ___\tfill_blank\tTime\tNULL\n30054\tThe SI unit of speed is ___ .\tfill_blank\tmetre per second\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 2629
+}
