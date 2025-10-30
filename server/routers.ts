@@ -6,7 +6,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import { getDb } from "./db";
-import { quizSessions } from "../drizzle/schema";
+import { quizSessions, aiExplanationCache } from "../drizzle/schema";
 import { eq, and, lt, desc } from "drizzle-orm";
 import { authRouter } from "./authRouter";
 
@@ -421,6 +421,7 @@ Format your response in clean markdown with:
       }),
 
     // Generate detailed explanation for a wrong answer (child-friendly)
+    // Uses cache to save AI tokens and improve performance
     generateDetailedExplanation: parentProcedure
       .input(z.object({ 
         questionId: z.number(),
@@ -430,6 +431,35 @@ Format your response in clean markdown with:
         grade: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        
+        // Check cache first
+        const cached = await db
+          .select()
+          .from(aiExplanationCache)
+          .where(eq(aiExplanationCache.questionId, input.questionId))
+          .limit(1);
+        
+        if (cached.length > 0) {
+          // Cache hit! Update usage stats and return cached explanation
+          await db
+            .update(aiExplanationCache)
+            .set({ 
+              timesUsed: cached[0].timesUsed + 1,
+              lastUsedAt: new Date()
+            })
+            .where(eq(aiExplanationCache.questionId, input.questionId));
+          
+          console.log(`[Cache HIT] Question ${input.questionId} - Used ${cached[0].timesUsed + 1} times`);
+          return {
+            detailedExplanation: cached[0].detailedExplanation,
+            fromCache: true,
+          };
+        }
+        
+        // Cache miss - generate new explanation with AI
+        console.log(`[Cache MISS] Question ${input.questionId} - Generating new explanation`);
         const { invokeLLM } = await import('./_core/llm');
         
         const grade = input.grade || '7';
@@ -464,8 +494,25 @@ Format in markdown with:
         const aiContent = aiResponse.choices[0]?.message?.content || '';
         const explanation = typeof aiContent === 'string' ? aiContent : '';
         
+        // Save to cache for future use
+        if (explanation) {
+          try {
+            await db.insert(aiExplanationCache).values({
+              questionId: input.questionId,
+              detailedExplanation: explanation,
+              timesUsed: 1,
+              generatedAt: new Date(),
+              lastUsedAt: new Date(),
+            });
+            console.log(`[Cache SAVED] Question ${input.questionId}`);
+          } catch (error) {
+            console.error('Failed to cache explanation:', error);
+          }
+        }
+        
         return {
           detailedExplanation: explanation || 'Explanation not available. Please try again.',
+          fromCache: false,
         };
       }),
 
@@ -995,6 +1042,7 @@ Format your response in clean markdown with:
       }),
 
     // Generate detailed explanation for a wrong answer (child-friendly)
+    // Uses cache to save AI tokens and improve performance
     generateDetailedExplanation: publicProcedure
       .input(z.object({ 
         questionId: z.number(),
@@ -1004,6 +1052,35 @@ Format your response in clean markdown with:
         grade: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
+        const database = await getDb();
+        if (!database) throw new Error('Database not available');
+        
+        // Check cache first
+        const cached = await database
+          .select()
+          .from(aiExplanationCache)
+          .where(eq(aiExplanationCache.questionId, input.questionId))
+          .limit(1);
+        
+        if (cached.length > 0) {
+          // Cache hit! Update usage stats and return cached explanation
+          await database
+            .update(aiExplanationCache)
+            .set({ 
+              timesUsed: cached[0].timesUsed + 1,
+              lastUsedAt: new Date()
+            })
+            .where(eq(aiExplanationCache.questionId, input.questionId));
+          
+          console.log(`[Cache HIT] Question ${input.questionId} - Used ${cached[0].timesUsed + 1} times`);
+          return {
+            detailedExplanation: cached[0].detailedExplanation,
+            fromCache: true,
+          };
+        }
+        
+        // Cache miss - generate new explanation with AI
+        console.log(`[Cache MISS] Question ${input.questionId} - Generating new explanation`);
         const { invokeLLM } = await import('./_core/llm');
         
         const grade = input.grade || '7';
@@ -1038,8 +1115,25 @@ Format in markdown with:
         const aiContent = aiResponse.choices[0]?.message?.content || '';
         const explanation = typeof aiContent === 'string' ? aiContent : '';
         
+        // Save to cache for future use
+        if (explanation) {
+          try {
+            await database.insert(aiExplanationCache).values({
+              questionId: input.questionId,
+              detailedExplanation: explanation,
+              timesUsed: 1,
+              generatedAt: new Date(),
+              lastUsedAt: new Date(),
+            });
+            console.log(`[Cache SAVED] Question ${input.questionId}`);
+          } catch (error) {
+            console.error('Failed to cache explanation:', error);
+          }
+        }
+        
         return {
           detailedExplanation: explanation || 'Explanation not available. Please try again.',
+          fromCache: false,
         };
       }),
 

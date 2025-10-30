@@ -1,0 +1,17 @@
+{
+  "query": "SELECT questionId, LEFT(detailedExplanation, 80) as preview, timesUsed, generatedAt, lastUsedAt FROM aiExplanationCache;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute SELECT questionId, LEFT(detailedExplanation, 80) as preview, timesUsed, generatedAt, lastUsedAt FROM aiExplanationCache;",
+  "rows": [
+    {
+      "questionId": "30129",
+      "preview": "Hey there! No worries at all, this is a super common one that trips people up, a",
+      "timesUsed": "2",
+      "generatedAt": "2025-10-30 18:27:31",
+      "lastUsedAt": "2025-10-30 18:30:18"
+    }
+  ],
+  "messages": [],
+  "stdout": "questionId\tpreview\ttimesUsed\tgeneratedAt\tlastUsedAt\n30129\tHey there! No worries at all, this is a super common one that trips people up, a\t2\t2025-10-30 18:27:31\t2025-10-30 18:30:18\n",
+  "stderr": "",
+  "execution_time_ms": 1599
+}

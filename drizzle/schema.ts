@@ -174,6 +174,18 @@ export const activityLog = mysqlTable("activityLog", {
   timeSpent: int("timeSpent").default(0), // in seconds
 });
 
+/**
+ * AI Explanation Cache - stores AI-generated detailed explanations for questions
+ * This saves AI tokens and improves performance by reusing explanations
+ */
+export const aiExplanationCache = mysqlTable("aiExplanationCache", {
+  questionId: int("questionId").primaryKey().notNull(), // Primary key - one explanation per question
+  detailedExplanation: text("detailedExplanation").notNull(), // The AI-generated explanation
+  generatedAt: timestamp("generatedAt").defaultNow().notNull(), // When it was first generated
+  timesUsed: int("timesUsed").default(1).notNull(), // Track how many times this cached explanation was used
+  lastUsedAt: timestamp("lastUsedAt").defaultNow().notNull(), // Last time someone requested this explanation
+});
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -195,4 +207,6 @@ export type ActivityLog = typeof activityLog.$inferSelect;
 export type InsertActivityLog = typeof activityLog.$inferInsert;
 export type Challenge = typeof challenges.$inferSelect;
 export type InsertChallenge = typeof challenges.$inferInsert;
+export type AiExplanationCache = typeof aiExplanationCache.$inferSelect;
+export type InsertAiExplanationCache = typeof aiExplanationCache.$inferInsert;
 

@@ -1,0 +1,8 @@
+{
+  "query": "SELECT questionId, LEFT(explanation, 100) as explanation_preview, timesUsed, createdAt, lastUsedAt FROM aiExplanationCache LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute SELECT questionId, LEFT(explanation, 100) as explanation_preview, timesUsed, createdAt, lastUsedAt FROM aiExplanationCache LIMIT 5;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'explanation' in 'field list'"
+  ]
+}
