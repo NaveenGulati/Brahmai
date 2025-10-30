@@ -332,7 +332,45 @@ export const appRouter = router({
           };
         });
 
-        // Generate AI analysis
+        // AI analysis removed - now generated on-demand via separate API
+
+        return {
+          session: {
+            ...session,
+            moduleName: module?.name || 'Unknown Module',
+            subjectName: subject?.name || 'Unknown Subject',
+          },
+          responses: detailedResponses,
+          // aiAnalysis removed for performance
+        };
+      }),
+
+    // Generate AI Analysis on-demand (fast loading)
+    generateAIAnalysis: parentProcedure
+      .input(z.object({ sessionId: z.number() }))
+      .mutation(async ({ input }) => {
+        const session = await db.getQuizSessionById(input.sessionId);
+        if (!session) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Quiz session not found' });
+        }
+
+        const responses = await db.getSessionResponses(input.sessionId);
+        const module = await db.getModuleById(session.moduleId);
+        const subject = module ? await db.getSubjectById(module.subjectId) : null;
+
+        const questionIds = responses.map((r: any) => r.questionId);
+        const questionsData = await db.getQuestionsByIds(questionIds);
+        const questionsMap = new Map(questionsData.map(q => [q.id, q]));
+
+        const detailedResponses = responses.map((r: any) => {
+          const question = questionsMap.get(r.questionId);
+          return {
+            ...r,
+            questionText: question?.questionText || '',
+            difficulty: question?.difficulty,
+          };
+        });
+
         const { invokeLLM } = await import('./_core/llm');
         
         const analysisPrompt = `Analyze this Grade 7 student's quiz performance and provide insights in clean, well-formatted markdown:
@@ -343,7 +381,7 @@ Correct: ${session.correctAnswers}/${session.totalQuestions}
 Time: ${session.timeTaken}s
 
 Questions and Answers:
-        ${detailedResponses.map((r: any, i: number) => `
+${detailedResponses.map((r: any, i: number) => `
 ${i + 1}. ${r.questionText}
    Difficulty: ${r.difficulty}
    Student Answer: ${r.userAnswer}
@@ -363,17 +401,9 @@ Provide a structured analysis with THREE sections:
 (Use numbered list, provide actionable study suggestions)
 
 Format your response in clean markdown with:
-- Use **bold** for key concepts and mathematical terms
+- Use **bold** for key concepts
 - Use bullet points (-) for lists
-- Use numbered lists (1., 2., 3.) for steps
-- DO NOT use backticks or code blocks - write math expressions naturally
-- Keep it concise and encouraging
-- Focus on learning, not just scores
-
-IMPORTANT: When mentioning mathematical expressions, write them naturally without backticks. For example:
-- Write "(-5) + (-3)" instead of using code formatting
-- Write "a² - 2ab + b²" instead of using code formatting  
-- Use **bold** to emphasize important formulas`;
+- Keep it concise and encouraging`;
 
         const aiResponse = await invokeLLM({
           messages: [
@@ -385,19 +415,57 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
         const aiContent = aiResponse.choices[0]?.message?.content || '';
         const aiText = typeof aiContent === 'string' ? aiContent : '';
         
-        // Return full markdown text for rendering
-        const aiAnalysis = {
+        return {
           fullAnalysis: aiText || 'Analysis not available. Please try again.',
         };
+      }),
 
+    // Generate detailed explanation for a wrong answer (child-friendly)
+    generateDetailedExplanation: parentProcedure
+      .input(z.object({ 
+        questionId: z.number(),
+        questionText: z.string(),
+        correctAnswer: z.string(),
+        userAnswer: z.string(),
+        grade: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { invokeLLM } = await import('./_core/llm');
+        
+        const grade = input.grade || '7';
+        const explanationPrompt = `A Grade ${grade} student answered this question incorrectly. Provide a detailed, child-friendly explanation to help them understand:
+
+Question: ${input.questionText}
+Student's Answer: ${input.userAnswer}
+Correct Answer: ${input.correctAnswer}
+
+Provide a detailed explanation that:
+1. Is written at a Grade ${grade} reading level
+2. Uses simple, clear language
+3. Includes examples or analogies
+4. Breaks down the concept step-by-step
+5. Is encouraging and patient
+6. Assumes the child is struggling with this concept
+7. Uses creative teaching methods (stories, visuals, real-world examples)
+
+Format in markdown with:
+- Use **bold** for key concepts
+- Use bullet points for steps
+- Keep paragraphs short and simple
+- Be encouraging and positive`;
+
+        const aiResponse = await invokeLLM({
+          messages: [
+            { role: 'system', content: `You are a patient, creative teacher explaining concepts to a Grade ${grade} student who is struggling. Use age-appropriate language and engaging examples.` },
+            { role: 'user', content: explanationPrompt }
+          ]
+        });
+
+        const aiContent = aiResponse.choices[0]?.message?.content || '';
+        const explanation = typeof aiContent === 'string' ? aiContent : '';
+        
         return {
-          session: {
-            ...session,
-            moduleName: module?.name || 'Unknown Module',
-            subjectName: subject?.name || 'Unknown Subject',
-          },
-          responses: detailedResponses,
-          aiAnalysis,
+          detailedExplanation: explanation || 'Explanation not available. Please try again.',
         };
       }),
 
@@ -838,7 +906,45 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
           };
         });
 
-        // Generate AI analysis
+        // AI analysis removed - now generated on-demand via separate API
+
+        return {
+          session: {
+            ...session,
+            moduleName: module?.name || 'Unknown Module',
+            subjectName: subject?.name || 'Unknown Subject',
+          },
+          responses: detailedResponses,
+          // aiAnalysis removed for performance
+        };
+      }),
+
+    // Generate AI Analysis on-demand (child router)
+    generateAIAnalysis: publicProcedure
+      .input(z.object({ sessionId: z.number() }))
+      .mutation(async ({ input }) => {
+        const session = await db.getQuizSessionById(input.sessionId);
+        if (!session) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Quiz session not found' });
+        }
+
+        const responses = await db.getSessionResponses(input.sessionId);
+        const module = await db.getModuleById(session.moduleId);
+        const subject = module ? await db.getSubjectById(module.subjectId) : null;
+
+        const questionIds = responses.map((r: any) => r.questionId);
+        const questionsData = await db.getQuestionsByIds(questionIds);
+        const questionsMap = new Map(questionsData.map(q => [q.id, q]));
+
+        const detailedResponses = responses.map((r: any) => {
+          const question = questionsMap.get(r.questionId);
+          return {
+            ...r,
+            questionText: question?.questionText || '',
+            difficulty: question?.difficulty,
+          };
+        });
+
         const { invokeLLM } = await import('./_core/llm');
         
         const analysisPrompt = `Analyze this Grade 7 student's quiz performance and provide insights in clean, well-formatted markdown:
@@ -849,7 +955,7 @@ Correct: ${session.correctAnswers}/${session.totalQuestions}
 Time: ${session.timeTaken}s
 
 Questions and Answers:
-        ${detailedResponses.map((r: any, i: number) => `
+${detailedResponses.map((r: any, i: number) => `
 ${i + 1}. ${r.questionText}
    Difficulty: ${r.difficulty}
    Student Answer: ${r.userAnswer}
@@ -869,17 +975,9 @@ Provide a structured analysis with THREE sections:
 (Use numbered list, provide actionable study suggestions)
 
 Format your response in clean markdown with:
-- Use **bold** for key concepts and mathematical terms
+- Use **bold** for key concepts
 - Use bullet points (-) for lists
-- Use numbered lists (1., 2., 3.) for steps
-- DO NOT use backticks or code blocks - write math expressions naturally
-- Keep it concise and encouraging
-- Focus on learning, not just scores
-
-IMPORTANT: When mentioning mathematical expressions, write them naturally without backticks. For example:
-- Write "(-5) + (-3)" instead of using code formatting
-- Write "a² - 2ab + b²" instead of using code formatting  
-- Use **bold** to emphasize important formulas`;
+- Keep it concise and encouraging`;
 
         const aiResponse = await invokeLLM({
           messages: [
@@ -891,19 +989,57 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
         const aiContent = aiResponse.choices[0]?.message?.content || '';
         const aiText = typeof aiContent === 'string' ? aiContent : '';
         
-        // Return full markdown text for rendering
-        const aiAnalysis = {
+        return {
           fullAnalysis: aiText || 'Analysis not available. Please try again.',
         };
+      }),
 
+    // Generate detailed explanation for a wrong answer (child-friendly)
+    generateDetailedExplanation: publicProcedure
+      .input(z.object({ 
+        questionId: z.number(),
+        questionText: z.string(),
+        correctAnswer: z.string(),
+        userAnswer: z.string(),
+        grade: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { invokeLLM } = await import('./_core/llm');
+        
+        const grade = input.grade || '7';
+        const explanationPrompt = `A Grade ${grade} student answered this question incorrectly. Provide a detailed, child-friendly explanation to help them understand:
+
+Question: ${input.questionText}
+Student's Answer: ${input.userAnswer}
+Correct Answer: ${input.correctAnswer}
+
+Provide a detailed explanation that:
+1. Is written at a Grade ${grade} reading level
+2. Uses simple, clear language
+3. Includes examples or analogies
+4. Breaks down the concept step-by-step
+5. Is encouraging and patient
+6. Assumes the child is struggling with this concept
+7. Uses creative teaching methods (stories, visuals, real-world examples)
+
+Format in markdown with:
+- Use **bold** for key concepts
+- Use bullet points for steps
+- Keep paragraphs short and simple
+- Be encouraging and positive`;
+
+        const aiResponse = await invokeLLM({
+          messages: [
+            { role: 'system', content: `You are a patient, creative teacher explaining concepts to a Grade ${grade} student who is struggling. Use age-appropriate language and engaging examples.` },
+            { role: 'user', content: explanationPrompt }
+          ]
+        });
+
+        const aiContent = aiResponse.choices[0]?.message?.content || '';
+        const explanation = typeof aiContent === 'string' ? aiContent : '';
+        
         return {
-          session: {
-            ...session,
-            moduleName: module?.name || 'Unknown Module',
-            subjectName: subject?.name || 'Unknown Subject',
-          },
-          responses: detailedResponses,
-          aiAnalysis,
+          detailedExplanation: explanation || 'Explanation not available. Please try again.',
         };
       }),
 

@@ -3,13 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useLocation, useParams } from "wouter";
-import { CheckCircle2, XCircle, Clock, Award, Brain } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Award, Brain, Sparkles } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
+import { useState } from 'react';
 
 export default function QuizReview() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [, setLocation] = useLocation();
   const { user } = useAuth({ redirectOnUnauthenticated: false });
+  const [aiAnalysis, setAiAnalysis] = useState<{ fullAnalysis: string } | null>(null);
+  const [expandedExplanations, setExpandedExplanations] = useState<Record<number, string>>({});
   
   // Check if child is logged in via localStorage
   const childUser = localStorage.getItem('childUser') ? JSON.parse(localStorage.getItem('childUser')!) : null;
@@ -60,7 +63,44 @@ export default function QuizReview() {
     );
   }
 
-  const { session, responses, aiAnalysis } = actualReviewData;
+  const { session, responses } = actualReviewData;
+
+  // AI Analysis mutation
+  const generateAnalysisMutation = isChild 
+    ? trpc.child.generateAIAnalysis.useMutation()
+    : trpc.parent.generateAIAnalysis.useMutation();
+
+  const handleGenerateAnalysis = async () => {
+    try {
+      const result = await generateAnalysisMutation.mutateAsync({ sessionId: parseInt(sessionId!) });
+      setAiAnalysis(result);
+    } catch (error) {
+      console.error('Failed to generate analysis:', error);
+    }
+  };
+
+  // Detailed explanation mutation
+  const generateExplanationMutation = isChild
+    ? trpc.child.generateDetailedExplanation.useMutation()
+    : trpc.parent.generateDetailedExplanation.useMutation();
+
+  const handleGetDetailedExplanation = async (response: any) => {
+    try {
+      const result = await generateExplanationMutation.mutateAsync({
+        questionId: response.questionId,
+        questionText: response.questionText,
+        correctAnswer: response.correctAnswer,
+        userAnswer: response.userAnswer,
+        grade: '7',
+      });
+      setExpandedExplanations(prev => ({
+        ...prev,
+        [response.questionId]: result.detailedExplanation,
+      }));
+    } catch (error) {
+      console.error('Failed to generate explanation:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -246,8 +286,35 @@ export default function QuizReview() {
           </Card>
         )}
 
-        {/* AI Analysis */}
-        {aiAnalysis && (
+        {/* AI Analysis - On Demand */}
+        {!aiAnalysis ? (
+          <Card className="mb-6 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <Sparkles className="w-12 h-12 text-purple-600 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-purple-900 mb-2">Get AI-Powered Performance Analysis</h3>
+                <p className="text-sm text-gray-600 mb-4">Let AI analyze your performance and provide personalized insights</p>
+                <Button 
+                  onClick={handleGenerateAnalysis}
+                  disabled={generateAnalysisMutation.isPending}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                >
+                  {generateAnalysisMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Generating Analysis...
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="w-4 h-4 mr-2" />
+                      Generate AI Analysis
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
           <Card className="mb-6 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-blue-900">
@@ -375,6 +442,43 @@ export default function QuizReview() {
                   <div className="p-3 bg-blue-50 rounded border border-blue-200">
                     <p className="text-sm font-semibold text-blue-900 mb-1">Explanation:</p>
                     <p className="text-sm text-blue-800">{response.explanation}</p>
+                  </div>
+                )}
+
+                {/* Detailed AI Explanation for Wrong Answers */}
+                {!response.isCorrect && (
+                  <div className="mt-3">
+                    {!expandedExplanations[response.questionId] ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleGetDetailedExplanation(response)}
+                        disabled={generateExplanationMutation.isPending}
+                        className="w-full border-purple-300 text-purple-700 hover:bg-purple-50"
+                      >
+                        {generateExplanationMutation.isPending ? (
+                          <>
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600 mr-2"></div>
+                            Generating Explanation...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3 h-3 mr-2" />
+                            Get Detailed AI Explanation
+                          </>
+                        )}
+                      </Button>
+                    ) : (
+                      <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Sparkles className="w-4 h-4 text-purple-600" />
+                          <p className="text-sm font-semibold text-purple-900">Detailed Explanation:</p>
+                        </div>
+                        <div className="prose prose-sm max-w-none prose-p:text-gray-700 prose-strong:text-purple-800">
+                          <ReactMarkdown>{expandedExplanations[response.questionId]}</ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
