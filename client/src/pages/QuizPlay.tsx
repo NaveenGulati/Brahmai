@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { encryptedRoutes, decryptId } from "@shared/urlEncryption";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -11,9 +12,19 @@ import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 
 export default function QuizPlay() {
-  const { moduleId } = useParams<{ moduleId: string }>();
+  const { moduleId: encryptedModuleId } = useParams<{ moduleId: string }>();
   const { user, loading } = useAuth({ redirectOnUnauthenticated: false });
   const [, setLocation] = useLocation();
+  
+  // Decrypt the module ID from URL
+  let moduleId: number;
+  try {
+    moduleId = decryptId(encryptedModuleId!);
+  } catch (error) {
+    console.error('Failed to decrypt module ID:', error);
+    setLocation('/child');
+    return null;
+  }
   const [childUser, setChildUser] = useState<any>(null);
   const [isReady, setIsReady] = useState(false);
 
@@ -130,7 +141,7 @@ export default function QuizPlay() {
   useEffect(() => {
     if (moduleId && !sessionId && isReady) {
       startQuizMutation.mutate({ 
-        moduleId: parseInt(moduleId),
+        moduleId,
         childId: childUser?.id
       });
     }
@@ -197,7 +208,7 @@ export default function QuizPlay() {
             <div className="flex flex-col gap-2">
               <Button 
                 className="w-full" 
-                onClick={() => setLocation(`/quiz-review/${sessionId}`)}
+                onClick={() => setLocation(encryptedRoutes.quizReview(sessionId!))}
               >
                 📊 View Detailed Analysis
               </Button>

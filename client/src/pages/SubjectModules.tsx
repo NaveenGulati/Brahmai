@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { encryptedRoutes, decryptId } from "@shared/urlEncryption";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
@@ -6,9 +7,19 @@ import { useEffect, useState } from "react";
 import { useLocation, useParams } from "wouter";
 
 export default function SubjectModules() {
-  const { subjectId } = useParams<{ subjectId: string }>();
-  const { user, loading } = useAuth({ redirectOnUnauthenticated: false });
+  const { subjectId: encryptedSubjectId } = useParams<{ subjectId: string }>();
   const [, setLocation] = useLocation();
+  
+  // Decrypt the subject ID from URL
+  let subjectId: number;
+  try {
+    subjectId = decryptId(encryptedSubjectId!);
+  } catch (error) {
+    console.error('Failed to decrypt subject ID:', error);
+    setLocation('/child');
+    return null;
+  }
+  const { user, loading } = useAuth({ redirectOnUnauthenticated: false });
   const [childUser, setChildUser] = useState<any>(null);
   const [isReady, setIsReady] = useState(false);
 
@@ -31,7 +42,7 @@ export default function SubjectModules() {
   }, [loading, user, setLocation]);
 
   const { data: modules } = trpc.child.getModules.useQuery(
-    { subjectId: parseInt(subjectId!) },
+    { subjectId },
     { enabled: !!subjectId && isReady }
   );
 
@@ -57,7 +68,7 @@ export default function SubjectModules() {
             <Card 
               key={module.id}
               className="hover:shadow-lg transition-all cursor-pointer border-2 hover:border-indigo-400"
-              onClick={() => setLocation(`/quiz/${module.id}`)}
+              onClick={() => setLocation(encryptedRoutes.quiz(module.id))}
             >
               <CardHeader>
                 <CardTitle className="text-lg">{module.name}</CardTitle>

@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { encryptedRoutes } from "@shared/urlEncryption";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -142,7 +143,7 @@ export default function ChildDashboard() {
                         // Store challenge ID in localStorage for the quiz page to access
                         localStorage.setItem('currentChallengeId', challenge.id.toString());
                         // Navigate to quiz with path parameter
-                        setLocation(`/quiz/${challenge.moduleId}`);
+                        setLocation(encryptedRoutes.quiz(challenge.moduleId));
                       }}
                       className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
                     >
@@ -206,7 +207,7 @@ export default function ChildDashboard() {
               <Card 
                 key={subject.id} 
                 className="hover:shadow-lg transition-all cursor-pointer border-2 hover:border-indigo-300"
-                onClick={() => setLocation(`/subject/${subject.id}`)}
+                onClick={() => setLocation(encryptedRoutes.subject(subject.id))}
               >
                 <CardHeader className="text-center">
                   <div className="text-5xl mb-2">{subject.icon}</div>
@@ -290,7 +291,7 @@ export default function ChildDashboard() {
             <CardContent>
               <div className="space-y-2">
                 {quizHistory.map((quiz) => (
-                  <Link key={quiz.id} href={`/quiz-review/${quiz.id}`}>
+                  <Link key={quiz.id} href={encryptedRoutes.quizReview(quiz.id)}>
                     <div className="flex justify-between items-center text-sm p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg hover:from-blue-100 hover:to-purple-100 cursor-pointer transition-all border border-blue-200">
                       <div className="flex-1">
                         <p className="font-semibold text-gray-900">Quiz #{quiz.id}</p>
@@ -354,7 +355,7 @@ export default function ChildDashboard() {
           <div className="space-y-2">
             {pointsHistory && pointsHistory.length > 0 ? (
               pointsHistory.map((entry, index) => (
-                <Link key={entry.id} href={`/quiz-review/${entry.id}`}>
+                <Link key={entry.id} href={encryptedRoutes.quizReview(entry.id)}>
                   <Card className="p-3 hover:bg-gray-50 cursor-pointer transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">

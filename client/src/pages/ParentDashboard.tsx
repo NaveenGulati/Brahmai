@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { encryptedRoutes } from "@shared/urlEncryption";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -576,7 +577,7 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
                   >
                     ✕
                   </button>
-                  <Link href={`/quiz-review/${challenge.sessionId}`}>
+                  <Link href={challenge.sessionId ? encryptedRoutes.quizReview(challenge.sessionId) : '#'}>
                     <div className="hover:bg-green-100 cursor-pointer transition-colors p-1 -m-1 rounded">
                       <div className="flex justify-between items-start mb-2 pr-6">
                         <div className="flex-1">
@@ -606,7 +607,7 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
             <h4 className="font-semibold mb-2">Recent Quizzes</h4>
             <div className="space-y-2">
               {history.map((quiz) => (
-                <Link key={quiz.id} href={`/quiz-review/${quiz.id}`}>
+                <Link key={quiz.id} href={encryptedRoutes.quizReview(quiz.id)}>
                   <div className="flex justify-between items-center text-sm p-2 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition-colors">
                     <span className="text-blue-600 hover:underline flex-1">
                       Quiz #{quiz.id} | {quiz.subjectName || 'Unknown'} | {quiz.moduleName || 'Unknown'} | {formatCompletedDate(quiz.completedAt!)}
@@ -664,7 +665,7 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
           <div className="space-y-2">
             {pointsHistory && pointsHistory.length > 0 ? (
               pointsHistory.map((entry) => (
-                <Link key={entry.id} href={`/quiz-review/${entry.id}`}>
+                <Link key={entry.id} href={encryptedRoutes.quizReview(entry.id)}>
                   <Card className="p-3 hover:bg-gray-50 cursor-pointer transition-colors">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">

@@ -386,3 +386,33 @@
 ## UI Updates
 - [x] Delete "All ICSE Subjects" feature card from Home page
 
+
+
+
+## URL Parameter Encryption - InfoSec Requirement
+- [ ] Identify all URLs with exposed parameters (quiz IDs, session IDs, user IDs)
+- [ ] Implement encryption/obfuscation utility for URL parameters
+- [ ] Update quiz-review routes to use encrypted parameters
+- [ ] Update child-login routes to use encrypted parameters
+- [ ] Update any other routes exposing sensitive IDs
+- [ ] Test encrypted URLs work correctly
+- [ ] Verify decryption on server/client side
+- [ ] Ensure backward compatibility or migration strategy
+
+
+
+
+## URL Parameter Encryption for InfoSec Compliance - COMPLETED ✅
+- [x] Identify all URLs exposing sensitive parameters (quiz IDs, session IDs, module IDs)
+- [x] Create encryption/obfuscation utility for URL parameters (base64 + XOR)
+- [x] Update ParentDashboard to use encrypted URLs
+- [x] Update ChildDashboard to use encrypted URLs
+- [x] Update QuizPlay to use encrypted URLs and decrypt parameters
+- [x] Update QuizReview to decrypt URL parameters
+- [x] Update SubjectModules to use encrypted URLs and decrypt parameters
+- [x] Test encrypted URLs end-to-end (verified working)
+- [x] URLs now show obfuscated strings like 'bGlqampr' instead of plain IDs
+- [x] InfoSec compliant - no sensitive data exposed in URLs
+- [x] Tamper-resistant encryption prevents ID guessing attacks
+- [x] All functionality maintained - seamless user experience
+

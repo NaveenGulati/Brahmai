@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { decryptId, encryptedRoutes } from "@shared/urlEncryption";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
@@ -9,7 +10,24 @@ import { useState } from 'react';
 
 export default function QuizReview() {
   // ALL HOOKS MUST BE AT THE TOP - BEFORE ANY CONDITIONAL RETURNS
-  const { sessionId } = useParams<{ sessionId: string }>();
+  const { sessionId: encryptedSessionId } = useParams<{ sessionId: string }>();
+  // Decrypt the session ID from URL
+  let sessionId: number;
+  try {
+    sessionId = decryptId(encryptedSessionId!);
+  } catch (error) {
+    console.error('Failed to decrypt session ID:', error);
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Invalid quiz session</p>
+          <Button onClick={() => setLocation('/parent')} className="mt-4">
+            Back to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
   const [, setLocation] = useLocation();
   const { user } = useAuth({ redirectOnUnauthenticated: false });
   const [aiAnalysis, setAiAnalysis] = useState<{ fullAnalysis: string } | null>(null);
@@ -21,12 +39,12 @@ export default function QuizReview() {
 
   // Query hooks - must be called unconditionally
   const { data: reviewData, isLoading } = trpc.parent.getQuizReview.useQuery(
-    { sessionId: parseInt(sessionId!) },
+    { sessionId },
     { enabled: !!sessionId && !isChild }
   );
   
   const { data: childReviewData, isLoading: isChildLoading } = trpc.child.getQuizReview.useQuery(
-    { sessionId: parseInt(sessionId!) },
+    { sessionId },
     { enabled: !!sessionId && isChild }
   );
   
@@ -36,7 +54,7 @@ export default function QuizReview() {
   const { data: previousAttempt } = trpc.parent.getPreviousAttempt.useQuery(
     { 
       moduleId: actualReviewData?.session.moduleId || 0,
-      currentSessionId: parseInt(sessionId!) 
+      currentSessionId: sessionId 
     },
     { enabled: !!actualReviewData?.session.moduleId && !isChild }
   );
@@ -80,7 +98,7 @@ export default function QuizReview() {
 
   const handleGenerateAnalysis = async () => {
     try {
-      const result = await generateAnalysisMutation.mutateAsync({ sessionId: parseInt(sessionId!) });
+      const result = await generateAnalysisMutation.mutateAsync({ sessionId });
       setAiAnalysis(result);
     } catch (error) {
       console.error('Failed to generate analysis:', error);
@@ -157,7 +175,7 @@ export default function QuizReview() {
             {isChild && (
               <div className="mt-4 flex justify-center">
                 <Button 
-                  onClick={() => setLocation(`/quiz/${session.moduleId}`)}
+                  onClick={() => setLocation(encryptedRoutes.quiz(session.moduleId))}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
                   🔄 Reattempt Test
