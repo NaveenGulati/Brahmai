@@ -236,3 +236,15 @@
 - [x] Subject dropdown now shows actual subjects from database
 
 
+
+
+## Quiz Review Performance & UX Improvements
+- [x] Speed up quiz review/assessment page loading - optimized with batch question fetching
+- [x] Eliminated N+1 query problem by fetching all questions in one query instead of individually
+- [x] Add back button on quiz review page to return to dashboard
+- [x] Show quiz history on child dashboard (like parent view) with test details
+- [x] Display attempted tests with scores, dates, and subject/module info on child dashboard
+- [x] Added getQuizHistory API for child router
+- [x] Created Recent Quizzes section with beautiful gradient cards showing quiz details
+
+

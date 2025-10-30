@@ -311,23 +311,26 @@ export const appRouter = router({
         const module = await db.getModuleById(session.moduleId);
         const subject = module ? await db.getSubjectById(module.subjectId) : null;
 
+        // Batch fetch all questions at once (performance optimization)
+        const questionIds = responses.map((r: any) => r.questionId);
+        const questionsData = await db.getQuestionsByIds(questionIds);
+        const questionsMap = new Map(questionsData.map(q => [q.id, q]));
+
         // Get detailed response data with questions
-        const detailedResponses = await Promise.all(
-          responses.map(async (r: any) => {
-            const question = await db.getQuestionById(r.questionId);
-            return {
-              ...r,
-              questionText: question?.questionText || '',
-              questionType: question?.questionType || 'mcq',
-              questionImage: question?.questionImage,
-              options: typeof question?.options === 'string' ? JSON.parse(question.options) : question?.options,
-              correctAnswer: question?.correctAnswer || '',
-              explanation: question?.explanation,
-              difficulty: question?.difficulty,
-              maxPoints: question?.points || 0,
-            };
-          })
-        );
+        const detailedResponses = responses.map((r: any) => {
+          const question = questionsMap.get(r.questionId);
+          return {
+            ...r,
+            questionText: question?.questionText || '',
+            questionType: question?.questionType || 'mcq',
+            questionImage: question?.questionImage,
+            options: typeof question?.options === 'string' ? JSON.parse(question.options) : question?.options,
+            correctAnswer: question?.correctAnswer || '',
+            explanation: question?.explanation,
+            difficulty: question?.difficulty,
+            maxPoints: question?.points || 0,
+          };
+        });
 
         // Generate AI analysis
         const { invokeLLM } = await import('./_core/llm');
@@ -668,6 +671,18 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
         return db.getPointsHistory(userId);
       }),
 
+    // Get quiz history (public for local auth)
+    getQuizHistory: publicProcedure
+      .input(z.object({ 
+        childId: z.number().optional(),
+        limit: z.number().optional(),
+      }))
+      .query(async ({ ctx, input }) => {
+        const userId = input.childId || ctx.user?.id;
+        if (!userId) return [];
+        return db.getUserQuizHistory(userId, input.limit);
+      }),
+
     // Get quiz review (public for local auth)
     getQuizReview: publicProcedure
       .input(z.object({ sessionId: z.number() }))
@@ -681,23 +696,26 @@ IMPORTANT: When mentioning mathematical expressions, write them naturally withou
         const module = await db.getModuleById(session.moduleId);
         const subject = module ? await db.getSubjectById(module.subjectId) : null;
 
+        // Batch fetch all questions at once (performance optimization)
+        const questionIds = responses.map((r: any) => r.questionId);
+        const questionsData = await db.getQuestionsByIds(questionIds);
+        const questionsMap = new Map(questionsData.map(q => [q.id, q]));
+
         // Get detailed response data with questions
-        const detailedResponses = await Promise.all(
-          responses.map(async (r: any) => {
-            const question = await db.getQuestionById(r.questionId);
-            return {
-              ...r,
-              questionText: question?.questionText || '',
-              questionType: question?.questionType || 'mcq',
-              questionImage: question?.questionImage,
-              options: typeof question?.options === 'string' ? JSON.parse(question.options) : question?.options,
-              correctAnswer: question?.correctAnswer || '',
-              explanation: question?.explanation,
-              difficulty: question?.difficulty,
-              maxPoints: question?.points || 0,
-            };
-          })
-        );
+        const detailedResponses = responses.map((r: any) => {
+          const question = questionsMap.get(r.questionId);
+          return {
+            ...r,
+            questionText: question?.questionText || '',
+            questionType: question?.questionType || 'mcq',
+            questionImage: question?.questionImage,
+            options: typeof question?.options === 'string' ? JSON.parse(question.options) : question?.options,
+            correctAnswer: question?.correctAnswer || '',
+            explanation: question?.explanation,
+            difficulty: question?.difficulty,
+            maxPoints: question?.points || 0,
+          };
+        });
 
         // Generate AI analysis
         const { invokeLLM } = await import('./_core/llm');

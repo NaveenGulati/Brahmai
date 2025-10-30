@@ -65,16 +65,14 @@ export default function QuizReview() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container max-w-4xl">
-              {/* Reattempt Test button only shown when child views their own results */}
-              {user?.role === 'child' && (
-                <Button
-                  variant="outline"
-                  onClick={() => setLocation(`/quiz/${session.moduleId}`)}
-                  className="mt-4"
-                >
-                  🔄 Reattempt Test
-                </Button>
-              )}
+        {/* Back button */}
+        <Button
+          variant="outline"
+          onClick={() => setLocation(isChild ? '/child' : '/parent')}
+          className="mb-4"
+        >
+          ← Back to Dashboard
+        </Button>
 
         {/* Quiz Summary */}
         <Card className="mb-6">

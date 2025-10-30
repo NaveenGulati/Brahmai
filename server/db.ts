@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, gte, lte, isNotNull } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lte, isNotNull, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, users, 
@@ -229,6 +229,12 @@ export async function getQuestionById(id: number) {
   if (!db) return undefined;
   const result = await db.select().from(questions).where(eq(questions.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getQuestionsByIds(ids: number[]) {
+  const db = await getDb();
+  if (!db || ids.length === 0) return [];
+  return db.select().from(questions).where(inArray(questions.id, ids));
 }
 
 export async function createQuestion(data: InsertQuestion) {

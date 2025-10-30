@@ -61,6 +61,11 @@ export default function ChildDashboard() {
     { enabled: isReady && isPointsLedgerOpen }
   );
   
+  const { data: quizHistory } = trpc.child.getQuizHistory.useQuery(
+    { childId: childUser?.id, limit: 5 },
+    { enabled: isReady }
+  );
+  
   const utils = trpc.useUtils();
   const completeChallengeM = trpc.child.completeChallenge.useMutation({
     onSuccess: () => {
@@ -270,6 +275,35 @@ export default function ChildDashboard() {
                   <p className="text-sm text-gray-600">Total Quizzes</p>
                   <p className="text-2xl font-bold text-green-600">{stats.totalQuizzes}</p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Recent Quizzes */}
+        {quizHistory && quizHistory.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Quizzes</CardTitle>
+              <CardDescription>Your latest quiz attempts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {quizHistory.map((quiz) => (
+                  <Link key={quiz.id} href={`/quiz-review/${quiz.id}`}>
+                    <div className="flex justify-between items-center text-sm p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg hover:from-blue-100 hover:to-purple-100 cursor-pointer transition-all border border-blue-200">
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">Quiz #{quiz.id}</p>
+                        <p className="text-xs text-gray-600">{quiz.subjectName || 'Unknown'} • {quiz.moduleName || 'Unknown'}</p>
+                        <p className="text-xs text-gray-500 mt-1">{new Date(quiz.completedAt!).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-indigo-600">{quiz.scorePercentage}%</p>
+                        <p className="text-xs text-gray-500">{quiz.correctAnswers}/{quiz.totalQuestions}</p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
               </div>
             </CardContent>
           </Card>
