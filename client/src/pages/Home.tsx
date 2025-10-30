@@ -45,21 +45,7 @@ export default function Home() {
         </div>
 
         {/* Features Grid */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <Card className="border-2 border-blue-200 hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span className="text-3xl">📚</span>
-                All ICSE Subjects
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Mathematics, Science, English, Social Studies, Hindi, Spanish, and Computer Science - all covered comprehensively
-              </CardDescription>
-            </CardContent>
-          </Card>
-
+        <div className="grid md:grid-cols-2 gap-6 mb-12">
           <Card className="border-2 border-green-200 hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

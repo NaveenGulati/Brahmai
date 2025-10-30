@@ -380,3 +380,9 @@
 - [x] VERIFIED: Database stores cached explanations correctly
 - [x] VERIFIED: Usage tracking works (timesUsed increments)
 
+
+
+
+## UI Updates
+- [x] Delete "All ICSE Subjects" feature card from Home page
+
