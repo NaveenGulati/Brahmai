@@ -180,13 +180,21 @@ export default function QuizPlay() {
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <Button className="flex-1" onClick={() => setLocation('/child')}>
-                Back to Dashboard
+            <div className="flex flex-col gap-2">
+              <Button 
+                className="w-full" 
+                onClick={() => setLocation(`/quiz-review/${sessionId}`)}
+              >
+                📊 View Detailed Analysis
               </Button>
-              <Button className="flex-1" variant="outline" onClick={() => window.location.reload()}>
-                Retry Quiz
-              </Button>
+              <div className="flex gap-2">
+                <Button className="flex-1" variant="outline" onClick={() => setLocation('/child')}>
+                  Back to Dashboard
+                </Button>
+                <Button className="flex-1" variant="outline" onClick={() => window.location.reload()}>
+                  Retry Quiz
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

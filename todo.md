@@ -290,3 +290,25 @@
 - [ ] (Future) Show difficulty level indicator during quiz
 
 
+
+
+## Quiz Completion Screen Improvements
+- [x] Add "View Detailed Analysis" button on quiz completion screen
+- [x] Button should redirect to quiz review page (same as clicking Total Points on dashboard)
+- [x] Pass sessionId to review page for detailed analysis
+
+## AI-Powered Personalized Learning System (Major USP) - IN PROGRESS
+- [x] Created adaptive-quiz.ts helper module with AI integration
+- [x] Implemented historical performance analysis (past quiz scores, trends)
+- [x] AI analyzes: accuracy rate, time spent, difficulty progression, patterns
+- [x] AI decides optimal difficulty based on historical + current performance
+- [x] Fallback logic for instant response if AI takes too long
+- [ ] Create API: getNextAdaptiveQuestion with historical analysis
+- [ ] Change quiz flow: one question at a time with instant response
+- [ ] Update frontend to fetch next question after answer submission
+- [ ] Integrate adaptive-quiz helper into quiz APIs
+- [ ] Test end-to-end adaptive testing flow
+- [ ] Track adaptation decisions and reasoning for transparency
+- [ ] True personalized learning that strengthens skills progressively
+
+
