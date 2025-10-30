@@ -349,3 +349,12 @@
 - [x] Loading states with spinners for both features
 - [x] Explanations persist once generated
 
+
+
+
+## React Hooks Error in QuizReview - FIXED ✅
+- [x] Fix "Rendered more hooks than during the previous render" error in QuizReview component
+- [x] Ensure all hooks are called unconditionally at the top level
+- [x] Move conditional logic below hook declarations
+- [x] Call both parent and child mutations unconditionally, then choose which to use
+

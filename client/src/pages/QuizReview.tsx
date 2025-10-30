@@ -65,10 +65,10 @@ export default function QuizReview() {
 
   const { session, responses } = actualReviewData;
 
-  // AI Analysis mutation
-  const generateAnalysisMutation = isChild 
-    ? trpc.child.generateAIAnalysis.useMutation()
-    : trpc.parent.generateAIAnalysis.useMutation();
+  // AI Analysis mutations - call both unconditionally (React hooks rule)
+  const parentAnalysisMutation = trpc.parent.generateAIAnalysis.useMutation();
+  const childAnalysisMutation = trpc.child.generateAIAnalysis.useMutation();
+  const generateAnalysisMutation = isChild ? childAnalysisMutation : parentAnalysisMutation;
 
   const handleGenerateAnalysis = async () => {
     try {
@@ -79,10 +79,10 @@ export default function QuizReview() {
     }
   };
 
-  // Detailed explanation mutation
-  const generateExplanationMutation = isChild
-    ? trpc.child.generateDetailedExplanation.useMutation()
-    : trpc.parent.generateDetailedExplanation.useMutation();
+  // Detailed explanation mutations - call both unconditionally (React hooks rule)
+  const parentExplanationMutation = trpc.parent.generateDetailedExplanation.useMutation();
+  const childExplanationMutation = trpc.child.generateDetailedExplanation.useMutation();
+  const generateExplanationMutation = isChild ? childExplanationMutation : parentExplanationMutation;
 
   const handleGetDetailedExplanation = async (response: any) => {
     try {
