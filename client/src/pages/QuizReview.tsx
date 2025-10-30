@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import { useState } from 'react';
 
 export default function QuizReview() {
+  // ALL HOOKS MUST BE AT THE TOP - BEFORE ANY CONDITIONAL RETURNS
   const { sessionId } = useParams<{ sessionId: string }>();
   const [, setLocation] = useLocation();
   const { user } = useAuth({ redirectOnUnauthenticated: false });
@@ -18,6 +19,7 @@ export default function QuizReview() {
   const childUser = localStorage.getItem('childUser') ? JSON.parse(localStorage.getItem('childUser')!) : null;
   const isChild = !!childUser;
 
+  // Query hooks - must be called unconditionally
   const { data: reviewData, isLoading } = trpc.parent.getQuizReview.useQuery(
     { sessionId: parseInt(sessionId!) },
     { enabled: !!sessionId && !isChild }
@@ -39,6 +41,17 @@ export default function QuizReview() {
     { enabled: !!actualReviewData?.session.moduleId && !isChild }
   );
 
+  // AI Analysis mutations - call both unconditionally (React hooks rule)
+  const parentAnalysisMutation = trpc.parent.generateAIAnalysis.useMutation();
+  const childAnalysisMutation = trpc.child.generateAIAnalysis.useMutation();
+  const generateAnalysisMutation = isChild ? childAnalysisMutation : parentAnalysisMutation;
+
+  // Detailed explanation mutations - call both unconditionally (React hooks rule)
+  const parentExplanationMutation = trpc.parent.generateDetailedExplanation.useMutation();
+  const childExplanationMutation = trpc.child.generateDetailedExplanation.useMutation();
+  const generateExplanationMutation = isChild ? childExplanationMutation : parentExplanationMutation;
+
+  // NOW we can do conditional returns - all hooks have been called
   if (actualLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -65,11 +78,6 @@ export default function QuizReview() {
 
   const { session, responses } = actualReviewData;
 
-  // AI Analysis mutations - call both unconditionally (React hooks rule)
-  const parentAnalysisMutation = trpc.parent.generateAIAnalysis.useMutation();
-  const childAnalysisMutation = trpc.child.generateAIAnalysis.useMutation();
-  const generateAnalysisMutation = isChild ? childAnalysisMutation : parentAnalysisMutation;
-
   const handleGenerateAnalysis = async () => {
     try {
       const result = await generateAnalysisMutation.mutateAsync({ sessionId: parseInt(sessionId!) });
@@ -78,11 +86,6 @@ export default function QuizReview() {
       console.error('Failed to generate analysis:', error);
     }
   };
-
-  // Detailed explanation mutations - call both unconditionally (React hooks rule)
-  const parentExplanationMutation = trpc.parent.generateDetailedExplanation.useMutation();
-  const childExplanationMutation = trpc.child.generateDetailedExplanation.useMutation();
-  const generateExplanationMutation = isChild ? childExplanationMutation : parentExplanationMutation;
 
   const handleGetDetailedExplanation = async (response: any) => {
     try {
@@ -151,7 +154,7 @@ export default function QuizReview() {
                 <span>{session.totalQuestions} questions</span>
               </div>
             </div>
-            {user?.role === 'child' && (
+            {isChild && (
               <div className="mt-4 flex justify-center">
                 <Button 
                   onClick={() => setLocation(`/quiz/${session.moduleId}`)}
@@ -235,260 +238,235 @@ export default function QuizReview() {
                   </div>
                   {(session.timeTaken || 0) < (previousAttempt.timeTaken || 0) && (
                     <p className="text-xs text-green-600 mt-2 text-center font-medium">
-                      {Math.floor(((previousAttempt.timeTaken || 0) - (session.timeTaken || 0)) / 60)}m {((previousAttempt.timeTaken || 0) - (session.timeTaken || 0)) % 60}s faster!
+                      Faster by {Math.floor(((previousAttempt.timeTaken || 0) - (session.timeTaken || 0)) / 60)}m {((previousAttempt.timeTaken || 0) - (session.timeTaken || 0)) % 60}s! ⚡
                     </p>
                   )}
                 </div>
 
-                {/* Accuracy Comparison */}
+                {/* Correct Answers Comparison */}
                 <div className="bg-white p-4 rounded-lg border border-indigo-100">
                   <p className="text-sm text-gray-600 mb-2">Correct Answers</p>
                   <div className="flex items-center justify-between">
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-gray-400">{previousAttempt.correctAnswers}/{previousAttempt.totalQuestions}</p>
+                      <p className="text-2xl font-bold text-gray-400">{previousAttempt.correctAnswers}</p>
                       <p className="text-xs text-gray-500">Previous</p>
                     </div>
                     <div className="text-2xl">
                       {(session.correctAnswers || 0) > (previousAttempt.correctAnswers || 0) ? (
-                        <span className="text-green-500">✓</span>
+                        <span className="text-green-500">↗</span>
                       ) : (session.correctAnswers || 0) < (previousAttempt.correctAnswers || 0) ? (
-                        <span className="text-red-500">✗</span>
+                        <span className="text-red-500">↘</span>
                       ) : (
-                        <span className="text-gray-400">≈</span>
+                        <span className="text-gray-400">→</span>
                       )}
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-indigo-600">{session.correctAnswers}/{session.totalQuestions}</p>
+                      <p className="text-2xl font-bold text-indigo-600">{session.correctAnswers}</p>
                       <p className="text-xs text-gray-500">Current</p>
                     </div>
                   </div>
                   {(session.correctAnswers || 0) > (previousAttempt.correctAnswers || 0) && (
                     <p className="text-xs text-green-600 mt-2 text-center font-medium">
-                      +{(session.correctAnswers || 0) - (previousAttempt.correctAnswers || 0)} more correct! 💪
+                      +{(session.correctAnswers || 0) - (previousAttempt.correctAnswers || 0)} more correct! 🎯
                     </p>
                   )}
                 </div>
               </div>
 
               {/* Overall Progress Message */}
-              <div className="mt-4 p-3 bg-white rounded-lg border border-indigo-100">
-                <p className="text-sm font-medium text-indigo-900">
-                  {(session.scorePercentage || 0) > (previousAttempt.scorePercentage || 0) ? (
-                    <span className="text-green-600">🌟 Great improvement! Keep up the excellent work!</span>
-                  ) : (session.scorePercentage || 0) === (previousAttempt.scorePercentage || 0) ? (
-                    <span className="text-blue-600">📚 Consistent performance. Try to improve speed or tackle harder questions!</span>
-                  ) : (
-                    <span className="text-orange-600">💡 Don't worry! Review the AI analysis below and practice the weak areas.</span>
-                  )}
-                </p>
+              <div className="mt-4 p-4 bg-white rounded-lg border border-indigo-100">
+                {(session.scorePercentage || 0) > (previousAttempt.scorePercentage || 0) ? (
+                  <p className="text-center text-indigo-700 font-medium">
+                    🎉 Great progress! You're getting better at {session.moduleName}!
+                  </p>
+                ) : (session.scorePercentage || 0) === (previousAttempt.scorePercentage || 0) ? (
+                  <p className="text-center text-indigo-700 font-medium">
+                    📚 Consistent performance! Keep practicing to improve further.
+                  </p>
+                ) : (
+                  <p className="text-center text-orange-700 font-medium">
+                    💪 Don't give up! Review the concepts and try again - you'll do better!
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* AI Analysis - On Demand */}
-        {!aiAnalysis ? (
-          <Card className="mb-6 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <Sparkles className="w-12 h-12 text-purple-600 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold text-purple-900 mb-2">Get AI-Powered Performance Analysis</h3>
-                <p className="text-sm text-gray-600 mb-4">Let AI analyze your performance and provide personalized insights</p>
-                <Button 
+        {/* AI Analysis Section */}
+        <Card className="mb-6 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-purple-900">
+              <Brain className="w-6 h-6" />
+              AI Performance Analysis
+            </CardTitle>
+            <p className="text-sm text-gray-600">Get personalized insights powered by AI</p>
+          </CardHeader>
+          <CardContent>
+            {!aiAnalysis ? (
+              <div className="text-center py-6">
+                <Button
                   onClick={handleGenerateAnalysis}
                   disabled={generateAnalysisMutation.isPending}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
                 >
                   {generateAnalysisMutation.isPending ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Generating Analysis...
+                      Analyzing...
                     </>
                   ) : (
                     <>
-                      <Brain className="w-4 h-4 mr-2" />
+                      <Sparkles className="w-4 h-4 mr-2" />
                       Generate AI Analysis
                     </>
                   )}
                 </Button>
+                <p className="text-xs text-gray-500 mt-2">
+                  Click to get detailed insights on your performance
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="mb-6 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-blue-900">
-                <Brain className="w-6 h-6 text-blue-600" />
-                AI Performance Analysis
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="prose prose-sm max-w-none prose-headings:text-blue-900 prose-strong:text-blue-800 prose-li:text-gray-700 prose-p:text-gray-700">
+            ) : (
+              <div className="prose prose-sm max-w-none">
                 <ReactMarkdown>{aiAnalysis.fullAnalysis}</ReactMarkdown>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Question-by-Question Review */}
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold">Question-by-Question Review</h3>
-          {responses.map((response, index) => (
-            <Card key={response.id} className={response.isCorrect ? 'border-green-200' : 'border-red-200'}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+        {/* Questions Review */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Question-by-Question Review</CardTitle>
+            <p className="text-sm text-gray-600">Review each question and your answers</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {responses.map((response, index) => (
+                <div
+                  key={response.id}
+                  className={`p-4 rounded-lg border-2 ${
+                    response.isCorrect
+                      ? 'border-green-200 bg-green-50'
+                      : 'border-red-200 bg-red-50'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-1">
                       {response.isCorrect ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        <CheckCircle2 className="w-6 h-6 text-green-600" />
                       ) : (
-                        <XCircle className="w-5 h-5 text-red-600" />
+                        <XCircle className="w-6 h-6 text-red-600" />
                       )}
-                      <span className="font-semibold">Question {index + 1}</span>
-                      <span className="text-xs px-2 py-1 rounded bg-gray-100">
-                        {response.difficulty}
-                      </span>
-                      <span className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-700">
-                        {response.pointsEarned} / {response.maxPoints} points
-                      </span>
                     </div>
-                    <p className="text-gray-800 font-medium">{response.questionText}</p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {response.questionImage && (
-                  <img 
-                    src={response.questionImage} 
-                    alt="Question" 
-                    className="max-w-md rounded border"
-                  />
-                )}
-                
-                {/* Options for MCQ */}
-                {response.questionType === 'mcq' && response.options && (
-                  <div className="space-y-2">
-                    {response.options.map((option: string, idx: number) => {
-                      const isUserAnswer = response.userAnswer === option;
-                      const isCorrectAnswer = response.correctAnswer === option;
-                      
-                      return (
-                        <div
-                          key={idx}
-                          className={`p-3 rounded border ${
-                            isCorrectAnswer
-                              ? 'bg-green-50 border-green-300'
-                              : isUserAnswer
-                              ? 'bg-red-50 border-red-300'
-                              : 'bg-gray-50 border-gray-200'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            {isCorrectAnswer && <CheckCircle2 className="w-4 h-4 text-green-600" />}
-                            {isUserAnswer && !isCorrectAnswer && <XCircle className="w-4 h-4 text-red-600" />}
-                            <span>{option}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* True/False */}
-                {response.questionType === 'true_false' && (
-                  <div className="space-y-2">
-                    {['True', 'False'].map((option) => {
-                      const isUserAnswer = response.userAnswer === option;
-                      const isCorrectAnswer = response.correctAnswer === option;
-                      
-                      return (
-                        <div
-                          key={option}
-                          className={`p-3 rounded border ${
-                            isCorrectAnswer
-                              ? 'bg-green-50 border-green-300'
-                              : isUserAnswer
-                              ? 'bg-red-50 border-red-300'
-                              : 'bg-gray-50 border-gray-200'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            {isCorrectAnswer && <CheckCircle2 className="w-4 h-4 text-green-600" />}
-                            {isUserAnswer && !isCorrectAnswer && <XCircle className="w-4 h-4 text-red-600" />}
-                            <span>{option}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Fill in blank / Other types */}
-                {(response.questionType === 'fill_blank' || response.questionType === 'match') && (
-                  <div className="space-y-2">
-                    <div className="p-3 bg-gray-50 rounded border">
-                      <p className="text-sm text-gray-600">Your Answer:</p>
-                      <p className="font-medium">{response.userAnswer || '(No answer)'}</p>
-                    </div>
-                    <div className="p-3 bg-green-50 rounded border border-green-300">
-                      <p className="text-sm text-gray-600">Correct Answer:</p>
-                      <p className="font-medium text-green-700">{response.correctAnswer}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Explanation */}
-                {response.explanation && (
-                  <div className="p-3 bg-blue-50 rounded border border-blue-200">
-                    <p className="text-sm font-semibold text-blue-900 mb-1">Explanation:</p>
-                    <p className="text-sm text-blue-800">{response.explanation}</p>
-                  </div>
-                )}
-
-                {/* Detailed AI Explanation for Wrong Answers */}
-                {!response.isCorrect && (
-                  <div className="mt-3">
-                    {!expandedExplanations[response.questionId] ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleGetDetailedExplanation(response)}
-                        disabled={generateExplanationMutation.isPending}
-                        className="w-full border-purple-300 text-purple-700 hover:bg-purple-50"
-                      >
-                        {generateExplanationMutation.isPending ? (
-                          <>
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600 mr-2"></div>
-                            Generating Explanation...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-3 h-3 mr-2" />
-                            Get Detailed AI Explanation
-                          </>
-                        )}
-                      </Button>
-                    ) : (
-                      <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Sparkles className="w-4 h-4 text-purple-600" />
-                          <p className="text-sm font-semibold text-purple-900">Detailed Explanation:</p>
-                        </div>
-                        <div className="prose prose-sm max-w-none prose-p:text-gray-700 prose-strong:text-purple-800">
-                          <ReactMarkdown>{expandedExplanations[response.questionId]}</ReactMarkdown>
-                        </div>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-semibold text-gray-900">
+                          Question {index + 1}
+                        </h3>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          response.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
+                          response.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {response.difficulty?.toUpperCase()} • {response.points} pts
+                        </span>
                       </div>
-                    )}
-                  </div>
-                )}
+                      <p className="text-gray-700 mb-3">{response.questionText}</p>
 
-                <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t">
-                  <span>Time spent: {response.timeSpent}s</span>
+                      {response.questionType === 'mcq' && (
+                        <div className="space-y-2 mb-3">
+                          {response.options?.map((option: string, optIndex: number) => {
+                            const isUserAnswer = option === response.userAnswer;
+                            const isCorrectAnswer = option === response.correctAnswer;
+                            
+                            return (
+                              <div
+                                key={optIndex}
+                                className={`p-2 rounded border ${
+                                  isCorrectAnswer
+                                    ? 'border-green-500 bg-green-100'
+                                    : isUserAnswer
+                                    ? 'border-red-500 bg-red-100'
+                                    : 'border-gray-200 bg-white'
+                                }`}
+                              >
+                                <span className="font-medium">{String.fromCharCode(65 + optIndex)}.</span> {option}
+                                {isCorrectAnswer && <span className="ml-2 text-green-600 font-medium">✓ Correct</span>}
+                                {isUserAnswer && !isCorrectAnswer && <span className="ml-2 text-red-600 font-medium">✗ Your answer</span>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {response.questionType !== 'mcq' && (
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <p className="text-xs text-gray-600 mb-1">Your Answer:</p>
+                            <p className={`font-medium ${response.isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                              {response.userAnswer || 'No answer'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-600 mb-1">Correct Answer:</p>
+                            <p className="font-medium text-green-700">{response.correctAnswer}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {response.explanation && (
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                          <p className="text-sm text-blue-900">
+                            <span className="font-semibold">Explanation: </span>
+                            {response.explanation}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Detailed AI Explanation for wrong answers */}
+                      {!response.isCorrect && (
+                        <div className="mt-3">
+                          {!expandedExplanations[response.questionId] ? (
+                            <Button
+                              onClick={() => handleGetDetailedExplanation(response)}
+                              disabled={generateExplanationMutation.isPending}
+                              variant="outline"
+                              size="sm"
+                              className="border-purple-300 text-purple-700 hover:bg-purple-50"
+                            >
+                              {generateExplanationMutation.isPending ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600 mr-2"></div>
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-3 h-3 mr-2" />
+                                  Get Detailed Explanation
+                                </>
+                              )}
+                            </Button>
+                          ) : (
+                            <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Brain className="w-5 h-5 text-purple-600" />
+                                <h4 className="font-semibold text-purple-900">AI Detailed Explanation</h4>
+                              </div>
+                              <div className="prose prose-sm max-w-none text-gray-800">
+                                <ReactMarkdown>{expandedExplanations[response.questionId]}</ReactMarkdown>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
