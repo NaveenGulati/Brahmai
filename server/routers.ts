@@ -1,7 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router, parentProcedure, qbAdminProcedure, teacherProcedure } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router, parentProcedure, qbAdminProcedure, teacherProcedure, superadminProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
@@ -1315,6 +1315,43 @@ Format in markdown with:
       .input(z.object({ query: z.string() }))
       .query(async ({ input }) => {
         return db.searchChildrenByUsername(input.query);
+      }),
+  }),
+
+  // ============= SUPER ADMIN MODULE =============
+  superadmin: router({
+    // Get all users with pagination and filters
+    getAllUsers: superadminProcedure
+      .input(z.object({
+        role: z.enum(['parent', 'child', 'teacher', 'qb_admin', 'superadmin']).optional(),
+        search: z.string().optional(),
+        limit: z.number().optional(),
+        offset: z.number().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        return db.getAllUsersWithDetails(input || {});
+      }),
+
+    // Update user role
+    updateUserRole: superadminProcedure
+      .input(z.object({
+        userId: z.number(),
+        newRole: z.enum(['parent', 'child', 'teacher', 'qb_admin', 'superadmin']),
+      }))
+      .mutation(async ({ input }) => {
+        return db.updateUserRole(input.userId, input.newRole);
+      }),
+
+    // Get platform statistics
+    getPlatformStats: superadminProcedure.query(async () => {
+      return db.getPlatformStatistics();
+    }),
+
+    // Get users by role
+    getUsersByRole: superadminProcedure
+      .input(z.object({ role: z.enum(['parent', 'child', 'teacher', 'qb_admin', 'superadmin']) }))
+      .query(async ({ input }) => {
+        return db.getUsersByRole(input.role);
       }),
   }),
 

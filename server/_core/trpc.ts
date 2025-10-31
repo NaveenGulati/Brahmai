@@ -97,3 +97,21 @@ export const teacherProcedure = t.procedure.use(
     });
   }),
 );
+
+// Super Admin procedure
+export const superadminProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+
+    if (!ctx.user || ctx.user.role !== 'superadmin') {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Access denied. Super Admin role required." });
+    }
+
+    return next({
+      ctx: {
+        ...ctx,
+        user: ctx.user,
+      },
+    });
+  }),
+);

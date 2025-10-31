@@ -1337,3 +1337,143 @@ export async function searchChildrenByUsername(query: string) {
   return children;
 }
 
+
+
+
+// ============= SUPER ADMIN FUNCTIONS =============
+
+export async function getAllUsersWithDetails(filters: {
+  role?: 'parent' | 'child' | 'teacher' | 'qb_admin' | 'superadmin';
+  search?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { role, search, limit = 50, offset = 0 } = filters;
+
+  let query = db.select({
+    id: users.id,
+    openId: users.openId,
+    name: users.name,
+    email: users.email,
+    username: users.username,
+    role: users.role,
+    loginMethod: users.loginMethod,
+    createdAt: users.createdAt,
+    lastSignedIn: users.lastSignedIn,
+  }).from(users);
+
+  const conditions = [];
+  if (role) {
+    conditions.push(eq(users.role, role));
+  }
+  if (search) {
+    conditions.push(
+      or(
+        sql`${users.name} LIKE ${`%${search}%`}`,
+        sql`${users.email} LIKE ${`%${search}%`}`,
+        sql`${users.username} LIKE ${`%${search}%`}`
+      )!
+    );
+  }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  const result = await query
+    .orderBy(desc(users.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  return result;
+}
+
+export async function updateUserRole(
+  userId: number,
+  newRole: 'parent' | 'child' | 'teacher' | 'qb_admin' | 'superadmin'
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(users)
+    .set({ role: newRole })
+    .where(eq(users.id, userId));
+
+  return { success: true };
+}
+
+export async function getPlatformStatistics() {
+  const db = await getDb();
+  if (!db) return {
+    totalUsers: 0,
+    usersByRole: {},
+    totalQuizzes: 0,
+    totalQuestions: 0,
+    activeUsers7Days: 0,
+  };
+
+  // Get total users by role
+  const userCounts = await db.select({
+    role: users.role,
+    count: sql<number>`count(*)`,
+  })
+    .from(users)
+    .groupBy(users.role);
+
+  const usersByRole: Record<string, number> = {};
+  let totalUsers = 0;
+  userCounts.forEach(({ role, count }) => {
+    usersByRole[role] = count;
+    totalUsers += count;
+  });
+
+  // Get total quizzes
+  const quizCount = await db.select({ count: sql<number>`count(*)` })
+    .from(quizSessions);
+  const totalQuizzes = quizCount[0]?.count || 0;
+
+  // Get total questions
+  const questionCount = await db.select({ count: sql<number>`count(*)` })
+    .from(questions);
+  const totalQuestions = questionCount[0]?.count || 0;
+
+  // Get active users (last 7 days)
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  const activeCount = await db.select({ count: sql<number>`count(distinct ${users.id})` })
+    .from(users)
+    .where(gte(users.lastSignedIn, sevenDaysAgo));
+  const activeUsers7Days = activeCount[0]?.count || 0;
+
+  return {
+    totalUsers,
+    usersByRole,
+    totalQuizzes,
+    totalQuestions,
+    activeUsers7Days,
+  };
+}
+
+export async function getUsersByRole(role: 'parent' | 'child' | 'teacher' | 'qb_admin' | 'superadmin') {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    username: users.username,
+    createdAt: users.createdAt,
+    lastSignedIn: users.lastSignedIn,
+  })
+    .from(users)
+    .where(eq(users.role, role))
+    .orderBy(desc(users.createdAt));
+
+  return result;
+}
+
