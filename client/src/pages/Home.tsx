@@ -9,16 +9,8 @@ export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      // Redirect based on role
-      if (user.role === 'parent') {
-        setLocation('/parent');
-      } else if (user.role === 'child') {
-        setLocation('/child');
-      }
-    }
-  }, [isAuthenticated, user, setLocation]);
+  // Don't auto-redirect on home page - let users see login options after logout
+  // Users will be redirected after successful login via OAuth callback
 
   if (loading) {
     return (

@@ -84,12 +84,13 @@ export default function ChildDashboard() {
   console.log('All challenges:', challenges);
   console.log('Pending challenges:', pendingChallenges);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.removeItem('childUser');
     if (user) {
-      logout();
+      await logout();
     }
-    setLocation('/child-login');
+    // Force navigation to child login after logout completes
+    window.location.href = '/child-login';
   };
 
   const earnedAchievementIds = new Set(achievements?.map(a => a.achievementId));

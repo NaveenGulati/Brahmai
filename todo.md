@@ -626,3 +626,12 @@
 - [x] Keep Manus OAuth as secondary option
 - [x] Test Google OAuth flow - Parent Dashboard loading successfully
 
+
+
+## Bug Fix: Logout Redirect Issue
+- [x] Fix logout redirect - removed auto-redirect from Home page
+- [x] Update OAuth callback to redirect based on user role after login
+- [x] Update ParentDashboard logout to use window.location.href after logout completes
+- [x] Update ChildDashboard logout to use window.location.href for consistency
+- [x] Force full page navigation to ensure auth state is properly cleared
+

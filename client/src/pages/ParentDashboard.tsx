@@ -174,7 +174,11 @@ export default function ParentDashboard() {
           <h1 className="text-2xl font-bold text-gray-900">👨‍👩‍👧 Parent Dashboard</h1>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">Welcome, {user?.name}</span>
-            <Button variant="outline" size="sm" onClick={() => logout()}>
+            <Button variant="outline" size="sm" onClick={async () => {
+              await logout();
+              // Force navigation to home after logout completes
+              window.location.href = '/';
+            }}>
               Logout
             </Button>
           </div>

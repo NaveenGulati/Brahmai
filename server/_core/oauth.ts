@@ -45,7 +45,15 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      res.redirect(302, "/");
+      // Redirect based on role after successful OAuth login
+      const user = await db.getUser(userInfo.openId);
+      if (user?.role === 'parent') {
+        res.redirect(302, "/parent");
+      } else if (user?.role === 'child') {
+        res.redirect(302, "/child");
+      } else {
+        res.redirect(302, "/");
+      }
     } catch (error) {
       console.error("[OAuth] Callback failed", error);
       res.status(500).json({ error: "OAuth callback failed" });
