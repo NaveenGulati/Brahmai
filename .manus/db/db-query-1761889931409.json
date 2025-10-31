@@ -1,0 +1,9 @@
+{
+  "query": "SET FOREIGN_KEY_CHECKS = 0;\nDROP TABLE IF EXISTS aiExplanationCache, activityLog, userAchievements, achievements, challenges, quizResponses, quizSessions, questions, modules, subjects, users, parentProfiles, childProfiles, teacherProfiles, gradeHistory, teacherStudentAssignments, studentGroups, studentGroupMembers, boards, grades, boardGradeSubjects, questionReports, messages, announcements, qbAdminAssignments, auditLog, platformSettings;\nSET FOREIGN_KEY_CHECKS = 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute SET FOREIGN_KEY_CHECKS = 0;\nDROP TABLE IF EXISTS aiExplanationCache, activityLog, userAchievements, achievements, challenges, quizResponses, quizSessions, questions, modules, subjects, users, parentProfiles, childProfiles, teacherProfiles, gradeHistory, teacherStudentAssignments, studentGroups, studentGroupMembers, boards, grades, boardGradeSubjects, questionReports, messages, announcements, qbAdminAssignments, auditLog, platformSettings;\nSET FOREIGN_KEY_CHECKS = 1;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 5942
+}

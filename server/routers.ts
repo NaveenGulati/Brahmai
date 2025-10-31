@@ -12,7 +12,7 @@ import { authRouter } from "./authRouter";
 
 // Custom procedure for parent-only access
 const parentProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== 'parent' && ctx.user.role !== 'admin') {
+  if (ctx.user.role !== 'parent' && ctx.user.role !== 'superadmin') {
     throw new TRPCError({ 
       code: 'FORBIDDEN',
       message: 'Only parents can access this resource'
@@ -135,21 +135,27 @@ export const appRouter = router({
     // Create single question
     createQuestion: parentProcedure
       .input(z.object({
-        moduleId: z.number(),
+        boardId: z.number(),
+        gradeId: z.number(),
+        subjectId: z.number(),
+        moduleId: z.number().optional(),
         questionType: z.enum(['mcq', 'true_false', 'fill_blank', 'match', 'image_based']),
         questionText: z.string(),
         questionImage: z.string().optional(),
         options: z.any(),
         correctAnswer: z.string(),
         explanation: z.string().optional(),
-        difficulty: z.enum(['easy', 'medium', 'hard', 'olympiad']),
+        difficulty: z.enum(['easy', 'medium', 'hard']),
         points: z.number().default(10),
         timeLimit: z.number().default(60),
+        topic: z.string().optional(),
+        subTopic: z.string().optional(),
+        scope: z.enum(['School', 'Olympiad', 'Competitive', 'Advanced']).default('School'),
       }))
       .mutation(async ({ input, ctx }) => {
         return db.createQuestion({
           ...input,
-          createdBy: ctx.user.id,
+          submittedBy: ctx.user.id,
         });
       }),
 
@@ -162,14 +168,14 @@ export const appRouter = router({
         subject: z.string().optional(),
         topic: z.string().optional(),
         subTopic: z.string().optional(),
-        scope: z.string().optional(),
+        scope: z.enum(['School', 'Olympiad', 'Competitive', 'Advanced']).optional(),
         questionType: z.enum(['mcq', 'true_false', 'fill_blank', 'match', 'image_based']).optional(),
         questionText: z.string().optional(),
         questionImage: z.string().optional(),
         options: z.any().optional(),
         correctAnswer: z.string().optional(),
         explanation: z.string().optional(),
-        difficulty: z.enum(['easy', 'medium', 'hard', 'olympiad']).optional(),
+        difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
         points: z.number().optional(),
         timeLimit: z.number().optional(),
       }))
@@ -189,25 +195,31 @@ export const appRouter = router({
     bulkUploadQuestions: parentProcedure
       .input(z.object({
         questions: z.array(z.object({
-          board: z.string(),
-          grade: z.number(),
-          subject: z.string(),
+          boardId: z.number(),
+          gradeId: z.number(),
+          subjectId: z.number(),
+          moduleId: z.number().optional(),
           topic: z.string(),
           subTopic: z.string().optional(),
-          scope: z.string(),
+          scope: z.enum(['School', 'Olympiad', 'Competitive', 'Advanced']),
           questionType: z.enum(['mcq', 'true_false', 'fill_blank', 'match', 'image_based']),
           questionText: z.string(),
           questionImage: z.string().optional(),
           options: z.any(),
           correctAnswer: z.string(),
           explanation: z.string().optional(),
-          difficulty: z.enum(['easy', 'medium', 'hard', 'olympiad']),
+          difficulty: z.enum(['easy', 'medium', 'hard']),
           points: z.number().default(10),
           timeLimit: z.number().default(60),
         }))
       }))
       .mutation(async ({ input, ctx }) => {
-        return db.bulkUploadQuestionsWithMetadata(input.questions, ctx.user.id);
+        // Add submittedBy to each question
+        const questionsWithSubmitter = input.questions.map(q => ({
+          ...q,
+          submittedBy: ctx.user.id
+        }));
+        return db.bulkUploadQuestionsWithMetadata(questionsWithSubmitter);
       }),
 
 
@@ -226,7 +238,7 @@ export const appRouter = router({
         topic: z.string().optional(),
         board: z.string().optional(),
         grade: z.number().optional(),
-        scope: z.string().optional(),
+        scope: z.enum(['School', 'Olympiad', 'Competitive', 'Advanced']).optional(),
         difficulty: z.string().optional(),
       }).optional())
       .query(async ({ input }) => {
@@ -243,7 +255,7 @@ export const appRouter = router({
     getUniqueTopics: parentProcedure
       .input(z.object({ subject: z.string() }))
       .query(async ({ input }) => {
-        return db.getUniqueTopicsForSubject(input.subject);
+        return db.getUniqueTopicsForSubject(parseInt(input.subject));
       }),
 
     // Get child progress
@@ -497,14 +509,17 @@ Format in markdown with:
         // Save to cache for future use
         if (explanation) {
           try {
-            await db.insert(aiExplanationCache).values({
-              questionId: input.questionId,
-              detailedExplanation: explanation,
-              timesUsed: 1,
-              generatedAt: new Date(),
-              lastUsedAt: new Date(),
-            });
-            console.log(`[Cache SAVED] Question ${input.questionId}`);
+            const database = await getDb();
+            if (database) {
+              await database.insert(aiExplanationCache).values({
+                questionId: input.questionId,
+                detailedExplanation: explanation,
+                timesUsed: 1,
+                generatedAt: new Date(),
+                lastUsedAt: new Date(),
+              });
+              console.log(`[Cache SAVED] Question ${input.questionId}`);
+            }
           } catch (error) {
             console.error('Failed to cache explanation:', error);
           }
@@ -527,8 +542,9 @@ Format in markdown with:
       }))
       .mutation(async ({ input, ctx }) => {
         return db.createChallenge({
-          parentId: ctx.user.id,
-          childId: input.childId,
+          assignedBy: ctx.user.id,
+          assignedTo: input.childId,
+          assignedToType: 'individual',
           moduleId: input.moduleId,
           title: input.title,
           message: input.message,
@@ -542,7 +558,7 @@ Format in markdown with:
         challengeId: z.number(),
       }))
       .mutation(async ({ input, ctx }) => {
-        await db.deleteChallenge(input.challengeId, ctx.user.id);
+        await db.deleteChallenge(input.challengeId);
         return { success: true };
       }),
 
@@ -622,7 +638,7 @@ Format in markdown with:
 
         // Create quiz session
         const sessionId = await db.createQuizSession({
-          userId,
+          childId: userId,
           moduleId: input.moduleId,
           totalQuestions: quizSize,
           isCompleted: false,
@@ -830,7 +846,7 @@ Format in markdown with:
         });
 
         // Update user points
-        await db.updateUserPoints(userId, totalPoints);
+        await db.updateChildPoints(userId, totalPoints);
 
         // Log activity
         await db.logActivity({
@@ -843,11 +859,11 @@ Format in markdown with:
         });
 
         // Update streak
-        const user = await db.getUserById(userId);
-        if (user) {
+        const childProfile = await db.getChildProfile(userId);
+        if (childProfile) {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
-          const lastActivity = user.lastActivityDate ? new Date(user.lastActivityDate) : null;
+          const lastActivity = childProfile.lastActivityDate ? new Date(childProfile.lastActivityDate) : null;
           
           if (lastActivity) {
             lastActivity.setHours(0, 0, 0, 0);
@@ -855,16 +871,16 @@ Format in markdown with:
             
             if (daysDiff === 1) {
               // Consecutive day
-              const newStreak = (user.currentStreak || 0) + 1;
-              const newLongest = Math.max(newStreak, user.longestStreak || 0);
-              await db.updateUserStreak(userId, newStreak, newLongest);
+              const newStreak = (childProfile.currentStreak || 0) + 1;
+              const newLongest = Math.max(newStreak, childProfile.longestStreak || 0);
+              await db.updateChildStreak(userId, newStreak, newLongest);
             } else if (daysDiff > 1) {
               // Streak broken
-              await db.updateUserStreak(userId, 1, user.longestStreak || 0);
+              await db.updateChildStreak(userId, 1, childProfile.longestStreak || 0);
             }
           } else {
             // First activity
-            await db.updateUserStreak(userId, 1, 1);
+            await db.updateChildStreak(userId, 1, 1);
           }
         }
 
@@ -1185,7 +1201,7 @@ Format in markdown with:
         if (!userId) {
           throw new TRPCError({ code: 'UNAUTHORIZED' });
         }
-        await db.updateChallengeStatus(input.challengeId, 'completed', input.sessionId);
+        await db.updateChallenge(input.challengeId, { status: 'completed', sessionId: input.sessionId, completedAt: new Date() });
         return { success: true };
       }),
   }),

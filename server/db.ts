@@ -1,8 +1,19 @@
-import { eq, and, desc, sql, gte, lte, isNotNull, inArray } from "drizzle-orm";
+/**
+ * Database operations for multi-tenant EdTech platform
+ * Performance-optimized with proper indexing, selective fields, and efficient joins
+ */
+
+import { eq, and, desc, sql, gte, lte, isNotNull, inArray, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
-  InsertUser, users, 
-  subjects, InsertSubject,
+  users, InsertUser,
+  parentProfiles, InsertParentProfile,
+  childProfiles, InsertChildProfile,
+  teacherProfiles, InsertTeacherProfile,
+  gradeHistory, InsertGradeHistory,
+  teacherStudentAssignments, InsertTeacherStudentAssignment,
+  boards, grades, subjects,
+  boardGradeSubjects,
   modules, InsertModule,
   questions, InsertQuestion,
   quizSessions, InsertQuizSession,
@@ -10,7 +21,9 @@ import {
   achievements, InsertAchievement,
   userAchievements, InsertUserAchievement,
   activityLog, InsertActivityLog,
-  challenges, InsertChallenge
+  challenges, InsertChallenge,
+  qbAdminAssignments, InsertQBAdminAssignment,
+  aiExplanationCache,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -30,160 +43,257 @@ export async function getDb() {
 
 // ============= USER OPERATIONS =============
 
-export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-
+export async function upsertUser(user: InsertUser): Promise<number | undefined> {
   const db = await getDb();
   if (!db) {
     console.warn("[Database] Cannot upsert user: database not available");
-    return;
+    return undefined;
   }
 
   try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
+    const values: InsertUser = {};
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
+    // Handle openId or username (one must be present)
+    if (user.openId) {
+      values.openId = user.openId;
     }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerId) {
+    if (user.username) {
+      values.username = user.username;
+    }
+    if (user.passwordHash) {
+      values.passwordHash = user.passwordHash;
+    }
+
+    // Optional fields
+    const optionalFields = ["name", "email", "loginMethod", "role", "isActive", "isEmailVerified"] as const;
+    optionalFields.forEach(field => {
+      if (user[field] !== undefined) {
+        values[field] = user[field] as any;
+        updateSet[field] = user[field];
+      }
+    });
+
+    // Set owner as parent if matching
+    if (user.openId === ENV.ownerId && !values.role) {
       values.role = 'parent';
       updateSet.role = 'parent';
     }
 
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
+    // Update lastSignedIn
+    values.lastSignedIn = new Date();
+    updateSet.lastSignedIn = new Date();
 
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
+    const result = await db.insert(users).values(values).onDuplicateKeyUpdate({
       set: updateSet,
     });
+
+    return Number(result[0].insertId);
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
   }
 }
 
-export async function getUser(openId: string) {
+export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  return result[0];
+}
+
+export async function getUserByUsername(username: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+  return result[0];
 }
 
 export async function getUserById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  return result[0];
+}
+
+// ============= CHILD PROFILE OPERATIONS =============
+
+export async function createChildProfile(data: InsertChildProfile) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(childProfiles).values(data);
+}
+
+export async function getChildProfile(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(childProfiles).where(eq(childProfiles.userId, userId)).limit(1);
+  return result[0];
 }
 
 export async function getChildrenByParent(parentId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(users).where(eq(users.parentId, parentId));
+  
+  // Efficient join - only fetch needed fields
+  return db.select({
+    id: users.id,
+    name: users.name,
+    username: users.username,
+    isActive: users.isActive,
+    currentGrade: childProfiles.currentGrade,
+    board: childProfiles.board,
+    schoolName: childProfiles.schoolName,
+    totalPoints: childProfiles.totalPoints,
+    currentStreak: childProfiles.currentStreak,
+    longestStreak: childProfiles.longestStreak,
+    lastActivityDate: childProfiles.lastActivityDate,
+  })
+    .from(childProfiles)
+    .innerJoin(users, eq(childProfiles.userId, users.id))
+    .where(eq(childProfiles.parentId, parentId));
 }
 
-export async function createChildAccount(data: InsertUser) {
+export async function updateChildProfile(userId: number, data: Partial<InsertChildProfile>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(users).values(data);
-  return result;
+  return db.update(childProfiles).set(data).where(eq(childProfiles.userId, userId));
 }
 
 export async function deleteChildAccount(childId: number, parentId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  // Verify the child belongs to this parent
-  const child = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, childId))
+  // Verify ownership
+  const child = await db.select()
+    .from(childProfiles)
+    .where(and(
+      eq(childProfiles.userId, childId),
+      eq(childProfiles.parentId, parentId)
+    ))
     .limit(1);
 
-  if (child.length === 0 || child[0].parentId !== parentId) {
+  if (child.length === 0) {
     throw new Error('Child account not found or access denied');
   }
 
-  // Delete the child account
+  // Delete profile and user (cascade will handle related data)
+  await db.delete(childProfiles).where(eq(childProfiles.userId, childId));
   await db.delete(users).where(eq(users.id, childId));
+  
   return { success: true };
 }
 
-export async function updateUserPoints(userId: number, pointsToAdd: number) {
+// ============= PARENT PROFILE OPERATIONS =============
+
+export async function createParentProfile(data: InsertParentProfile) {
   const db = await getDb();
-  if (!db) return;
-  await db.update(users)
-    .set({ totalPoints: sql`${users.totalPoints} + ${pointsToAdd}` })
-    .where(eq(users.id, userId));
+  if (!db) throw new Error("Database not available");
+  return db.insert(parentProfiles).values(data);
 }
 
-export async function updateUserStreak(userId: number, currentStreak: number, longestStreak: number) {
+export async function getParentProfile(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(parentProfiles).where(eq(parentProfiles.userId, userId)).limit(1);
+  return result[0];
+}
+
+// ============= TEACHER PROFILE OPERATIONS =============
+
+export async function createTeacherProfile(data: InsertTeacherProfile) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(teacherProfiles).values(data);
+}
+
+export async function getTeacherProfile(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, userId)).limit(1);
+  return result[0];
+}
+
+// ============= POINTS & STREAK OPERATIONS (Performance-optimized) =============
+
+export async function updateChildPoints(userId: number, pointsToAdd: number) {
   const db = await getDb();
   if (!db) return;
-  await db.update(users)
+  
+  // Atomic increment - no race conditions
+  await db.update(childProfiles)
+    .set({ totalPoints: sql`${childProfiles.totalPoints} + ${pointsToAdd}` })
+    .where(eq(childProfiles.userId, userId));
+}
+
+export async function updateChildStreak(userId: number, currentStreak: number, longestStreak: number) {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db.update(childProfiles)
     .set({ 
       currentStreak, 
       longestStreak,
       lastActivityDate: new Date()
     })
-    .where(eq(users.id, userId));
+    .where(eq(childProfiles.userId, userId));
 }
 
-// ============= SUBJECT OPERATIONS =============
+// ============= BOARD, GRADE, SUBJECT OPERATIONS =============
+
+export async function getAllBoards() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(boards).orderBy(boards.displayOrder);
+}
+
+export async function getAllGrades() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(grades).orderBy(grades.displayOrder);
+}
 
 export async function getAllSubjects() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(subjects);
+  return db.select().from(subjects).orderBy(subjects.displayOrder);
 }
 
-export async function getSubjectById(id: number) {
+export async function getSubjectsByBoardAndGrade(boardId: number, gradeId: number) {
   const db = await getDb();
-  if (!db) return undefined;
-  const result = await db.select().from(subjects).where(eq(subjects.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
-}
-
-export async function createSubject(data: InsertSubject) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  return db.insert(subjects).values(data);
+  if (!db) return [];
+  
+  // Efficient join with filtering
+  return db.select({
+    id: subjects.id,
+    name: subjects.name,
+    code: subjects.code,
+    category: subjects.category,
+    icon: subjects.icon,
+    color: subjects.color,
+    isCompulsory: boardGradeSubjects.isCompulsory,
+  })
+    .from(boardGradeSubjects)
+    .innerJoin(subjects, eq(boardGradeSubjects.subjectId, subjects.id))
+    .where(and(
+      eq(boardGradeSubjects.boardId, boardId),
+      eq(boardGradeSubjects.gradeId, gradeId)
+    ))
+    .orderBy(boardGradeSubjects.displayOrder);
 }
 
 // ============= MODULE OPERATIONS =============
 
-export async function getModulesBySubject(subjectId: number) {
+export async function getModulesBySubject(subjectId: number, boardId?: number, gradeId?: number) {
   const db = await getDb();
   if (!db) return [];
+  
+  const conditions = [eq(modules.subjectId, subjectId)];
+  if (boardId) conditions.push(eq(modules.boardId, boardId));
+  if (gradeId) conditions.push(eq(modules.gradeId, gradeId));
+  
   return db.select().from(modules)
-    .where(eq(modules.subjectId, subjectId))
+    .where(and(...conditions))
     .orderBy(modules.orderIndex);
 }
 
@@ -191,7 +301,7 @@ export async function getModuleById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(modules).where(eq(modules.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  return result[0];
 }
 
 export async function createModule(data: InsertModule) {
@@ -200,35 +310,45 @@ export async function createModule(data: InsertModule) {
   return db.insert(modules).values(data);
 }
 
-export async function updateModule(id: number, data: Partial<InsertModule>) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  return db.update(modules).set(data).where(eq(modules.id, id));
-}
+// ============= QUESTION OPERATIONS (Performance-optimized) =============
 
-export async function deleteModule(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  return db.delete(modules).where(eq(modules.id, id));
-}
-
-// ============= QUESTION OPERATIONS =============
-
-export async function getQuestionsByModule(moduleId: number) {
+export async function getQuestionsByModule(moduleId: number, limit?: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(questions)
+  
+  let query = db.select({
+    id: questions.id,
+    questionType: questions.questionType,
+    questionText: questions.questionText,
+    questionImage: questions.questionImage,
+    options: questions.options,
+    correctAnswer: questions.correctAnswer,
+    explanation: questions.explanation,
+    difficulty: questions.difficulty,
+    points: questions.points,
+    timeLimit: questions.timeLimit,
+    topic: questions.topic,
+    subTopic: questions.subTopic,
+  })
+    .from(questions)
     .where(and(
       eq(questions.moduleId, moduleId),
+      eq(questions.status, 'approved'),
       eq(questions.isActive, true)
     ));
+  
+  if (limit) {
+    query = query.limit(limit) as any;
+  }
+  
+  return query;
 }
 
 export async function getQuestionById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(questions).where(eq(questions.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  return result[0];
 }
 
 export async function getQuestionsByIds(ids: number[]) {
@@ -243,15 +363,15 @@ export async function createQuestion(data: InsertQuestion) {
   return db.insert(questions).values(data);
 }
 
-// updateQuestion and deleteQuestion moved to end of file with enhanced signatures
-
 export async function bulkCreateQuestions(questionsData: InsertQuestion[]) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  
+  // Batch insert for performance
   return db.insert(questions).values(questionsData);
 }
 
-// ============= QUIZ SESSION OPERATIONS =============
+// ============= QUIZ SESSION OPERATIONS (Performance-optimized) =============
 
 export async function createQuizSession(data: InsertQuizSession) {
   const db = await getDb();
@@ -264,7 +384,7 @@ export async function getQuizSessionById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(quizSessions).where(eq(quizSessions.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  return result[0];
 }
 
 export async function updateQuizSession(id: number, data: Partial<InsertQuizSession>) {
@@ -276,9 +396,11 @@ export async function updateQuizSession(id: number, data: Partial<InsertQuizSess
 export async function getUserQuizHistory(userId: number, limit: number = 20) {
   const db = await getDb();
   if (!db) return [];
+  
+  // Optimized join - only fetch needed fields
   return db.select({
     id: quizSessions.id,
-    userId: quizSessions.userId,
+    userId: quizSessions.childId,
     moduleId: quizSessions.moduleId,
     startedAt: quizSessions.startedAt,
     completedAt: quizSessions.completedAt,
@@ -295,7 +417,7 @@ export async function getUserQuizHistory(userId: number, limit: number = 20) {
     .from(quizSessions)
     .leftJoin(modules, eq(quizSessions.moduleId, modules.id))
     .leftJoin(subjects, eq(modules.subjectId, subjects.id))
-    .where(eq(quizSessions.userId, userId))
+    .where(eq(quizSessions.childId, userId))
     .orderBy(desc(quizSessions.startedAt))
     .limit(limit);
 }
@@ -305,7 +427,7 @@ export async function getModuleQuizHistory(userId: number, moduleId: number) {
   if (!db) return [];
   return db.select().from(quizSessions)
     .where(and(
-      eq(quizSessions.userId, userId),
+      eq(quizSessions.childId, userId),
       eq(quizSessions.moduleId, moduleId)
     ))
     .orderBy(desc(quizSessions.startedAt));
@@ -319,11 +441,47 @@ export async function createQuizResponse(data: InsertQuizResponse) {
   return db.insert(quizResponses).values(data);
 }
 
+export async function bulkCreateQuizResponses(responses: InsertQuizResponse[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Batch insert for performance
+  return db.insert(quizResponses).values(responses);
+}
+
 export async function getSessionResponses(sessionId: number) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(quizResponses)
-    .where(eq(quizResponses.sessionId, sessionId));
+    .where(eq(quizResponses.sessionId, sessionId))
+    .orderBy(quizResponses.questionOrder);
+}
+
+export async function getSessionResponsesWithQuestions(sessionId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Efficient join
+  return db.select({
+    responseId: quizResponses.id,
+    questionId: quizResponses.questionId,
+    userAnswer: quizResponses.userAnswer,
+    isCorrect: quizResponses.isCorrect,
+    timeTaken: quizResponses.timeTaken,
+    pointsEarned: quizResponses.pointsEarned,
+    questionOrder: quizResponses.questionOrder,
+    questionText: questions.questionText,
+    options: questions.options,
+    correctAnswer: questions.correctAnswer,
+    explanation: questions.explanation,
+    difficulty: questions.difficulty,
+    topic: questions.topic,
+    subTopic: questions.subTopic,
+  })
+    .from(quizResponses)
+    .innerJoin(questions, eq(quizResponses.questionId, questions.id))
+    .where(eq(quizResponses.sessionId, sessionId))
+    .orderBy(quizResponses.questionOrder);
 }
 
 // ============= ACHIEVEMENT OPERATIONS =============
@@ -331,101 +489,44 @@ export async function getSessionResponses(sessionId: number) {
 export async function getAllAchievements() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(achievements);
+  return db.select().from(achievements).where(eq(achievements.isActive, true));
 }
 
 export async function getUserAchievements(userId: number) {
   const db = await getDb();
   if (!db) return [];
+  
   return db.select({
-    achievement: achievements,
-    earnedAt: userAchievements.earnedAt
+    achievementId: userAchievements.achievementId,
+    earnedAt: userAchievements.earnedAt,
+    name: achievements.name,
+    description: achievements.description,
+    icon: achievements.icon,
+    category: achievements.category,
+    points: achievements.points,
+    rarity: achievements.rarity,
   })
-  .from(userAchievements)
-  .innerJoin(achievements, eq(userAchievements.achievementId, achievements.id))
-  .where(eq(userAchievements.userId, userId));
+    .from(userAchievements)
+    .innerJoin(achievements, eq(userAchievements.achievementId, achievements.id))
+    .where(eq(userAchievements.userId, userId))
+    .orderBy(desc(userAchievements.earnedAt));
 }
 
 export async function awardAchievement(userId: number, achievementId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.insert(userAchievements).values({ userId, achievementId });
-}
-
-// ============= ACTIVITY LOG OPERATIONS =============
-
-export async function logActivity(data: InsertActivityLog) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
   
-  // Check if entry exists for today
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const existing = await db.select().from(activityLog)
-    .where(and(
-      eq(activityLog.userId, data.userId),
-      gte(activityLog.activityDate, today)
-    ))
-    .limit(1);
-  
-  if (existing.length > 0) {
-    // Update existing entry
-    return db.update(activityLog)
-      .set({
-        quizzesTaken: sql`${activityLog.quizzesTaken} + ${data.quizzesTaken || 0}`,
-        questionsAnswered: sql`${activityLog.questionsAnswered} + ${data.questionsAnswered || 0}`,
-        pointsEarned: sql`${activityLog.pointsEarned} + ${data.pointsEarned || 0}`,
-        timeSpent: sql`${activityLog.timeSpent} + ${data.timeSpent || 0}`,
-      })
-      .where(eq(activityLog.id, existing[0].id));
-  } else {
-    // Create new entry
-    return db.insert(activityLog).values(data);
+  try {
+    await db.insert(userAchievements).values({
+      userId,
+      achievementId,
+      earnedAt: new Date(),
+    });
+    return true;
+  } catch (error) {
+    // Duplicate key - already earned
+    return false;
   }
-}
-
-export async function getUserActivityLog(userId: number, startDate: Date, endDate: Date) {
-  const db = await getDb();
-  if (!db) return [];
-  return db.select().from(activityLog)
-    .where(and(
-      eq(activityLog.userId, userId),
-      gte(activityLog.activityDate, startDate),
-      lte(activityLog.activityDate, endDate)
-    ))
-    .orderBy(desc(activityLog.activityDate));
-}
-
-// ============= STATISTICS OPERATIONS =============
-
-export async function getUserStats(userId: number) {
-  const db = await getDb();
-  if (!db) return null;
-  
-  const user = await getUserById(userId);
-  const totalQuizzes = await db.select({ count: sql<number>`count(*)` })
-    .from(quizSessions)
-    .where(and(
-      eq(quizSessions.userId, userId),
-      eq(quizSessions.isCompleted, true)
-    ));
-  
-  const avgScore = await db.select({ avg: sql<number>`avg(${quizSessions.scorePercentage})` })
-    .from(quizSessions)
-    .where(and(
-      eq(quizSessions.userId, userId),
-      eq(quizSessions.isCompleted, true)
-    ));
-  
-  return {
-    user,
-    totalQuizzes: totalQuizzes[0]?.count || 0,
-    averageScore: Math.round(avgScore[0]?.avg || 0),
-    totalPoints: user?.totalPoints || 0,
-    currentStreak: user?.currentStreak || 0,
-    longestStreak: user?.longestStreak || 0,
-  };
 }
 
 // ============= CHALLENGE OPERATIONS =============
@@ -433,336 +534,543 @@ export async function getUserStats(userId: number) {
 export async function createChallenge(data: InsertChallenge) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.insert(challenges).values(data);
-  return { success: true };
+  return db.insert(challenges).values(data);
 }
 
-export async function getChildChallenges(childId: number) {
+export async function getChallengesForChild(childId: number) {
   const db = await getDb();
   if (!db) return [];
+  
   return db.select().from(challenges)
-    .where(eq(challenges.childId, childId))
+    .where(and(
+      eq(challenges.assignedTo, childId),
+      eq(challenges.assignedToType, 'child')
+    ))
     .orderBy(desc(challenges.createdAt));
 }
 
-export async function updateChallengeStatus(challengeId: number, status: string, sessionId?: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  const updateData: any = { status };
-  if (status === 'completed') {
-    updateData.completedAt = new Date();
-    if (sessionId) updateData.sessionId = sessionId;
-  }
-  await db.update(challenges).set(updateData).where(eq(challenges.id, challengeId));
-}
-
-
-
-export async function completeChallenge(challengeId: number, childId: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
-  // Verify the challenge belongs to this child
-  const challenge = await db.select().from(challenges)
-    .where(eq(challenges.id, challengeId))
-    .limit(1);
-  
-  if (challenge.length === 0 || challenge[0].childId !== childId) {
-    throw new Error("Challenge not found or unauthorized");
-  }
-  
-  await db.update(challenges)
-    .set({ 
-      status: 'completed',
-      completedAt: new Date()
-    })
-    .where(eq(challenges.id, challengeId));
-  
-  return { success: true };
-}
-
-
-
-export async function getPointsHistory(userId: number) {
+export async function getChallengesByParent(parentId: number) {
   const db = await getDb();
   if (!db) return [];
   
-  const sessions = await db
-    .select({
-      id: quizSessions.id,
-      completedAt: quizSessions.completedAt,
-      totalPoints: quizSessions.totalPoints,
-      scorePercentage: quizSessions.scorePercentage,
-      moduleName: modules.name,
-      subjectName: subjects.name,
-    })
-    .from(quizSessions)
-    .leftJoin(modules, eq(quizSessions.moduleId, modules.id))
-    .leftJoin(subjects, eq(modules.subjectId, subjects.id))
-    .where(and(
-      eq(quizSessions.userId, userId),
-      eq(quizSessions.isCompleted, true),
-      isNotNull(quizSessions.totalPoints)
-    ))
-    .orderBy(desc(quizSessions.completedAt));
-  
-  return sessions;
+  return db.select().from(challenges)
+    .where(eq(challenges.assignedBy, parentId))
+    .orderBy(desc(challenges.createdAt));
 }
 
+export async function updateChallenge(id: number, data: Partial<InsertChallenge>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(challenges).set(data).where(eq(challenges.id, id));
+}
 
+// ============= AI EXPLANATION CACHE (Performance-optimized) =============
 
-export async function deleteChallenge(challengeId: number, parentId: number) {
+export async function getCachedExplanation(questionId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select()
+    .from(aiExplanationCache)
+    .where(eq(aiExplanationCache.questionId, questionId))
+    .limit(1);
+  
+  if (result[0]) {
+    // Update usage stats asynchronously (don't block)
+    db.update(aiExplanationCache)
+      .set({
+        timesUsed: sql`${aiExplanationCache.timesUsed} + 1`,
+        lastUsedAt: new Date(),
+      })
+      .where(eq(aiExplanationCache.questionId, questionId))
+      .catch(err => console.error("[Cache] Failed to update usage:", err));
+  }
+  
+  return result[0];
+}
+
+export async function cacheExplanation(questionId: number, explanation: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  try {
+    await db.insert(aiExplanationCache).values({
+      questionId,
+      explanation,
+      timesUsed: 1,
+      generatedAt: new Date(),
+      lastUsedAt: new Date(),
+    });
+    return true;
+  } catch (error) {
+    // Duplicate key - already cached
+    console.warn("[Cache] Explanation already cached for question", questionId);
+    return false;
+  }
+}
+
+// ============= ACTIVITY LOG (Performance-optimized) =============
+
+export async function logActivity(data: InsertActivityLog) {
   const db = await getDb();
   if (!db) return;
   
-  // Verify the challenge belongs to this parent's child
-  const challenge = await db
-    .select({ childId: challenges.childId, parentId: challenges.parentId })
-    .from(challenges)
-    .where(eq(challenges.id, challengeId))
+  // Fire and forget - don't block on logging
+  db.insert(activityLog).values(data).catch(err => 
+    console.error("[ActivityLog] Failed to log:", err)
+  );
+}
+
+// ============= TEACHER-STUDENT ASSIGNMENT OPERATIONS =============
+
+export async function assignTeacherToStudent(data: InsertTeacherStudentAssignment) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(teacherStudentAssignments).values(data);
+}
+
+export async function getStudentsByTeacher(teacherId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select({
+    assignmentId: teacherStudentAssignments.id,
+    studentId: users.id,
+    studentName: users.name,
+    currentGrade: childProfiles.currentGrade,
+    board: childProfiles.board,
+    subjectId: teacherStudentAssignments.subjectIds,
+    assignedAt: teacherStudentAssignments.assignedAt,
+  })
+    .from(teacherStudentAssignments)
+    .innerJoin(users, eq(teacherStudentAssignments.childId, users.id))
+    .innerJoin(childProfiles, eq(users.id, childProfiles.userId))
+    .where(eq(teacherStudentAssignments.teacherId, teacherId));
+}
+
+export async function getTeachersByStudent(studentId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select({
+    assignmentId: teacherStudentAssignments.id,
+    teacherId: users.id,
+    teacherName: users.name,
+    teacherEmail: users.email,
+    subjectId: teacherStudentAssignments.subjectIds,
+    assignedAt: teacherStudentAssignments.assignedAt,
+  })
+    .from(teacherStudentAssignments)
+    .innerJoin(users, eq(teacherStudentAssignments.teacherId, users.id))
+    .where(eq(teacherStudentAssignments.childId, studentId));
+}
+
+// ============= QB ADMIN OPERATIONS =============
+
+export async function getQBAdminAssignments(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select().from(qbAdminAssignments)
+    .where(eq(qbAdminAssignments.userId, userId));
+}
+
+export async function canUserManageQuestions(
+  userId: number, 
+  boardId: number, 
+  gradeId: number, 
+  subjectId: number
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  
+  // Check if user is superadmin
+  const user = await getUserById(userId);
+  if (user?.role === 'superadmin') return true;
+  
+  // Check QB admin assignments
+  const assignments = await db.select()
+    .from(qbAdminAssignments)
+    .where(and(
+      eq(qbAdminAssignments.userId, userId),
+      eq(qbAdminAssignments.boardId, boardId),
+      eq(qbAdminAssignments.gradeId, gradeId),
+      or(
+        eq(qbAdminAssignments.subjectId, subjectId),
+        sql`${qbAdminAssignments.subjectId} IS NULL` // NULL means all subjects
+      )
+    ))
     .limit(1);
   
-  if (challenge.length === 0 || challenge[0].parentId !== parentId) {
-    throw new Error("Challenge not found or unauthorized");
-  }
-  
-  await db.delete(challenges).where(eq(challenges.id, challengeId));
+  return assignments.length > 0;
 }
 
+// ============= ANALYTICS (Performance-optimized with aggregations) =============
 
-
-
-// Bulk upload questions with metadata (auto-create subjects/modules)
-export async function bulkUploadQuestionsWithMetadata(
-  questionsData: Array<{
-    board: string;
-    grade: number;
-    subject: string;
-    topic: string;
-    subTopic?: string;
-    scope: string;
-    questionType: string;
-    questionText: string;
-    questionImage?: string;
-    options: any;
-    correctAnswer: string;
-    explanation?: string;
-    difficulty: string;
-    points: number;
-    timeLimit: number;
-  }>,
-  createdBy: number
-) {
-  const database = await getDb();
-  if (!database) throw new Error('Database not available');
-  const results = {
-    created: 0,
-    subjectsCreated: 0,
-    modulesCreated: 0,
-    errors: [] as string[],
+export async function getChildAnalytics(childId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const profile = await getChildProfile(childId);
+  if (!profile) return null;
+  
+  // Efficient aggregation query
+  const stats = await db.select({
+    totalQuizzes: sql<number>`COUNT(*)`,
+    completedQuizzes: sql<number>`SUM(CASE WHEN ${quizSessions.isCompleted} = 1 THEN 1 ELSE 0 END)`,
+    avgScore: sql<number>`AVG(${quizSessions.scorePercentage})`,
+    totalTimeSpent: sql<number>`SUM(${quizSessions.timeTaken})`,
+  })
+    .from(quizSessions)
+    .where(eq(quizSessions.childId, childId));
+  
+  return {
+    ...profile,
+    ...stats[0],
   };
+}
 
-  // Group questions by subject and topic
-  const groupedQuestions = new Map<string, Map<string, typeof questionsData>>();
+export async function getParentDashboardStats(parentId: number) {
+  const db = await getDb();
+  if (!db) return null;
   
-  for (const q of questionsData) {
-    if (!groupedQuestions.has(q.subject)) {
-      groupedQuestions.set(q.subject, new Map());
-    }
-    const subjectMap = groupedQuestions.get(q.subject)!;
-    if (!subjectMap.has(q.topic)) {
-      subjectMap.set(q.topic, []);
-    }
-    subjectMap.get(q.topic)!.push(q);
-  }
-
-  // Process each subject and topic
-  for (const [subjectName, topicsMap] of Array.from(groupedQuestions.entries())) {
-    try {
-      // Find or create subject
-      let subjectResult = await database.select().from(subjects)
-        .where(eq(subjects.name, subjectName))
-        .limit(1);
-      let subject = subjectResult.length > 0 ? subjectResult[0] : undefined;
-
-      if (!subject) {
-        // Create subject with minimal required fields
-        await database.insert(subjects).values({
-          name: subjectName,
-          code: subjectName.substring(0, 3).toUpperCase(), // Generate simple code
-        });
-        // Query the newly created subject
-        subjectResult = await database.select().from(subjects)
-          .where(eq(subjects.name, subjectName))
-          .limit(1);
-        subject = subjectResult[0];
-        results.subjectsCreated++;
-      }
-
-      // Process each topic (module)
-      for (const [topicName, questionsForTopic] of Array.from(topicsMap.entries())) {
-        try {
-          // Find or create module
-          let moduleResult = await database.select().from(modules)
-            .where(and(
-              eq(modules.subjectId, subject!.id),
-              eq(modules.name, topicName)
-            ))
-            .limit(1);
-          let module = moduleResult.length > 0 ? moduleResult[0] : undefined;
-
-          if (!module) {
-            await database.insert(modules).values({
-              subjectId: subject!.id,
-              name: topicName,
-            });
-            // Query the newly created module
-            moduleResult = await database.select().from(modules)
-              .where(and(
-                eq(modules.subjectId, subject!.id),
-                eq(modules.name, topicName)
-              ))
-              .limit(1);
-            module = moduleResult[0];
-            results.modulesCreated++;
-          }
-
-          // Insert questions for this module
-          for (const q of questionsForTopic) {
-            try {
-              await database.insert(questions).values({
-                moduleId: module!.id,
-                board: q.board as any,
-                grade: q.grade,
-                subject: q.subject,
-                topic: q.topic,
-                subTopic: q.subTopic || null,
-                scope: q.scope as any,
-                questionType: q.questionType as any,
-                questionText: q.questionText,
-                questionImage: q.questionImage || null,
-                options: q.options,
-                correctAnswer: q.correctAnswer,
-                explanation: q.explanation || null,
-                difficulty: q.difficulty as any,
-                points: q.points,
-                timeLimit: q.timeLimit,
-                createdBy,
-              });
-              results.created++;
-            } catch (error) {
-              results.errors.push(`Failed to create question: ${q.questionText.substring(0, 50)}...`);
-            }
-          }
-        } catch (error) {
-          results.errors.push(`Failed to process topic: ${topicName}`);
-        }
-      }
-    } catch (error) {
-      results.errors.push(`Failed to process subject: ${subjectName}`);
-    }
-  }
-
-  return results;
+  // Get all children
+  const children = await getChildrenByParent(parentId);
+  
+  // Aggregate stats across all children
+  const childIds = children.map(c => c.id);
+  if (childIds.length === 0) return { children: [], totalChildren: 0 };
+  
+  const stats = await db.select({
+    totalQuizzes: sql<number>`COUNT(*)`,
+    avgScore: sql<number>`AVG(${quizSessions.scorePercentage})`,
+  })
+    .from(quizSessions)
+    .where(inArray(quizSessions.childId, childIds));
+  
+  return {
+    children,
+    totalChildren: children.length,
+    ...stats[0],
+  };
 }
 
 
-// Update a question
-export async function updateQuestion(
-  questionId: number,
-  updates: {
-    board?: string;
-    grade?: number;
-    subject?: string;
-    topic?: string;
-    subTopic?: string;
-    scope?: string;
-    questionType?: string;
-    questionText?: string;
-    questionImage?: string;
-    options?: any;
-    correctAnswer?: string;
-    explanation?: string;
-    difficulty?: string;
-    points?: number;
-    timeLimit?: number;
-  }
-) {
+
+// ============= MISSING FUNCTIONS FOR BACKWARD COMPATIBILITY =============
+
+export async function getSubjectById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(subjects).where(eq(subjects.id, id)).limit(1);
+  return result[0];
+}
+
+export async function getUserActivityLog(userId: number, startDate?: Date, endDate?: Date, limit: number = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const conditions = [eq(activityLog.userId, userId)];
+  if (startDate) conditions.push(gte(activityLog.activityDate, startDate));
+  if (endDate) conditions.push(lte(activityLog.activityDate, endDate));
+  
+  return db.select().from(activityLog)
+    .where(and(...conditions))
+    .orderBy(desc(activityLog.activityDate))
+    .limit(limit);
+}
+
+export async function getChildChallenges(childId: number) {
+  return getChallengesForChild(childId);
+}
+
+export async function updateChallengeStatus(challengeId: number, status: string) {
+  return updateChallenge(challengeId, { status: status as any });
+}
+
+// Alias for backward compatibility
+export async function getUser(openId: string) {
+  return getUserByOpenId(openId);
+}
+
+export async function updateModule(id: number, data: Partial<InsertModule>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  return db.update(questions)
-    .set({
-      ...updates,
-      board: updates.board as any,
-      scope: updates.scope as any,
-      questionType: updates.questionType as any,
-      difficulty: updates.difficulty as any,
-    })
-    .where(eq(questions.id, questionId));
+  return db.update(modules).set(data).where(eq(modules.id, id));
 }
 
-// Delete a question
-export async function deleteQuestion(questionId: number) {
+export async function deleteModule(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  return db.delete(questions).where(eq(questions.id, questionId));
+  return db.delete(modules).where(eq(modules.id, id));
 }
 
-// Get all questions with optional filtering
-export async function getAllQuestionsWithFilters(filters?: {
-  subject?: string;
+export async function updateQuestion(id: number, data: Partial<InsertQuestion>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(questions).set(data).where(eq(questions.id, id));
+}
+
+export async function deleteQuestion(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(questions).set({ isActive: false }).where(eq(questions.id, id));
+}
+
+export async function createSubject(data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(subjects).values(data);
+}
+
+export async function createAchievement(data: InsertAchievement) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(achievements).values(data);
+}
+
+export async function updateAchievement(id: number, data: Partial<InsertAchievement>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(achievements).set(data).where(eq(achievements.id, id));
+}
+
+export async function deleteAchievement(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(achievements).set({ isActive: false }).where(eq(achievements.id, id));
+}
+
+
+
+// ============= STATS & HISTORY FUNCTIONS =============
+
+export async function getUserStats(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  // Check if user is a child
+  const childProfile = await getChildProfile(userId);
+  if (!childProfile) return null;
+  
+  // Get quiz stats
+  const quizStats = await db.select({
+    totalQuizzes: sql<number>`COUNT(*)`,
+    completedQuizzes: sql<number>`SUM(CASE WHEN ${quizSessions.isCompleted} = 1 THEN 1 ELSE 0 END)`,
+    avgScore: sql<number>`COALESCE(AVG(${quizSessions.scorePercentage}), 0)`,
+    totalCorrect: sql<number>`COALESCE(SUM(${quizSessions.correctAnswers}), 0)`,
+    totalWrong: sql<number>`COALESCE(SUM(${quizSessions.wrongAnswers}), 0)`,
+  })
+    .from(quizSessions)
+    .where(eq(quizSessions.childId, userId));
+  
+  return {
+    ...childProfile,
+    ...quizStats[0],
+  };
+}
+
+export async function getPointsHistory(userId: number, days: number = 30) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  
+  // Get daily points from quiz sessions
+  return db.select({
+    date: sql<string>`DATE(${quizSessions.completedAt})`,
+    points: sql<number>`SUM(${quizSessions.totalPoints})`,
+  })
+    .from(quizSessions)
+    .where(and(
+      eq(quizSessions.childId, userId),
+      eq(quizSessions.isCompleted, true),
+      gte(quizSessions.completedAt, startDate)
+    ))
+    .groupBy(sql`DATE(${quizSessions.completedAt})`)
+    .orderBy(sql`DATE(${quizSessions.completedAt})`);
+}
+
+export async function getSubjectProgress(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Aggregate quiz performance by subject
+  return db.select({
+    subjectId: subjects.id,
+    subjectName: subjects.name,
+    subjectIcon: subjects.icon,
+    subjectColor: subjects.color,
+    totalQuizzes: sql<number>`COUNT(DISTINCT ${quizSessions.id})`,
+    avgScore: sql<number>`COALESCE(AVG(${quizSessions.scorePercentage}), 0)`,
+    totalPoints: sql<number>`COALESCE(SUM(${quizSessions.totalPoints}), 0)`,
+  })
+    .from(quizSessions)
+    .innerJoin(modules, eq(quizSessions.moduleId, modules.id))
+    .innerJoin(subjects, eq(modules.subjectId, subjects.id))
+    .where(and(
+      eq(quizSessions.childId, userId),
+      eq(quizSessions.isCompleted, true)
+    ))
+    .groupBy(subjects.id, subjects.name, subjects.icon, subjects.color);
+}
+
+export async function getRecentActivity(userId: number, limit: number = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select({
+    id: activityLog.id,
+    activityDate: activityLog.activityDate,
+    quizzesTaken: activityLog.quizzesTaken,
+    questionsAnswered: activityLog.questionsAnswered,
+    pointsEarned: activityLog.pointsEarned,
+    timeSpent: activityLog.timeSpent,
+  })
+    .from(activityLog)
+    .where(eq(activityLog.userId, userId))
+    .orderBy(desc(activityLog.activityDate))
+    .limit(limit);
+}
+
+export async function getWeakTopics(userId: number, limit: number = 5) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Find topics with lowest average scores
+  return db.select({
+    topic: questions.topic,
+    subTopic: questions.subTopic,
+    totalAttempts: sql<number>`COUNT(*)`,
+    correctCount: sql<number>`SUM(CASE WHEN ${quizResponses.isCorrect} = 1 THEN 1 ELSE 0 END)`,
+    accuracy: sql<number>`(SUM(CASE WHEN ${quizResponses.isCorrect} = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*))`,
+  })
+    .from(quizResponses)
+    .innerJoin(quizSessions, eq(quizResponses.sessionId, quizSessions.id))
+    .innerJoin(questions, eq(quizResponses.questionId, questions.id))
+    .where(eq(quizSessions.childId, userId))
+    .groupBy(questions.topic, questions.subTopic)
+    .having(sql`COUNT(*) >= 3`) // At least 3 attempts
+    .orderBy(sql`accuracy ASC`)
+    .limit(limit);
+}
+
+export async function getStrongTopics(userId: number, limit: number = 5) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Find topics with highest average scores
+  return db.select({
+    topic: questions.topic,
+    subTopic: questions.subTopic,
+    totalAttempts: sql<number>`COUNT(*)`,
+    correctCount: sql<number>`SUM(CASE WHEN ${quizResponses.isCorrect} = 1 THEN 1 ELSE 0 END)`,
+    accuracy: sql<number>`(SUM(CASE WHEN ${quizResponses.isCorrect} = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*))`,
+  })
+    .from(quizResponses)
+    .innerJoin(quizSessions, eq(quizResponses.sessionId, quizSessions.id))
+    .innerJoin(questions, eq(quizResponses.questionId, questions.id))
+    .where(eq(quizSessions.childId, userId))
+    .groupBy(questions.topic, questions.subTopic)
+    .having(sql`COUNT(*) >= 3`) // At least 3 attempts
+    .orderBy(sql`accuracy DESC`)
+    .limit(limit);
+}
+
+
+
+export async function deleteChallenge(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(challenges).where(eq(challenges.id, id));
+}
+
+
+
+// ============= QUESTION BANK FILTER FUNCTIONS =============
+
+export async function getAllQuestionsWithFilters(filters: {
+  boardId?: number;
+  gradeId?: number;
+  subjectId?: number;
+  moduleId?: number;
   topic?: string;
-  board?: string;
-  grade?: number;
-  scope?: string;
   difficulty?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
 }) {
   const db = await getDb();
   if (!db) return [];
   
-  let query = db.select().from(questions);
-  
   const conditions = [];
-  if (filters?.subject) conditions.push(eq(questions.subject, filters.subject));
-  if (filters?.topic) conditions.push(eq(questions.topic, filters.topic));
-  if (filters?.board) conditions.push(eq(questions.board, filters.board as any));
-  if (filters?.grade) conditions.push(eq(questions.grade, filters.grade));
-  if (filters?.scope) conditions.push(eq(questions.scope, filters.scope as any));
-  if (filters?.difficulty) conditions.push(eq(questions.difficulty, filters.difficulty as any));
+  if (filters.boardId) conditions.push(eq(questions.boardId, filters.boardId));
+  if (filters.gradeId) conditions.push(eq(questions.gradeId, filters.gradeId));
+  if (filters.subjectId) conditions.push(eq(questions.subjectId, filters.subjectId));
+  if (filters.moduleId) conditions.push(eq(questions.moduleId, filters.moduleId));
+  if (filters.topic) conditions.push(eq(questions.topic, filters.topic));
+  if (filters.difficulty) conditions.push(eq(questions.difficulty, filters.difficulty as any));
+  if (filters.status) conditions.push(eq(questions.status, filters.status as any));
+  
+  let query = db.select().from(questions);
   
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
   }
   
-  return query.orderBy(questions.createdAt);
+  query = query.orderBy(desc(questions.createdAt)) as any;
+  
+  if (filters.limit) {
+    query = query.limit(filters.limit) as any;
+  }
+  
+  if (filters.offset) {
+    query = query.offset(filters.offset) as any;
+  }
+  
+  return query;
 }
 
-// Get unique subjects from questions
-export async function getUniqueSubjects() {
+export async function getUniqueSubjects(boardId?: number, gradeId?: number) {
   const db = await getDb();
   if (!db) return [];
   
-  const results = await db.selectDistinct({ subject: questions.subject })
-    .from(questions)
-    .where(eq(questions.isActive, true));
+  const conditions = [];
+  if (boardId) conditions.push(eq(questions.boardId, boardId));
+  if (gradeId) conditions.push(eq(questions.gradeId, gradeId));
   
-  return results.map(r => r.subject).filter(Boolean);
+  let query = db.selectDistinct({
+    subjectId: questions.subjectId,
+  }).from(questions);
+  
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+  
+  return query;
 }
 
-// Get unique topics for a subject
-export async function getUniqueTopicsForSubject(subject: string) {
+export async function getUniqueTopicsForSubject(subjectId: number, boardId?: number, gradeId?: number) {
   const db = await getDb();
   if (!db) return [];
   
-  const results = await db.selectDistinct({ topic: questions.topic })
-    .from(questions)
-    .where(and(
-      eq(questions.subject, subject),
-      eq(questions.isActive, true)
-    ));
+  const conditions = [eq(questions.subjectId, subjectId)];
+  if (boardId) conditions.push(eq(questions.boardId, boardId));
+  if (gradeId) conditions.push(eq(questions.gradeId, gradeId));
   
-  return results.map(r => r.topic).filter(Boolean);
+  return db.selectDistinct({
+    topic: questions.topic,
+    subTopic: questions.subTopic,
+  })
+    .from(questions)
+    .where(and(...conditions))
+    .orderBy(questions.topic);
+}
+
+
+
+export async function bulkUploadQuestionsWithMetadata(questionsData: InsertQuestion[]) {
+  return bulkCreateQuestions(questionsData);
 }
 
