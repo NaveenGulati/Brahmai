@@ -12,7 +12,7 @@ import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 // QuestionBankManager removed - now managed by QB Admin role
 
 // Format date as "29th Oct 2025, 11:22 AM"
@@ -301,6 +301,7 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
   const { data: stats } = trpc.parent.getChildProgress.useQuery({ childId });
   const { data: history } = trpc.parent.getChildQuizHistory.useQuery({ childId, limit: 5 });
   const { data: completedChallenges } = trpc.parent.getCompletedChallenges.useQuery({ childId });
+  const { data: subjectStats } = trpc.parent.getChildSubjectStats.useQuery({ childId });
   const { data: subjects } = trpc.parent.getSubjects.useQuery();
   const { data: pointsHistory } = trpc.child.getPointsHistory.useQuery(
     { childId },
@@ -352,6 +353,41 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
           <CardTitle>{childName}</CardTitle>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              // Export quiz history to CSV
+              if (!history || history.length === 0) {
+                toast.error('No quiz history to export');
+                return;
+              }
+              
+              const csvContent = [
+                ['Quiz ID', 'Subject', 'Module', 'Score %', 'Correct Answers', 'Total Questions', 'Completed At'].join(','),
+                ...history.map(q => [
+                  q.id,
+                  q.subjectName || 'Unknown',
+                  q.moduleName || 'Unknown',
+                  q.scorePercentage,
+                  q.correctAnswers,
+                  q.totalQuestions,
+                  q.completedAt ? new Date(q.completedAt).toLocaleString() : 'N/A'
+                ].join(','))
+              ].join('\n');
+              
+              const blob = new Blob([csvContent], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `${childName.replace(/\s+/g, '_')}_quiz_history.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+              toast.success('Quiz history exported!');
+            }}
+          >
+            📥 Export CSV
+          </Button>
           <Dialog open={isPasswordResetOpen} onOpenChange={setIsPasswordResetOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">🔑 Reset Password</Button>
@@ -484,6 +520,28 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
           </div>
         ) : (
           <p className="text-gray-500">No data available</p>
+        )}
+
+        {/* Subject-wise Performance Chart */}
+        {subjectStats && subjectStats.length > 0 && (
+          <div className="mt-6">
+            <h4 className="font-semibold mb-3">📊 Subject-wise Performance</h4>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={subjectStats}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="subject" stroke="#666" fontSize={12} />
+                <YAxis stroke="#666" fontSize={12} label={{ value: 'Avg Score %', angle: -90, position: 'insideLeft' }} />
+                <Tooltip 
+                  formatter={(value: any, name: string) => {
+                    if (name === 'avgScore') return [`${value}%`, 'Average Score'];
+                    return [value, name];
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="avgScore" fill="#3b82f6" name="Average Score %" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         )}
 
         {completedChallenges && completedChallenges.length > 0 && (

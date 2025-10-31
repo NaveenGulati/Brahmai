@@ -102,6 +102,32 @@ export const appRouter = router({
         return db.getUserQuizHistory(input.childId, input.limit);
       }),
 
+    // Get subject-wise performance statistics
+    getChildSubjectStats: parentProcedure
+      .input(z.object({ childId: z.number() }))
+      .query(async ({ input }) => {
+        const history = await db.getUserQuizHistory(input.childId);
+        
+        // Group by subject and calculate average score
+        const subjectStats = history.reduce((acc: any, quiz: any) => {
+          const subject = quiz.subjectName || 'Unknown';
+          if (!acc[subject]) {
+            acc[subject] = { totalScore: 0, count: 0, totalQuizzes: 0 };
+          }
+          acc[subject].totalScore += quiz.scorePercentage || 0;
+          acc[subject].count += 1;
+          acc[subject].totalQuizzes += 1;
+          return acc;
+        }, {});
+        
+        // Convert to array format for charts
+        return Object.entries(subjectStats).map(([subject, stats]: [string, any]) => ({
+          subject,
+          avgScore: Math.round(stats.totalScore / stats.count),
+          quizCount: stats.totalQuizzes,
+        }));
+      }),
+
     // Get child activity log
     getChildActivity: parentProcedure
       .input(z.object({

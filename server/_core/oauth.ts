@@ -51,6 +51,12 @@ export function registerOAuthRoutes(app: Express) {
         res.redirect(302, "/parent");
       } else if (user?.role === 'child') {
         res.redirect(302, "/child");
+      } else if (user?.role === 'qb_admin') {
+        res.redirect(302, "/qb-admin");
+      } else if (user?.role === 'teacher') {
+        res.redirect(302, "/teacher");
+      } else if (user?.role === 'superadmin') {
+        res.redirect(302, "/superadmin");
       } else {
         res.redirect(302, "/");
       }
