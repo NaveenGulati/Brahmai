@@ -51,7 +51,9 @@ export async function upsertUser(user: InsertUser): Promise<number | undefined> 
   }
 
   try {
-    const values: InsertUser = {};
+    const values: InsertUser = {
+      role: user.role || 'child' // Default role if not provided
+    };
     const updateSet: Record<string, unknown> = {};
 
     // Handle openId or username (one must be present)
@@ -66,13 +68,30 @@ export async function upsertUser(user: InsertUser): Promise<number | undefined> 
     }
 
     // Optional fields
-    const optionalFields = ["name", "email", "loginMethod", "role", "isActive", "isEmailVerified"] as const;
-    optionalFields.forEach(field => {
-      if (user[field] !== undefined) {
-        values[field] = user[field] as any;
-        updateSet[field] = user[field];
-      }
-    });
+    if (user.name !== undefined) {
+      values.name = user.name;
+      updateSet.name = user.name;
+    }
+    if (user.email !== undefined) {
+      values.email = user.email;
+      updateSet.email = user.email;
+    }
+    if (user.loginMethod !== undefined) {
+      values.loginMethod = user.loginMethod;
+      updateSet.loginMethod = user.loginMethod;
+    }
+    if (user.role !== undefined) {
+      values.role = user.role;
+      updateSet.role = user.role;
+    }
+    if (user.isActive !== undefined) {
+      values.isActive = user.isActive;
+      updateSet.isActive = user.isActive;
+    }
+    if (user.isEmailVerified !== undefined) {
+      values.isEmailVerified = user.isEmailVerified;
+      updateSet.isEmailVerified = user.isEmailVerified;
+    }
 
     // Set owner as parent if matching
     if (user.openId === ENV.ownerId && !values.role) {
@@ -454,7 +473,7 @@ export async function getSessionResponses(sessionId: number) {
   if (!db) return [];
   return db.select().from(quizResponses)
     .where(eq(quizResponses.sessionId, sessionId))
-    .orderBy(quizResponses.questionOrder);
+    .orderBy(quizResponses.id);
 }
 
 export async function getSessionResponsesWithQuestions(sessionId: number) {
@@ -467,9 +486,8 @@ export async function getSessionResponsesWithQuestions(sessionId: number) {
     questionId: quizResponses.questionId,
     userAnswer: quizResponses.userAnswer,
     isCorrect: quizResponses.isCorrect,
-    timeTaken: quizResponses.timeTaken,
+    timeSpent: quizResponses.timeSpent,
     pointsEarned: quizResponses.pointsEarned,
-    questionOrder: quizResponses.questionOrder,
     questionText: questions.questionText,
     options: questions.options,
     correctAnswer: questions.correctAnswer,
@@ -481,7 +499,7 @@ export async function getSessionResponsesWithQuestions(sessionId: number) {
     .from(quizResponses)
     .innerJoin(questions, eq(quizResponses.questionId, questions.id))
     .where(eq(quizResponses.sessionId, sessionId))
-    .orderBy(quizResponses.questionOrder);
+    .orderBy(quizResponses.id);
 }
 
 // ============= ACHIEVEMENT OPERATIONS =============
@@ -544,7 +562,7 @@ export async function getChallengesForChild(childId: number) {
   return db.select().from(challenges)
     .where(and(
       eq(challenges.assignedTo, childId),
-      eq(challenges.assignedToType, 'child')
+      eq(challenges.assignedToType, 'individual')
     ))
     .orderBy(desc(challenges.createdAt));
 }
@@ -596,7 +614,7 @@ export async function cacheExplanation(questionId: number, explanation: string) 
   try {
     await db.insert(aiExplanationCache).values({
       questionId,
-      explanation,
+      detailedExplanation: explanation,
       timesUsed: 1,
       generatedAt: new Date(),
       lastUsedAt: new Date(),
@@ -877,19 +895,24 @@ export async function getPointsHistory(userId: number, days: number = 30) {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
   
-  // Get daily points from quiz sessions
+  // Get detailed quiz sessions with subject and module info
   return db.select({
-    date: sql<string>`DATE(${quizSessions.completedAt})`,
-    points: sql<number>`SUM(${quizSessions.totalPoints})`,
+    id: quizSessions.id,
+    subjectName: subjects.name,
+    moduleName: modules.name,
+    completedAt: quizSessions.completedAt,
+    totalPoints: quizSessions.totalPoints,
+    scorePercentage: sql<number>`ROUND((${quizSessions.correctAnswers} * 100.0 / ${quizSessions.totalQuestions}), 1)`,
   })
     .from(quizSessions)
+    .leftJoin(modules, eq(quizSessions.moduleId, modules.id))
+    .leftJoin(subjects, eq(modules.subjectId, subjects.id))
     .where(and(
       eq(quizSessions.childId, userId),
       eq(quizSessions.isCompleted, true),
       gte(quizSessions.completedAt, startDate)
     ))
-    .groupBy(sql`DATE(${quizSessions.completedAt})`)
-    .orderBy(sql`DATE(${quizSessions.completedAt})`);
+    .orderBy(desc(quizSessions.completedAt));
 }
 
 export async function getSubjectProgress(userId: number) {
@@ -1041,14 +1064,17 @@ export async function getUniqueSubjects(boardId?: number, gradeId?: number) {
   if (gradeId) conditions.push(eq(questions.gradeId, gradeId));
   
   let query = db.selectDistinct({
-    subjectId: questions.subjectId,
-  }).from(questions);
+    subjectName: subjects.name,
+  })
+    .from(questions)
+    .innerJoin(subjects, eq(questions.subjectId, subjects.id));
   
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
   }
   
-  return query;
+  const result = await query;
+  return result.map(r => r.subjectName);
 }
 
 export async function getUniqueTopicsForSubject(subjectId: number, boardId?: number, gradeId?: number) {
@@ -1059,18 +1085,40 @@ export async function getUniqueTopicsForSubject(subjectId: number, boardId?: num
   if (boardId) conditions.push(eq(questions.boardId, boardId));
   if (gradeId) conditions.push(eq(questions.gradeId, gradeId));
   
-  return db.selectDistinct({
+  const result = await db.selectDistinct({
     topic: questions.topic,
-    subTopic: questions.subTopic,
   })
     .from(questions)
     .where(and(...conditions))
     .orderBy(questions.topic);
+    
+  return result.map(r => r.topic).filter(Boolean) as string[];
 }
 
 
 
 export async function bulkUploadQuestionsWithMetadata(questionsData: InsertQuestion[]) {
-  return bulkCreateQuestions(questionsData);
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const errors: string[] = [];
+  let created = 0;
+  
+  // Insert questions one by one to track errors
+  for (const questionData of questionsData) {
+    try {
+      await db.insert(questions).values(questionData);
+      created++;
+    } catch (error) {
+      errors.push(`Failed to insert question: ${questionData.questionText.substring(0, 50)}...`);
+    }
+  }
+  
+  return {
+    created,
+    subjectsCreated: 0, // Auto-creation not implemented yet
+    modulesCreated: 0,  // Auto-creation not implemented yet
+    errors,
+  };
 }
 

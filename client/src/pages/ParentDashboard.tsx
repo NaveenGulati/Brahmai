@@ -109,7 +109,7 @@ export default function ParentDashboard() {
   });
 
   useEffect(() => {
-    if (!loading && (!isAuthenticated || (user?.role !== 'parent' && user?.role !== 'admin'))) {
+    if (!loading && (!isAuthenticated || user?.role !== 'parent')) {
       setLocation('/');
     }
   }, [loading, isAuthenticated, user, setLocation]);
@@ -136,6 +136,9 @@ export default function ParentDashboard() {
     }
 
     createQuestionMutation.mutate({
+      boardId: 1, // TODO: Get from form - deprecated code
+      gradeId: 7, // TODO: Get from form - deprecated code
+      subjectId: 1, // TODO: Get from form - deprecated code
       moduleId: selectedModule!,
       questionType: questionType as any,
       questionText: formData.get('questionText') as string,
@@ -295,7 +298,7 @@ export default function ParentDashboard() {
                       <div key={child.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                         <div>
                           <p className="font-semibold">{child.name}</p>
-                          <p className="text-sm text-gray-500">{child.username ? `@${child.username}` : child.email || 'No email'}</p>
+                          <p className="text-sm text-gray-500">{child.username ? `@${child.username}` : 'No username'}</p>
                         </div>
                         <div className="flex gap-2">
                           <Button variant="outline" size="sm" onClick={() => {
@@ -541,7 +544,7 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
               <p className="text-sm text-gray-600">Total Quizzes</p>
             </div>
             <div className="text-center p-3 bg-green-50 rounded">
-              <p className="text-2xl font-bold text-green-600">{stats.averageScore}%</p>
+              <p className="text-2xl font-bold text-green-600">{stats.avgScore}%</p>
               <p className="text-sm text-gray-600">Avg Score</p>
             </div>
             <div 

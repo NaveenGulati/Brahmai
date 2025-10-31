@@ -28,10 +28,6 @@ export const authRouter = router({
           username: user.username,
           email: user.email,
           role: user.role,
-          grade: user.grade,
-          totalPoints: user.totalPoints,
-          currentStreak: user.currentStreak,
-          longestStreak: user.longestStreak,
         },
       };
     }),

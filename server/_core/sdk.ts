@@ -279,6 +279,7 @@ class SDKServer {
           name: userInfo.name || null,
           email: userInfo.email ?? null,
           loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
+          role: 'parent', // OAuth users are parents by default
           lastSignedIn: signedInAt,
         });
         user = await db.getUser(userInfo.openId);
@@ -294,6 +295,7 @@ class SDKServer {
 
     await db.upsertUser({
       openId: user.openId,
+      role: user.role, // Preserve existing role
       lastSignedIn: signedInAt,
     });
 

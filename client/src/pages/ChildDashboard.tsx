@@ -92,7 +92,7 @@ export default function ChildDashboard() {
     setLocation('/child-login');
   };
 
-  const earnedAchievementIds = new Set(achievements?.map(a => a.achievement.id));
+  const earnedAchievementIds = new Set(achievements?.map(a => a.achievementId));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
@@ -185,7 +185,7 @@ export default function ChildDashboard() {
               <CardTitle className="text-sm font-medium opacity-90">Average Score</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">{stats?.averageScore || 0}%</p>
+              <p className="text-3xl font-bold">{stats?.avgScore || 0}%</p>
             </CardContent>
           </Card>
 
@@ -262,9 +262,9 @@ export default function ChildDashboard() {
               <div>
                 <div className="flex justify-between mb-2">
                   <span className="text-sm font-medium">Overall Performance</span>
-                  <span className="text-sm font-bold text-indigo-600">{stats.averageScore}%</span>
+                  <span className="text-sm font-bold text-indigo-600">{stats.avgScore}%</span>
                 </div>
-                <Progress value={stats.averageScore} className="h-3" />
+                <Progress value={stats.avgScore} className="h-3" />
               </div>
               
               <div className="grid grid-cols-2 gap-4 text-center">

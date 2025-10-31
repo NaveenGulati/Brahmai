@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { getDb } from './db';
-import { users } from '../drizzle/schema';
+import { users, childProfiles } from '../drizzle/schema';
 
 /**
  * Hash a password using bcrypt
@@ -92,22 +92,30 @@ export async function createChildWithPassword(
   // Hash password
   const passwordHash = await hashPassword(password);
 
-  // Create user
-  const result = await db.insert(users).values({
-    openId: `child_${username}_${Date.now()}`,
+  // Create user in users table
+  const userResult = await db.insert(users).values({
     name,
     username,
     passwordHash,
     email: email || null,
     role: 'child',
+    isActive: true,
+  });
+
+  const userId = Number(userResult[0].insertId);
+
+  // Create child profile
+  await db.insert(childProfiles).values({
+    userId,
     parentId,
-    grade: 7,
+    currentGrade: 7,
+    board: 'ICSE',
     totalPoints: 0,
     currentStreak: 0,
     longestStreak: 0,
   });
 
-  return result;
+  return userId;
 }
 
 
@@ -124,20 +132,20 @@ export async function resetChildPassword(
     throw new Error('Database not available');
   }
 
-  // Verify the child belongs to this parent
-  const result = await db
+  // Verify the child belongs to this parent by checking childProfiles
+  const childProfileResult = await db
     .select()
-    .from(users)
-    .where(eq(users.id, childId))
+    .from(childProfiles)
+    .where(eq(childProfiles.userId, childId))
     .limit(1);
 
-  if (result.length === 0) {
-    throw new Error('Child not found');
+  if (childProfileResult.length === 0) {
+    throw new Error('Child profile not found');
   }
 
-  const child = result[0];
+  const childProfile = childProfileResult[0];
 
-  if (child.role !== 'child' || child.parentId !== parentId) {
+  if (childProfile.parentId !== parentId) {
     throw new Error('Unauthorized: This child does not belong to you');
   }
 

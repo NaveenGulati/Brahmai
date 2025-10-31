@@ -649,4 +649,8 @@ export type AuditLog = typeof auditLog.$inferSelect;
 export type InsertAuditLog = typeof auditLog.$inferInsert;
 export type AiExplanationCache = typeof aiExplanationCache.$inferSelect;
 export type InsertAiExplanationCache = typeof aiExplanationCache.$inferInsert;
+export type QBAdminAssignment = typeof qbAdminAssignments.$inferSelect;
+export type InsertQBAdminAssignment = typeof qbAdminAssignments.$inferInsert;
+export type GradeHistory = typeof gradeHistory.$inferSelect;
+export type InsertGradeHistory = typeof gradeHistory.$inferInsert;
 
