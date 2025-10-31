@@ -1236,6 +1236,88 @@ Format in markdown with:
       }),
   }),
 
+  // ============= TEACHER MODULE =============
+  teacher: router({  
+    // Get all classes for logged-in teacher
+    getMyClasses: teacherProcedure.query(async ({ ctx }) => {
+      return db.getTeacherClasses(ctx.user.id);
+    }),
+
+    // Create new class
+    createClass: teacherProcedure
+      .input(z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        board: z.enum(['CBSE', 'ICSE', 'IB', 'State', 'Other']),
+        grade: z.number(),
+        subjectId: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return db.createClass({ ...input, teacherId: ctx.user.id });
+      }),
+
+    // Update class
+    updateClass: teacherProcedure
+      .input(z.object({
+        classId: z.number(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        isActive: z.boolean().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { classId, ...data } = input;
+        return db.updateClass(classId, data, ctx.user.id);
+      }),
+
+    // Delete class
+    deleteClass: teacherProcedure
+      .input(z.object({ classId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        return db.deleteClass(input.classId, ctx.user.id);
+      }),
+
+    // Get students in a class
+    getClassStudents: teacherProcedure
+      .input(z.object({ classId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getClassStudents(input.classId);
+      }),
+
+    // Add student to class
+    addStudentToClass: teacherProcedure
+      .input(z.object({
+        classId: z.number(),
+        childId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return db.addStudentToClass(input.classId, input.childId, ctx.user.id);
+      }),
+
+    // Remove student from class
+    removeStudentFromClass: teacherProcedure
+      .input(z.object({
+        classId: z.number(),
+        childId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return db.removeStudentFromClass(input.classId, input.childId);
+      }),
+
+    // Get class performance stats
+    getClassPerformance: teacherProcedure
+      .input(z.object({ classId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getClassPerformance(input.classId);
+      }),
+
+    // Search children by username
+    searchChildren: teacherProcedure
+      .input(z.object({ query: z.string() }))
+      .query(async ({ input }) => {
+        return db.searchChildrenByUsername(input.query);
+      }),
+  }),
+
   // ============= COMMON ROUTES =============
   common: router({
     // Get user profile

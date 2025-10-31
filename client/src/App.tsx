@@ -12,6 +12,7 @@ import QuizPlay from "./pages/QuizPlay";
 import SubjectModules from "./pages/SubjectModules";
 import ChildLogin from "./pages/ChildLogin";
 import QBAdminDashboard from "./pages/QBAdminDashboard";
+import TeacherDashboard from "./pages/TeacherDashboard";
 
 function Router() {
   return (
@@ -19,6 +20,7 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/parent"} component={ParentDashboard} />
       <Route path={"/qb-admin"} component={QBAdminDashboard} />
+      <Route path={"/teacher"} component={TeacherDashboard} />
       <Route path={"/quiz-review/:sessionId"} component={QuizReview} />
       <Route path="/child-login" component={ChildLogin} />
       <Route path={"/child"} component={ChildDashboard} />

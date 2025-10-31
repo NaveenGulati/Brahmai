@@ -24,6 +24,8 @@ import {
   challenges, InsertChallenge,
   qbAdminAssignments, InsertQBAdminAssignment,
   aiExplanationCache,
+  studentGroups,
+  studentGroupMembers,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1120,5 +1122,218 @@ export async function bulkUploadQuestionsWithMetadata(questionsData: InsertQuest
     modulesCreated: 0,  // Auto-creation not implemented yet
     errors,
   };
+}
+
+
+
+// ============= TEACHER FUNCTIONS =============
+
+export async function getTeacherClasses(teacherId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const classes = await db.select({
+    id: studentGroups.id,
+    name: studentGroups.name,
+    description: studentGroups.description,
+    board: studentGroups.board,
+    grade: studentGroups.grade,
+    subjectId: studentGroups.subjectId,
+    isActive: studentGroups.isActive,
+    createdAt: studentGroups.createdAt,
+  })
+    .from(studentGroups)
+    .where(eq(studentGroups.teacherId, teacherId))
+    .orderBy(desc(studentGroups.createdAt));
+  
+  // Get student count for each class
+  const classesWithCount = await Promise.all(
+    classes.map(async (cls) => {
+      const members = await db!.select({ count: sql<number>`count(*)` })
+        .from(studentGroupMembers)
+        .where(eq(studentGroupMembers.groupId, cls.id));
+      
+      return {
+        ...cls,
+        studentCount: members[0]?.count || 0,
+      };
+    })
+  );
+  
+  return classesWithCount;
+}
+
+export async function createClass(data: {
+  teacherId: number;
+  name: string;
+  description?: string;
+  board: 'CBSE' | 'ICSE' | 'IB' | 'State' | 'Other';
+  grade: number;
+  subjectId?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(studentGroups).values(data);
+  return { id: Number((result as any).insertId), ...data };
+}
+
+export async function updateClass(
+  classId: number,
+  data: { name?: string; description?: string; isActive?: boolean },
+  teacherId: number
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Verify teacher owns this class
+  const existing = await db.select()
+    .from(studentGroups)
+    .where(and(eq(studentGroups.id, classId), eq(studentGroups.teacherId, teacherId)))
+    .limit(1);
+  
+  if (existing.length === 0) {
+    throw new Error("Class not found or unauthorized");
+  }
+  
+  await db.update(studentGroups)
+    .set(data)
+    .where(eq(studentGroups.id, classId));
+  
+  return { success: true };
+}
+
+export async function deleteClass(classId: number, teacherId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Verify teacher owns this class
+  const existing = await db.select()
+    .from(studentGroups)
+    .where(and(eq(studentGroups.id, classId), eq(studentGroups.teacherId, teacherId)))
+    .limit(1);
+  
+  if (existing.length === 0) {
+    throw new Error("Class not found or unauthorized");
+  }
+  
+  // Delete all members first
+  await db.delete(studentGroupMembers)
+    .where(eq(studentGroupMembers.groupId, classId));
+  
+  // Delete the class
+  await db.delete(studentGroups)
+    .where(eq(studentGroups.id, classId));
+  
+  return { success: true };
+}
+
+export async function getClassStudents(classId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const students = await db.select({
+    id: childProfiles.id,
+    userId: childProfiles.userId,
+    name: users.name,
+    username: users.username,
+    totalPoints: childProfiles.totalPoints,
+    currentStreak: childProfiles.currentStreak,
+    addedAt: studentGroupMembers.addedAt,
+  })
+    .from(studentGroupMembers)
+    .innerJoin(childProfiles, eq(studentGroupMembers.childId, childProfiles.id))
+    .innerJoin(users, eq(childProfiles.userId, users.id))
+    .where(eq(studentGroupMembers.groupId, classId))
+    .orderBy(users.name);
+  
+  return students;
+}
+
+export async function addStudentToClass(classId: number, childId: number, teacherId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Check if already exists
+  const existing = await db.select()
+    .from(studentGroupMembers)
+    .where(and(
+      eq(studentGroupMembers.groupId, classId),
+      eq(studentGroupMembers.childId, childId)
+    ))
+    .limit(1);
+  
+  if (existing.length > 0) {
+    throw new Error("Student already in this class");
+  }
+  
+  await db.insert(studentGroupMembers).values({
+    groupId: classId,
+    childId,
+    addedBy: teacherId,
+  });
+  
+  return { success: true };
+}
+
+export async function removeStudentFromClass(classId: number, childId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(studentGroupMembers)
+    .where(and(
+      eq(studentGroupMembers.groupId, classId),
+      eq(studentGroupMembers.childId, childId)
+    ));
+  
+  return { success: true };
+}
+
+export async function getClassPerformance(classId: number) {
+  const db = await getDb();
+  if (!db) return { students: [], classAverage: 0, totalQuizzes: 0 };
+  
+  const students = await getClassStudents(classId);
+  
+  // Get stats for each student
+  const studentsWithStats = await Promise.all(
+    students.map(async (student) => {
+      const stats = await getUserStats(student.userId);
+      return {
+        ...student,
+        stats,
+      };
+    })
+  );
+  
+  const totalQuizzes = studentsWithStats.reduce((sum, s) => sum + (s.stats?.totalQuizzes || 0), 0);
+  const totalScore = studentsWithStats.reduce((sum, s) => sum + (s.stats?.avgScore || 0), 0);
+  const classAverage = students.length > 0 ? Math.round(totalScore / students.length) : 0;
+  
+  return {
+    students: studentsWithStats,
+    classAverage,
+    totalQuizzes,
+  };
+}
+
+export async function searchChildrenByUsername(query: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  if (query.length < 2) return [];
+  
+  const children = await db.select({
+    id: childProfiles.id,
+    userId: childProfiles.userId,
+    name: users.name,
+    username: users.username,
+  })
+    .from(childProfiles)
+    .innerJoin(users, eq(childProfiles.userId, users.id))
+    .where(sql`${users.username} LIKE ${`%${query}%`}`)
+    .limit(10);
+  
+  return children;
 }
 
