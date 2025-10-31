@@ -861,3 +861,18 @@
 - [x] Update feature highlights to mention teacher features (3-column grid)
 - [x] Ensure consistent styling across all three login cards
 
+
+
+
+---
+
+## Home Page Styling Update ✅ COMPLETE
+- [x] Remove "Sign in with Manus" from Parent login card
+- [x] Remove "Sign in with Manus" from Teacher login card
+- [x] Apply distinct pastel colors to differentiate login cards:
+  - [x] Parent: Purple-pink gradient (from-purple-50 to-pink-50)
+  - [x] Teacher: Cyan-blue gradient (from-cyan-50 to-blue-50)
+  - [x] Student: Violet-purple gradient (from-violet-50 to-purple-50)
+- [x] Update border colors to match pastel theme
+- [x] Add hover effects with shadow for better interactivity
+

@@ -91,18 +91,20 @@ export default function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Card className="border-2 border-indigo-200 hover:border-indigo-400 transition-colors">
+              <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 hover:border-purple-300 hover:shadow-lg transition-all">
                 <CardHeader>
-                  <CardTitle className="text-lg">👨‍👩‍👧 Parent Login</CardTitle>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <span className="text-2xl">👨‍👩‍👧</span>
+                    Parent Login
+                  </CardTitle>
                   <CardDescription className="text-sm">
                     Monitor your children's progress
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {/* Google Sign-In - Primary Option */}
+                <CardContent>
                   <Button 
                     size="lg" 
-                    className="w-full bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300 font-medium"
+                    className="w-full bg-white hover:bg-gray-50 text-gray-700 border-2 border-purple-200 font-medium shadow-sm"
                     onClick={() => window.location.href = getGoogleLoginUrl()}
                   >
                     <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -113,41 +115,23 @@ export default function Home() {
                     </svg>
                     Sign in with Google
                   </Button>
-                  
-                  {/* Divider */}
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-gray-300" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-gray-500">Or</span>
-                    </div>
-                  </div>
-                  
-                  {/* Manus OAuth - Secondary Option */}
-                  <Button 
-                    size="lg" 
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => window.location.href = getLoginUrl()}
-                  >
-                    Sign in with Manus
-                  </Button>
                 </CardContent>
               </Card>
 
-              <Card className="border-2 border-blue-200 hover:border-blue-400 transition-colors">
+              <Card className="bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200 hover:border-cyan-300 hover:shadow-lg transition-all">
                 <CardHeader>
-                  <CardTitle className="text-lg">👨‍🏫 Teacher Login</CardTitle>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <span className="text-2xl">👨‍🏫</span>
+                    Teacher Login
+                  </CardTitle>
                   <CardDescription className="text-sm">
                     Manage classes and track student performance
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {/* Google Sign-In */}
+                <CardContent>
                   <Button 
                     size="lg" 
-                    className="w-full bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300 font-medium"
+                    className="w-full bg-white hover:bg-gray-50 text-gray-700 border-2 border-cyan-200 font-medium shadow-sm"
                     onClick={() => window.location.href = getGoogleLoginUrl()}
                   >
                     <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -158,30 +142,15 @@ export default function Home() {
                     </svg>
                     Sign in with Google
                   </Button>
-                  
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-gray-300" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-gray-500">Or</span>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    size="lg" 
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => window.location.href = getLoginUrl()}
-                  >
-                    Sign in with Manus
-                  </Button>
                 </CardContent>
               </Card>
 
-              <Card className="border-2 border-purple-200 hover:border-purple-400 transition-colors">
+              <Card className="bg-gradient-to-br from-violet-50 to-purple-50 border-2 border-violet-200 hover:border-violet-300 hover:shadow-lg transition-all">
                 <CardHeader>
-                  <CardTitle className="text-lg">🎓 Student Login</CardTitle>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <span className="text-2xl">🎓</span>
+                    Student Login
+                  </CardTitle>
                   <CardDescription className="text-sm">
                     Take quizzes and earn achievements
                   </CardDescription>
@@ -189,7 +158,7 @@ export default function Home() {
                 <CardContent>
                   <Button 
                     size="lg" 
-                    className="w-full bg-purple-600 hover:bg-purple-700"
+                    className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-sm"
                     onClick={() => setLocation('/child-login')}
                   >
                     Student Sign In
