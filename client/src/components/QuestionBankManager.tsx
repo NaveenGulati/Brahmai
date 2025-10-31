@@ -19,14 +19,14 @@ export default function QuestionBankManager() {
   const [editFormData, setEditFormData] = useState<any>({});
 
   // Fetch unique subjects and topics
-  const { data: subjects = [] } = trpc.parent.getUniqueSubjects.useQuery();
-  const { data: topics = [] } = trpc.parent.getUniqueTopics.useQuery(
+  const { data: subjects = [] } = trpc.qbAdmin.getUniqueSubjects.useQuery();
+  const { data: topics = [] } = trpc.qbAdmin.getUniqueTopics.useQuery(
     { subject: selectedSubject },
     { enabled: !!selectedSubject }
   );
 
   // Fetch questions with filters
-  const { data: questions = [] } = trpc.parent.getAllQuestions.useQuery(
+  const { data: questions = [] } = trpc.qbAdmin.getAllQuestions.useQuery(
     selectedSubject || selectedTopic
       ? {
           subject: selectedSubject || undefined,
@@ -36,42 +36,42 @@ export default function QuestionBankManager() {
   );
 
   // Mutations
-  const bulkUploadMutation = trpc.parent.bulkUploadQuestions.useMutation({
+  const bulkUploadMutation = trpc.qbAdmin.bulkUploadQuestions.useMutation({
     onSuccess: (result) => {
       toast.success(`Uploaded ${result.created} questions! Created ${result.subjectsCreated} subjects and ${result.modulesCreated} topics.`);
       if (result.errors.length > 0) {
         toast.error(`${result.errors.length} errors occurred. Check console for details.`);
         console.error("Upload errors:", result.errors);
       }
-      utils.parent.getUniqueSubjects.invalidate();
-      utils.parent.getAllQuestions.invalidate();
+      utils.qbAdmin.getUniqueSubjects.invalidate();
+      utils.qbAdmin.getAllQuestions.invalidate();
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Upload failed: ${error.message}`);
     },
   });
 
-  const updateQuestionMutation = trpc.parent.updateQuestion.useMutation({
+  const updateQuestionMutation = trpc.qbAdmin.updateQuestion.useMutation({
     onSuccess: () => {
       toast.success("Question updated successfully!");
       setEditingQuestionId(null);
-      utils.parent.getAllQuestions.invalidate();
+      utils.qbAdmin.getAllQuestions.invalidate();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Update failed: ${error.message}`);
     },
   });
 
-  const deleteQuestionMutation = trpc.parent.deleteQuestionPermanent.useMutation({
+  const deleteQuestionMutation = trpc.qbAdmin.deleteQuestionPermanent.useMutation({
     onSuccess: () => {
       toast.success("Question deleted!");
-      utils.parent.getAllQuestions.invalidate();
-      utils.parent.getUniqueSubjects.invalidate();
+      utils.qbAdmin.getAllQuestions.invalidate();
+      utils.qbAdmin.getUniqueSubjects.invalidate();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Delete failed: ${error.message}`);
     },
   });

@@ -1,7 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router, parentProcedure, qbAdminProcedure, teacherProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
@@ -9,17 +9,6 @@ import { getDb } from "./db";
 import { quizSessions, aiExplanationCache } from "../drizzle/schema";
 import { eq, and, lt, desc } from "drizzle-orm";
 import { authRouter } from "./authRouter";
-
-// Custom procedure for parent-only access
-const parentProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== 'parent' && ctx.user.role !== 'superadmin') {
-    throw new TRPCError({ 
-      code: 'FORBIDDEN',
-      message: 'Only parents can access this resource'
-    });
-  }
-  return next({ ctx });
-});
 
 // Custom procedure for child access
 const childProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -81,181 +70,19 @@ export const appRouter = router({
         return db.deleteChildAccount(input.childId, ctx.user.id);
       }),
 
-    // Get all subjects
+    // ===== QUESTION BANK MANAGEMENT MOVED TO QB ADMIN =====
+    // Parents can now only view subjects/modules for assigning challenges
+    
+    // Get all subjects (read-only for parents)
     getSubjects: parentProcedure.query(async () => {
       return db.getAllSubjects();
     }),
 
-    // Get modules by subject
+    // Get modules by subject (read-only for parents)
     getModules: parentProcedure
       .input(z.object({ subjectId: z.number() }))
       .query(async ({ input }) => {
         return db.getModulesBySubject(input.subjectId);
-      }),
-
-    // Create module
-    createModule: parentProcedure
-      .input(z.object({
-        subjectId: z.number(),
-        name: z.string(),
-        description: z.string().optional(),
-        orderIndex: z.number().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        return db.createModule(input);
-      }),
-
-    // Update module
-    updateModule: parentProcedure
-      .input(z.object({
-        id: z.number(),
-        name: z.string().optional(),
-        description: z.string().optional(),
-        orderIndex: z.number().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const { id, ...data } = input;
-        return db.updateModule(id, data);
-      }),
-
-    // Delete module
-    deleteModule: parentProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        return db.deleteModule(input.id);
-      }),
-
-    // Get questions by module
-    getQuestions: parentProcedure
-      .input(z.object({ moduleId: z.number() }))
-      .query(async ({ input }) => {
-        return db.getQuestionsByModule(input.moduleId);
-      }),
-
-    // Create single question
-    createQuestion: parentProcedure
-      .input(z.object({
-        boardId: z.number(),
-        gradeId: z.number(),
-        subjectId: z.number(),
-        moduleId: z.number().optional(),
-        questionType: z.enum(['mcq', 'true_false', 'fill_blank', 'match', 'image_based']),
-        questionText: z.string(),
-        questionImage: z.string().optional(),
-        options: z.any(),
-        correctAnswer: z.string(),
-        explanation: z.string().optional(),
-        difficulty: z.enum(['easy', 'medium', 'hard']),
-        points: z.number().default(10),
-        timeLimit: z.number().default(60),
-        topic: z.string().optional(),
-        subTopic: z.string().optional(),
-        scope: z.enum(['School', 'Olympiad', 'Competitive', 'Advanced']).default('School'),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        return db.createQuestion({
-          ...input,
-          submittedBy: ctx.user.id,
-        });
-      }),
-
-    // Update question (enhanced with metadata fields)
-    updateQuestion: parentProcedure
-      .input(z.object({
-        id: z.number(),
-        board: z.string().optional(),
-        grade: z.number().optional(),
-        subject: z.string().optional(),
-        topic: z.string().optional(),
-        subTopic: z.string().optional(),
-        scope: z.enum(['School', 'Olympiad', 'Competitive', 'Advanced']).optional(),
-        questionType: z.enum(['mcq', 'true_false', 'fill_blank', 'match', 'image_based']).optional(),
-        questionText: z.string().optional(),
-        questionImage: z.string().optional(),
-        options: z.any().optional(),
-        correctAnswer: z.string().optional(),
-        explanation: z.string().optional(),
-        difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
-        points: z.number().optional(),
-        timeLimit: z.number().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const { id, ...updates } = input;
-        return db.updateQuestion(id, updates);
-      }),
-
-    // Delete question
-    deleteQuestion: parentProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        return db.deleteQuestion(input.id);
-      }),
-
-    // Bulk upload questions from JSON with auto-creation of subjects/modules
-    bulkUploadQuestions: parentProcedure
-      .input(z.object({
-        questions: z.array(z.object({
-          boardId: z.number(),
-          gradeId: z.number(),
-          subjectId: z.number(),
-          moduleId: z.number().optional(),
-          topic: z.string(),
-          subTopic: z.string().optional(),
-          scope: z.enum(['School', 'Olympiad', 'Competitive', 'Advanced']),
-          questionType: z.enum(['mcq', 'true_false', 'fill_blank', 'match', 'image_based']),
-          questionText: z.string(),
-          questionImage: z.string().optional(),
-          options: z.any(),
-          correctAnswer: z.string(),
-          explanation: z.string().optional(),
-          difficulty: z.enum(['easy', 'medium', 'hard']),
-          points: z.number().default(10),
-          timeLimit: z.number().default(60),
-        }))
-      }))
-      .mutation(async ({ input, ctx }) => {
-        // Add submittedBy to each question
-        const questionsWithSubmitter = input.questions.map(q => ({
-          ...q,
-          submittedBy: ctx.user.id
-        }));
-        return db.bulkUploadQuestionsWithMetadata(questionsWithSubmitter);
-      }),
-
-
-
-    // Delete a question
-    deleteQuestionPermanent: parentProcedure
-      .input(z.object({ questionId: z.number() }))
-      .mutation(async ({ input }) => {
-        return db.deleteQuestion(input.questionId);
-      }),
-
-    // Get all questions with optional filters
-    getAllQuestions: parentProcedure
-      .input(z.object({
-        subject: z.string().optional(),
-        topic: z.string().optional(),
-        board: z.string().optional(),
-        grade: z.number().optional(),
-        scope: z.enum(['School', 'Olympiad', 'Competitive', 'Advanced']).optional(),
-        difficulty: z.string().optional(),
-      }).optional())
-      .query(async ({ input }) => {
-        return db.getAllQuestionsWithFilters(input || {});
-      }),
-
-    // Get unique subjects from question bank
-    getUniqueSubjects: parentProcedure
-      .query(async () => {
-        return db.getUniqueSubjects();
-      }),
-
-    // Get unique topics for a subject
-    getUniqueTopics: parentProcedure
-      .input(z.object({ subject: z.string() }))
-      .query(async ({ input }) => {
-        return db.getUniqueTopicsForSubject(parseInt(input.subject));
       }),
 
     // Get child progress
@@ -1203,6 +1030,183 @@ Format in markdown with:
         }
         await db.updateChallenge(input.challengeId, { status: 'completed', sessionId: input.sessionId, completedAt: new Date() });
         return { success: true };
+      }),
+  }),
+
+  // ============= QB ADMIN MODULE =============
+  qbAdmin: router({
+    // Get all subjects
+    getSubjects: qbAdminProcedure.query(async () => {
+      return db.getAllSubjects();
+    }),
+
+    // Get modules by subject
+    getModules: qbAdminProcedure
+      .input(z.object({ subjectId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getModulesBySubject(input.subjectId);
+      }),
+
+    // Create module
+    createModule: qbAdminProcedure
+      .input(z.object({
+        subjectId: z.number(),
+        name: z.string(),
+        description: z.string().optional(),
+        orderIndex: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return db.createModule(input);
+      }),
+
+    // Update module
+    updateModule: qbAdminProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        orderIndex: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return db.updateModule(id, data);
+      }),
+
+    // Delete module
+    deleteModule: qbAdminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteModule(input.id);
+      }),
+
+    // Get questions by module
+    getQuestions: qbAdminProcedure
+      .input(z.object({ moduleId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getQuestionsByModule(input.moduleId);
+      }),
+
+    // Create single question
+    createQuestion: qbAdminProcedure
+      .input(z.object({
+        boardId: z.number(),
+        gradeId: z.number(),
+        subjectId: z.number(),
+        moduleId: z.number().optional(),
+        questionType: z.enum(['mcq', 'true_false', 'fill_blank', 'match', 'image_based']),
+        questionText: z.string(),
+        questionImage: z.string().optional(),
+        options: z.any(),
+        correctAnswer: z.string(),
+        explanation: z.string().optional(),
+        difficulty: z.enum(['easy', 'medium', 'hard']),
+        points: z.number().default(10),
+        timeLimit: z.number().default(60),
+        topic: z.string().optional(),
+        subTopic: z.string().optional(),
+        scope: z.enum(['School', 'Olympiad', 'Competitive', 'Advanced']).default('School'),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return db.createQuestion({
+          ...input,
+          submittedBy: ctx.user.id,
+        });
+      }),
+
+    // Update question
+    updateQuestion: qbAdminProcedure
+      .input(z.object({
+        id: z.number(),
+        board: z.string().optional(),
+        grade: z.number().optional(),
+        subject: z.string().optional(),
+        topic: z.string().optional(),
+        subTopic: z.string().optional(),
+        scope: z.enum(['School', 'Olympiad', 'Competitive', 'Advanced']).optional(),
+        questionType: z.enum(['mcq', 'true_false', 'fill_blank', 'match', 'image_based']).optional(),
+        questionText: z.string().optional(),
+        questionImage: z.string().optional(),
+        options: z.any().optional(),
+        correctAnswer: z.string().optional(),
+        explanation: z.string().optional(),
+        difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+        points: z.number().optional(),
+        timeLimit: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...updates } = input;
+        return db.updateQuestion(id, updates);
+      }),
+
+    // Delete question
+    deleteQuestion: qbAdminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteQuestion(input.id);
+      }),
+
+    // Bulk upload questions
+    bulkUploadQuestions: qbAdminProcedure
+      .input(z.object({
+        questions: z.array(z.object({
+          boardId: z.number(),
+          gradeId: z.number(),
+          subjectId: z.number(),
+          moduleId: z.number().optional(),
+          topic: z.string(),
+          subTopic: z.string().optional(),
+          scope: z.enum(['School', 'Olympiad', 'Competitive', 'Advanced']),
+          questionType: z.enum(['mcq', 'true_false', 'fill_blank', 'match', 'image_based']),
+          questionText: z.string(),
+          questionImage: z.string().optional(),
+          options: z.any(),
+          correctAnswer: z.string(),
+          explanation: z.string().optional(),
+          difficulty: z.enum(['easy', 'medium', 'hard']),
+          points: z.number().default(10),
+          timeLimit: z.number().default(60),
+        }))
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const questionsWithSubmitter = input.questions.map(q => ({
+          ...q,
+          submittedBy: ctx.user.id
+        }));
+        return db.bulkUploadQuestionsWithMetadata(questionsWithSubmitter);
+      }),
+
+    // Delete question permanently
+    deleteQuestionPermanent: qbAdminProcedure
+      .input(z.object({ questionId: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteQuestion(input.questionId);
+      }),
+
+    // Get all questions with filters
+    getAllQuestions: qbAdminProcedure
+      .input(z.object({
+        subject: z.string().optional(),
+        topic: z.string().optional(),
+        board: z.string().optional(),
+        grade: z.number().optional(),
+        scope: z.enum(['School', 'Olympiad', 'Competitive', 'Advanced']).optional(),
+        difficulty: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        return db.getAllQuestionsWithFilters(input || {});
+      }),
+
+    // Get unique subjects
+    getUniqueSubjects: qbAdminProcedure
+      .query(async () => {
+        return db.getUniqueSubjects();
+      }),
+
+    // Get unique topics for a subject
+    getUniqueTopics: qbAdminProcedure
+      .input(z.object({ subject: z.string() }))
+      .query(async ({ input }) => {
+        return db.getUniqueTopicsForSubject(parseInt(input.subject));
       }),
   }),
 

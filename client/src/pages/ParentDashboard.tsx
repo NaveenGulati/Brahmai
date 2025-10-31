@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import QuestionBankManager from '@/components/QuestionBankManager';
+// QuestionBankManager removed - now managed by QB Admin role
 
 // Format date as "29th Oct 2025, 11:22 AM"
 function formatCompletedDate(date: Date | string): string {
@@ -37,46 +37,14 @@ function formatCompletedDate(date: Date | string): string {
 export default function ParentDashboard() {
   const { user, loading, isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
-  const [selectedSubject, setSelectedSubject] = useState<number | null>(null);
-  const [selectedModule, setSelectedModule] = useState<number | null>(null);
-  const [isAddQuestionOpen, setIsAddQuestionOpen] = useState(false);
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  // Question bank management removed - now handled by QB Admin
   const [isCreateChildOpen, setIsCreateChildOpen] = useState(false);
 
-  const { data: subjects } = trpc.parent.getSubjects.useQuery();
-  const { data: modules } = trpc.parent.getModules.useQuery(
-    { subjectId: selectedSubject! },
-    { enabled: !!selectedSubject }
-  );
-  const { data: questions } = trpc.parent.getQuestions.useQuery(
-    { moduleId: selectedModule! },
-    { enabled: !!selectedModule }
-  );
+  // Subject/module queries removed - question bank now managed by QB Admin
   const { data: children } = trpc.parent.getChildren.useQuery();
 
   const utils = trpc.useUtils();
-  const createQuestionMutation = trpc.parent.createQuestion.useMutation({
-    onSuccess: () => {
-      toast.success("Question added successfully!");
-      utils.parent.getQuestions.invalidate();
-      setIsAddQuestionOpen(false);
-    },
-  });
-
-  const bulkUploadMutation = trpc.parent.bulkUploadQuestions.useMutation({
-    onSuccess: () => {
-      toast.success("Questions uploaded successfully!");
-      utils.parent.getQuestions.invalidate();
-      setIsBulkUploadOpen(false);
-    },
-  });
-
-  const deleteQuestionMutation = trpc.parent.deleteQuestion.useMutation({
-    onSuccess: () => {
-      toast.success("Question deleted!");
-      utils.parent.getQuestions.invalidate();
-    },
-  });
+  // Question mutations removed - question bank now managed by QB Admin
 
   const createChildMutation = trpc.parent.createChild.useMutation({
     onSuccess: () => {
@@ -118,53 +86,7 @@ export default function ParentDashboard() {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
-  const handleAddQuestion = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    const questionType = formData.get('questionType') as string;
-    let options: any = null;
-    let correctAnswer = formData.get('correctAnswer') as string;
-
-    if (questionType === 'mcq') {
-      options = [
-        formData.get('option1'),
-        formData.get('option2'),
-        formData.get('option3'),
-        formData.get('option4'),
-      ];
-    }
-
-    createQuestionMutation.mutate({
-      boardId: 1, // TODO: Get from form - deprecated code
-      gradeId: 7, // TODO: Get from form - deprecated code
-      subjectId: 1, // TODO: Get from form - deprecated code
-      moduleId: selectedModule!,
-      questionType: questionType as any,
-      questionText: formData.get('questionText') as string,
-      options,
-      correctAnswer,
-      explanation: formData.get('explanation') as string,
-      difficulty: formData.get('difficulty') as any,
-      points: parseInt(formData.get('points') as string) || 10,
-      timeLimit: parseInt(formData.get('timeLimit') as string) || 60,
-    });
-  };
-
-  const handleBulkUpload = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const jsonText = formData.get('jsonData') as string;
-
-    try {
-      const questions = JSON.parse(jsonText);
-      bulkUploadMutation.mutate({
-        questions,
-      });
-    } catch (error) {
-      toast.error("Invalid JSON format!");
-    }
-  };
+  // Old question form handlers removed - question bank now managed by QB Admin
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -187,15 +109,11 @@ export default function ParentDashboard() {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="progress" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-md grid-cols-1">
             <TabsTrigger value="progress">Child Progress</TabsTrigger>
-            <TabsTrigger value="questions">Question Bank</TabsTrigger>
           </TabsList>
 
-          {/* Question Bank Tab */}
-          <TabsContent value="questions" className="space-y-6">
-            <QuestionBankManager />
-          </TabsContent>
+          {/* Question Bank tab removed - now managed by QB Admin role */}
 
           {/* Child Progress Tab */}
           <TabsContent value="progress" className="space-y-6">

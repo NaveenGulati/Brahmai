@@ -635,3 +635,114 @@
 - [x] Update ChildDashboard logout to use window.location.href for consistency
 - [x] Force full page navigation to ensure auth state is properly cleared
 
+
+
+
+---
+
+# MULTI-TENANT PLATFORM COMPLETION PLAN
+
+## Phase 1: Refactor Question Bank Management to QB Admin ✅ COMPLETE
+- [x] Create `qbAdminProcedure` in tRPC (also added parentProcedure, teacherProcedure)
+- [x] Move question management procedures from `parent` router to new `qbAdmin` router
+  - [x] createQuestion
+  - [x] bulkUploadQuestions
+  - [x] deleteQuestionPermanent
+  - [x] getAllQuestions
+  - [x] getUniqueSubjects
+  - [x] getUniqueTopics
+  - [x] createModule, updateModule, deleteModule
+  - [x] getQuestions, updateQuestion, deleteQuestion
+- [x] Create QB Admin authentication/authorization checks
+- [x] Remove QuestionBankManager component from ParentDashboard
+- [x] Remove Question Bank tab from ParentDashboard
+- [x] Remove all question-related mutations from ParentDashboard
+- [x] Update QuestionBankManager component to use qbAdmin procedures
+- [x] All TypeScript errors fixed
+
+## Phase 2: Update Parent Dashboard
+- [ ] Remove Question Bank tab completely
+- [ ] Add Challenge Assignment feature
+  - [ ] Create challenge form
+  - [ ] Assign to specific children
+  - [ ] Set point rewards
+  - [ ] Track challenge completion
+- [ ] Improve Progress Monitoring
+  - [ ] Add performance trend charts
+  - [ ] Add subject-wise comparison
+  - [ ] Add weekly/monthly summaries
+- [ ] Add Reports feature
+  - [ ] Generate PDF reports
+  - [ ] Export quiz history to CSV
+
+## Phase 3: Create QB Admin Dashboard
+- [ ] Create QB Admin login/authentication
+- [ ] Build Dashboard Overview
+  - [ ] Question statistics by subject
+  - [ ] Question statistics by difficulty
+  - [ ] Recent uploads
+  - [ ] Usage statistics
+- [ ] Build Question Management UI
+  - [ ] List questions with filters
+  - [ ] Add question form
+  - [ ] Edit question form
+  - [ ] Delete question confirmation
+  - [ ] Mark active/inactive
+- [ ] Build Bulk Upload Interface
+  - [ ] JSON file upload
+  - [ ] Validation and preview
+  - [ ] Import history
+- [ ] Build Subject & Module Management
+  - [ ] Create/edit/delete subjects
+  - [ ] Create/edit/delete modules
+  - [ ] Set module prerequisites
+
+## Phase 4: Implement Teacher Dashboard
+- [ ] Create Teacher login/authentication
+- [ ] Build Class Management
+  - [ ] Create classes
+  - [ ] Add students to classes
+  - [ ] View class roster
+  - [ ] Remove students
+- [ ] Build Assignment Creation
+  - [ ] Browse question bank (read-only)
+  - [ ] Create quiz assignments
+  - [ ] Set due dates
+  - [ ] Assign to class/students
+- [ ] Build Progress Tracking
+  - [ ] Class performance dashboard
+  - [ ] Individual student progress
+  - [ ] Assignment completion tracking
+  - [ ] Generate class reports
+
+## Phase 5: Super Admin Dashboard
+- [ ] Create Super Admin authentication
+- [ ] Build User Management
+  - [ ] List all users
+  - [ ] Assign roles (QB Admin, Teacher)
+  - [ ] Deactivate users
+- [ ] Build Platform Analytics
+  - [ ] User statistics
+  - [ ] Quiz statistics
+  - [ ] Engagement metrics
+
+## Phase 6: Testing & Polish
+- [ ] Test parent workflow end-to-end
+- [ ] Test child workflow end-to-end
+- [ ] Test QB Admin workflow end-to-end
+- [ ] Test teacher workflow end-to-end
+- [ ] Test super admin workflow end-to-end
+- [ ] Fix bugs discovered during testing
+- [ ] Add loading states and error handling
+- [ ] Improve UI/UX
+
+## Database Schema Adjustments
+- [ ] Add `createdBy` field to questions table
+- [ ] Add `isActive` field to questions table
+- [ ] Add `usageCount` field to questions table
+- [ ] Add `lastUsedAt` field to questions table
+
+---
+
+**See MULTI_TENANT_PLAN.md for detailed specifications**
+

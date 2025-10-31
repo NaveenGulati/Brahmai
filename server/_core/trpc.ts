@@ -43,3 +43,57 @@ export const adminProcedure = t.procedure.use(
     });
   }),
 );
+
+// Parent-only procedure
+export const parentProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+
+    if (!ctx.user || ctx.user.role !== 'parent') {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Access denied. Parent role required." });
+    }
+
+    return next({
+      ctx: {
+        ...ctx,
+        user: ctx.user,
+      },
+    });
+  }),
+);
+
+// QB Admin procedure
+export const qbAdminProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+
+    if (!ctx.user || ctx.user.role !== 'qb_admin') {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Access denied. QB Admin role required." });
+    }
+
+    return next({
+      ctx: {
+        ...ctx,
+        user: ctx.user,
+      },
+    });
+  }),
+);
+
+// Teacher procedure
+export const teacherProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+
+    if (!ctx.user || ctx.user.role !== 'teacher') {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Access denied. Teacher role required." });
+    }
+
+    return next({
+      ctx: {
+        ...ctx,
+        user: ctx.user,
+      },
+    });
+  }),
+);
