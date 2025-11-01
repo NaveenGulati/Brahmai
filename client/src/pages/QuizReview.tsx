@@ -6,7 +6,51 @@ import { trpc } from "@/lib/trpc";
 import { useLocation, useParams } from "wouter";
 import { CheckCircle2, XCircle, Clock, Award, Brain, Sparkles } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { TTSPlayer } from '@/components/TTSPlayer';
+
+/**
+ * Component to display text with paragraph-level highlighting
+ * 
+ * Splits markdown text into paragraphs and highlights the current one during audio playback.
+ */
+function HighlightedText({ text, highlightIndex }: { text: string; highlightIndex: number }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const paragraphRefs = useRef<(HTMLDivElement | null)[]>([]);
+  
+  // Split text into paragraphs (double newline or markdown headers)
+  const paragraphs = text.split(/\n\n+/).filter(p => p.trim().length > 0);
+  
+  // Auto-scroll to highlighted paragraph
+  useEffect(() => {
+    if (highlightIndex >= 0 && paragraphRefs.current[highlightIndex]) {
+      paragraphRefs.current[highlightIndex]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [highlightIndex]);
+  
+  return (
+    <div ref={containerRef} className="prose prose-sm max-w-none">
+      {paragraphs.map((paragraph, index) => (
+        <div
+          key={index}
+          ref={(el) => {
+            paragraphRefs.current[index] = el;
+          }}
+          className={`transition-all duration-200 rounded-lg ${
+            index === highlightIndex
+              ? 'bg-yellow-200 shadow-lg p-3 border-2 border-yellow-400'
+              : 'p-1'
+          }`}
+        >
+          <ReactMarkdown>{paragraph}</ReactMarkdown>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function QuizReview() {
   // ALL HOOKS MUST BE AT THE TOP - BEFORE ANY CONDITIONAL RETURNS
@@ -32,6 +76,8 @@ export default function QuizReview() {
   const { user } = useAuth({ redirectOnUnauthenticated: false });
   const [aiAnalysis, setAiAnalysis] = useState<{ fullAnalysis: string } | null>(null);
   const [expandedExplanations, setExpandedExplanations] = useState<Record<number, string>>({});
+  const [highlightedQuestionId, setHighlightedQuestionId] = useState<number | null>(null);
+  const [highlightIndex, setHighlightIndex] = useState<number>(-1);
   
   // Check if child is logged in via localStorage
   const childUser = localStorage.getItem('childUser') ? JSON.parse(localStorage.getItem('childUser')!) : null;
@@ -467,12 +513,42 @@ export default function QuizReview() {
                             </Button>
                           ) : (
                             <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg">
-                              <div className="flex items-center gap-2 mb-2">
+                              <div className="flex items-center gap-2 mb-3">
                                 <Brain className="w-5 h-5 text-purple-600" />
                                 <h4 className="font-semibold text-purple-900">AI Detailed Explanation</h4>
                               </div>
-                              <div className="prose prose-sm max-w-none text-gray-800">
-                                <ReactMarkdown>{expandedExplanations[response.questionId]}</ReactMarkdown>
+                              
+                              {/* Audio player at top */}
+                              <div className="mb-3">
+                                <TTSPlayer
+                                  questionId={response.questionId}
+                                  isChild={isChild}
+                                  explanationText={expandedExplanations[response.questionId]}
+                                  onHighlightChange={(index) => {
+                                    setHighlightedQuestionId(response.questionId);
+                                    setHighlightIndex(index);
+                                  }}
+                                />
+                              </div>
+                              
+                              <div className="text-gray-800 mb-3">
+                                <HighlightedText
+                                  text={expandedExplanations[response.questionId]}
+                                  highlightIndex={highlightedQuestionId === response.questionId ? highlightIndex : -1}
+                                />
+                              </div>
+                              
+                              {/* Audio player at bottom */}
+                              <div className="mt-3">
+                                <TTSPlayer
+                                  questionId={response.questionId}
+                                  isChild={isChild}
+                                  explanationText={expandedExplanations[response.questionId]}
+                                  onHighlightChange={(index) => {
+                                    setHighlightedQuestionId(response.questionId);
+                                    setHighlightIndex(index);
+                                  }}
+                                />
                               </div>
                             </div>
                           )}

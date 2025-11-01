@@ -363,6 +363,7 @@ export const questionReports = mysqlTable("questionReports", {
 export const aiExplanationCache = mysqlTable("aiExplanationCache", {
   questionId: int("questionId").primaryKey().notNull(),
   detailedExplanation: text("detailedExplanation").notNull(),
+  audioUrl: text("audioUrl"),
   generatedAt: timestamp("generatedAt").defaultNow().notNull(),
   timesUsed: int("timesUsed").default(1).notNull(),
   lastUsedAt: timestamp("lastUsedAt").defaultNow().notNull(),

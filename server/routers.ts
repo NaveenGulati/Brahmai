@@ -5,7 +5,7 @@ import { publicProcedure, protectedProcedure, router, parentProcedure, qbAdminPr
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
-import { getDb } from "./db";
+import { getDb, generateAudioForQuestion, generateDetailedExplanationForQuestion } from "./db";
 import { quizSessions, aiExplanationCache } from "../drizzle/schema";
 import { eq, and, lt, desc } from "drizzle-orm";
 import { authRouter } from "./authRouter";
@@ -296,92 +296,24 @@ Format your response in clean markdown with:
         grade: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db) throw new Error('Database not available');
-        
-        // Check cache first
-        const cached = await db
-          .select()
-          .from(aiExplanationCache)
-          .where(eq(aiExplanationCache.questionId, input.questionId))
-          .limit(1);
-        
-        if (cached.length > 0) {
-          // Cache hit! Update usage stats and return cached explanation
-          await db
-            .update(aiExplanationCache)
-            .set({ 
-              timesUsed: cached[0].timesUsed + 1,
-              lastUsedAt: new Date()
-            })
-            .where(eq(aiExplanationCache.questionId, input.questionId));
-          
-          console.log(`[Cache HIT] Question ${input.questionId} - Used ${cached[0].timesUsed + 1} times`);
-          return {
-            detailedExplanation: cached[0].detailedExplanation,
-            fromCache: true,
-          };
-        }
-        
-        // Cache miss - generate new explanation with AI
-        console.log(`[Cache MISS] Question ${input.questionId} - Generating new explanation`);
-        const { invokeLLM } = await import('./_core/llm');
-        
-        const grade = input.grade || '7';
-        const explanationPrompt = `A Grade ${grade} student answered this question incorrectly. Provide a detailed, child-friendly explanation to help them understand:
-
-Question: ${input.questionText}
-Student's Answer: ${input.userAnswer}
-Correct Answer: ${input.correctAnswer}
-
-Provide a detailed explanation that:
-1. Is written at a Grade ${grade} reading level
-2. Uses simple, clear language
-3. Includes examples or analogies
-4. Breaks down the concept step-by-step
-5. Is encouraging and patient
-6. Assumes the child is struggling with this concept
-7. Uses creative teaching methods (stories, visuals, real-world examples)
-
-Format in markdown with:
-- Use **bold** for key concepts
-- Use bullet points for steps
-- Keep paragraphs short and simple
-- Be encouraging and positive`;
-
-        const aiResponse = await invokeLLM({
-          messages: [
-            { role: 'system', content: `You are a patient, creative teacher explaining concepts to a Grade ${grade} student who is struggling. Use age-appropriate language and engaging examples.` },
-            { role: 'user', content: explanationPrompt }
-          ]
-        });
-
-        const aiContent = aiResponse.choices[0]?.message?.content || '';
-        const explanation = typeof aiContent === 'string' ? aiContent : '';
-        
-        // Save to cache for future use
-        if (explanation) {
-          try {
-            const database = await getDb();
-            if (database) {
-              await database.insert(aiExplanationCache).values({
-                questionId: input.questionId,
-                detailedExplanation: explanation,
-                timesUsed: 1,
-                generatedAt: new Date(),
-                lastUsedAt: new Date(),
-              });
-              console.log(`[Cache SAVED] Question ${input.questionId}`);
-            }
-          } catch (error) {
-            console.error('Failed to cache explanation:', error);
-          }
-        }
-        
+        const result = await generateDetailedExplanationForQuestion(
+          input.questionId,
+          input.questionText,
+          input.correctAnswer,
+          input.userAnswer,
+          input.grade
+        );
         return {
-          detailedExplanation: explanation || 'Explanation not available. Please try again.',
-          fromCache: false,
+          detailedExplanation: result.detailedExplanation,
+          fromCache: result.fromCache || false,
         };
+      }),
+
+    // Generate audio for explanation
+    generateAudio: parentProcedure
+      .input(z.object({ questionId: z.number() }))
+      .mutation(async ({ input }) => {
+        return generateAudioForQuestion(input.questionId);
       }),
 
     // Create challenge for child
@@ -921,89 +853,24 @@ Format your response in clean markdown with:
         grade: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        const database = await getDb();
-        if (!database) throw new Error('Database not available');
-        
-        // Check cache first
-        const cached = await database
-          .select()
-          .from(aiExplanationCache)
-          .where(eq(aiExplanationCache.questionId, input.questionId))
-          .limit(1);
-        
-        if (cached.length > 0) {
-          // Cache hit! Update usage stats and return cached explanation
-          await database
-            .update(aiExplanationCache)
-            .set({ 
-              timesUsed: cached[0].timesUsed + 1,
-              lastUsedAt: new Date()
-            })
-            .where(eq(aiExplanationCache.questionId, input.questionId));
-          
-          console.log(`[Cache HIT] Question ${input.questionId} - Used ${cached[0].timesUsed + 1} times`);
-          return {
-            detailedExplanation: cached[0].detailedExplanation,
-            fromCache: true,
-          };
-        }
-        
-        // Cache miss - generate new explanation with AI
-        console.log(`[Cache MISS] Question ${input.questionId} - Generating new explanation`);
-        const { invokeLLM } = await import('./_core/llm');
-        
-        const grade = input.grade || '7';
-        const explanationPrompt = `A Grade ${grade} student answered this question incorrectly. Provide a detailed, child-friendly explanation to help them understand:
-
-Question: ${input.questionText}
-Student's Answer: ${input.userAnswer}
-Correct Answer: ${input.correctAnswer}
-
-Provide a detailed explanation that:
-1. Is written at a Grade ${grade} reading level
-2. Uses simple, clear language
-3. Includes examples or analogies
-4. Breaks down the concept step-by-step
-5. Is encouraging and patient
-6. Assumes the child is struggling with this concept
-7. Uses creative teaching methods (stories, visuals, real-world examples)
-
-Format in markdown with:
-- Use **bold** for key concepts
-- Use bullet points for steps
-- Keep paragraphs short and simple
-- Be encouraging and positive`;
-
-        const aiResponse = await invokeLLM({
-          messages: [
-            { role: 'system', content: `You are a patient, creative teacher explaining concepts to a Grade ${grade} student who is struggling. Use age-appropriate language and engaging examples.` },
-            { role: 'user', content: explanationPrompt }
-          ]
-        });
-
-        const aiContent = aiResponse.choices[0]?.message?.content || '';
-        const explanation = typeof aiContent === 'string' ? aiContent : '';
-        
-        // Save to cache for future use
-        if (explanation) {
-          try {
-            await database.insert(aiExplanationCache).values({
-              questionId: input.questionId,
-              detailedExplanation: explanation,
-              timesUsed: 1,
-              generatedAt: new Date(),
-              lastUsedAt: new Date(),
-            });
-            console.log(`[Cache SAVED] Question ${input.questionId}`);
-          } catch (error) {
-            console.error('Failed to cache explanation:', error);
-          }
-        }
-        
+        const result = await generateDetailedExplanationForQuestion(
+          input.questionId,
+          input.questionText,
+          input.correctAnswer,
+          input.userAnswer,
+          input.grade
+        );
         return {
-          detailedExplanation: explanation || 'Explanation not available. Please try again.',
-          fromCache: false,
+          detailedExplanation: result.detailedExplanation,
+          fromCache: result.fromCache || false,
         };
+      }),
+
+    // Generate audio for explanation
+    generateAudio: publicProcedure
+      .input(z.object({ questionId: z.number() }))
+      .mutation(async ({ input }) => {
+        return generateAudioForQuestion(input.questionId);
       }),
 
     // Get achievements (public for local auth)

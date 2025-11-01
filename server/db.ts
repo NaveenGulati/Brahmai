@@ -1477,3 +1477,158 @@ export async function getUsersByRole(role: 'parent' | 'child' | 'teacher' | 'qb_
   return result;
 }
 
+
+
+// ==================== Shared AI Explanation & Audio Functions ====================
+
+import { invokeLLM } from './_core/llm';
+import { generateSpeech } from './_core/googleTTS';
+
+/**
+ * Shared function to generate detailed AI explanation for a question
+ * Used by both parent and child routers to avoid code duplication
+ */
+export async function generateDetailedExplanationForQuestion(questionId: number): Promise<{ detailedExplanation: string }> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error('Database not available');
+  }
+
+  // Check cache first
+  const cached = await db
+    .select()
+    .from(aiExplanationCache)
+    .where(eq(aiExplanationCache.questionId, questionId))
+    .limit(1);
+
+  if (cached.length > 0 && cached[0].detailedExplanation) {
+    console.log(`[AI] Using cached explanation for question ${questionId}`);
+    
+    // Update usage stats
+    await updateCachedExplanationUsage(questionId);
+    
+    return { detailedExplanation: cached[0].detailedExplanation };
+  }
+
+  // Generate new explanation
+  const question = await db
+    .select()
+    .from(questions)
+    .where(eq(questions.id, questionId))
+    .limit(1);
+
+  if (question.length === 0) {
+    throw new Error('Question not found');
+  }
+
+  const q = question[0];
+  
+  // Build prompt for AI
+  let prompt = `You are a friendly, knowledgeable teacher explaining a concept to a Grade 7 ICSE student who got this question wrong.
+
+Question: ${q.questionText}
+Correct Answer: ${q.correctAnswer}
+Brief Explanation: ${q.explanation || 'Not provided'}
+
+Provide a detailed, conversational explanation that:
+1. Explains WHY the correct answer is right
+2. Clarifies any misconceptions
+3. Uses simple examples or analogies
+4. Keeps a warm, encouraging tone
+
+Write in a natural, spoken style as if you're talking to the student. Use short paragraphs. Avoid using backticks, asterisks, or other markdown formatting for emphasis - just write naturally.`;
+
+  if (q.questionType === 'mcq' && q.options) {
+    prompt += `\n\nOptions:\n${q.options.join('\n')}`;
+  }
+
+  const response = await invokeLLM({
+    messages: [
+      { role: 'system', content: 'You are a helpful, patient teacher for Grade 7 students.' },
+      { role: 'user', content: prompt },
+    ],
+  });
+
+  const detailedExplanation = response.choices[0].message.content || 'Unable to generate explanation';
+
+  // Cache the explanation
+  await db
+    .insert(aiExplanationCache)
+    .values({
+      questionId,
+      detailedExplanation,
+      timesUsed: 1,
+      lastUsedAt: new Date(),
+    })
+    .onDuplicateKeyUpdate({
+      set: {
+        detailedExplanation,
+        timesUsed: sql`COALESCE(timesUsed, 0) + 1`,
+        lastUsedAt: new Date(),
+      },
+    });
+
+  console.log(`[AI] Generated and cached new explanation for question ${questionId}`);
+
+  return { detailedExplanation };
+}
+
+/**
+ * Shared function to generate audio for a question's explanation
+ * Used by both parent and child routers to avoid code duplication
+ */
+export async function generateAudioForQuestion(questionId: number): Promise<{ audioUrl: string }> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error('Database not available');
+  }
+
+  // Check if audio already exists in cache
+  const cached = await db
+    .select()
+    .from(aiExplanationCache)
+    .where(eq(aiExplanationCache.questionId, questionId))
+    .limit(1);
+
+  if (cached.length > 0 && cached[0].audioUrl) {
+    console.log(`[TTS] Using cached audio for question ${questionId}`);
+    return { audioUrl: cached[0].audioUrl };
+  }
+
+  // Get the text explanation
+  if (cached.length === 0 || !cached[0].detailedExplanation) {
+    throw new Error('No explanation found. Generate explanation first.');
+  }
+
+  const explanationText = cached[0].detailedExplanation;
+
+  // Generate audio using Google TTS
+  console.log(`[TTS] Generating audio for question ${questionId}`);
+  const audioUrl = await generateSpeech(explanationText);
+
+  // Update cache with audio URL
+  await db
+    .update(aiExplanationCache)
+    .set({ audioUrl: audioUrl })
+    .where(eq(aiExplanationCache.questionId, questionId));
+
+  console.log(`[TTS] Generated and cached audio for question ${questionId}`);
+
+  return { audioUrl };
+}
+
+/**
+ * Update usage statistics for cached explanation
+ */
+async function updateCachedExplanationUsage(questionId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.execute(sql`
+    UPDATE aiExplanationCache 
+    SET timesUsed = COALESCE(timesUsed, 0) + 1,
+        lastUsedAt = NOW()
+    WHERE questionId = ${questionId}
+  `);
+}
+

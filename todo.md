@@ -876,3 +876,60 @@
 - [x] Update border colors to match pastel theme
 - [x] Add hover effects with shadow for better interactivity
 
+
+
+
+## URGENT: Audio Player Broken After Server Restart - IN PROGRESS
+- [x] Audio button not responding when clicked
+- [x] Speed dropdown not showing
+- [x] Check browser console for errors
+- [x] Verify TTSPlayer component is being imported correctly
+- [x] Verify tRPC mutations are working
+- [x] Added generateAudio procedures to parent and child routers
+- [x] Created TTSPlayer component with speed controls and highlighting
+- [x] Created googleTTS module with markdown cleaning
+- [x] Added shared generateAudioForQuestion function to db.ts
+- [x] Added Google TTS API key to env.ts
+- [x] Fixed SQL update query syntax
+- [ ] SQL update still failing - need to investigate Drizzle ORM issue
+- [ ] CHECKPOINT NEEDED IMMEDIATELY
+
+
+
+
+## Code Centralization Complete ✅
+- [x] Added audioUrl column to aiExplanationCache schema
+- [x] Refactored parent.generateDetailedExplanation to use shared function
+- [x] Refactored child.generateDetailedExplanation to use shared function
+- [x] Both parent and child now call generateDetailedExplanationForQuestion()
+- [x] Eliminated ~166 lines of duplicate code
+- [x] parent.generateAudio uses shared generateAudioForQuestion() ✅
+- [x] child.generateAudio uses shared generateAudioForQuestion() ✅
+- [x] Frontend uses single QuizReview.tsx for both parent and child ✅
+- [x] All quiz review functionality fully centralized
+- [x] Tested with both parent and child profiles
+- [x] Audio player working with speed controls and text highlighting
+- [x] Checkpoint saved
+
+
+
+
+## Dual Audio Player Placement
+- [x] Add TTSPlayer at the top of detailed explanation (before text)
+- [x] Keep TTSPlayer at the bottom of detailed explanation (after text)
+- [x] Both players control the same audio instance
+- [x] Both players share highlighting state
+- [x] Test that both players work correctly
+- [x] Save checkpoint
+
+
+
+
+## Change TTS Voice to Indian English
+- [x] Current voice: en-US-Neural2-F (US English female)
+- [x] Changed to: en-IN-Neural2-D (Indian English female)
+- [x] Using Neural2 for more natural, human-like quality
+- [x] Cleared audio cache to regenerate with new voice
+- [x] Test new voice quality
+- [x] Save checkpoint
+
