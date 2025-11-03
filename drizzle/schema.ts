@@ -282,7 +282,7 @@ export const modules = pgTable("modules", {
   
   // Metadata
   estimatedTime: integer("estimatedTime"), // Minutes to complete
-  difficulty: difficultyEnum().default("intermediate"),
+  difficulty: difficultyEnum().default("medium"),
   
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -310,13 +310,7 @@ export const questions = pgTable("questions", {
   scope: varchar("scope", { length: 20 }).default("School").notNull(),
   
   // Question content
-  questionType: varchar("questionType", { length: 50 }) [
-    "mcq",           // Multiple choice
-    "true_false",    // True/False
-    "fill_blank",    // Fill in the blanks
-    "match",         // Match the following
-    "image_based"    // Image-based questions
-  ]).notNull(),
+  questionType: varchar("questionType", { length: 50 }).notNull(),
   questionText: text("questionText").notNull(),
   questionImage: varchar("questionImage", { length: 500 }), // URL to image
   
