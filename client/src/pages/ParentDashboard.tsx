@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import ChallengeCreator from '@/components/ChallengeCreator';
 // QuestionBankManager removed - now managed by QB Admin role
 
 // Format date as "29th Oct 2025, 11:22 AM"
@@ -432,63 +433,25 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">🎯 Create Challenge</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create Quiz Challenge for {childName}</DialogTitle>
+              <DialogTitle>Create Adaptive Challenge for {childName}</DialogTitle>
               <DialogDescription>
-                Assign a specific quiz module for your child to complete
+                Configure a personalized quiz challenge based on performance and difficulty
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div>
-                <Label>Subject</Label>
-                <Select value={challengeSubject?.toString()} onValueChange={(v) => {
-                  setChallengeSubject(parseInt(v));
-                  setChallengeModule(null);
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose subject" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subjects?.map((s) => (
-                      <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {challengeSubject && (
-                <div>
-                  <Label>Module</Label>
-                  <Select value={challengeModule?.toString()} onValueChange={(v) => setChallengeModule(parseInt(v))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose module" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {modules?.map((m) => (
-                        <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <Button 
-                onClick={() => {
-                  if (challengeModule) {
-                    const module = modules?.find(m => m.id === challengeModule);
-                    const subject = subjects?.find(s => s.id === challengeSubject);
-                    createChallengeMutation.mutate({
-                      childId,
-                      moduleId: challengeModule,
-                      title: `Complete ${module?.name} quiz`,
-                      message: `Your parent wants you to practice **${subject?.name} - ${module?.name}**`,
-                    });
-                  }
+            <div className="mt-4">
+              <ChallengeCreator
+                childId={childId}
+                childName={childName}
+                onSuccess={(challengeId) => {
+                  toast.success('Challenge created successfully!');
+                  setIsChallengeOpen(false);
+                  refetch(); // Refresh challenges list
                 }}
-                disabled={!challengeModule || createChallengeMutation.isPending}
-                className="w-full"
-              >
-                Create Challenge
-              </Button>
+                onCancel={() => setIsChallengeOpen(false)}
+                mode="parent"
+              />
             </div>
           </DialogContent>
         </Dialog>

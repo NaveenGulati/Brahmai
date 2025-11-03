@@ -1,0 +1,29 @@
+{
+  "query": "SELECT * FROM quizSessions WHERE id = 120001",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute SELECT * FROM quizSessions WHERE id = 120001",
+  "rows": [
+    {
+      "id": "120001",
+      "childId": "180009",
+      "moduleId": "30001",
+      "startedAt": "2025-11-02 15:10:57",
+      "completedAt": "2025-11-02 15:15:14",
+      "totalQuestions": "12",
+      "correctAnswers": "8",
+      "wrongAnswers": "3",
+      "skippedQuestions": "1",
+      "totalPoints": "24",
+      "timeTaken": "247",
+      "scorePercentage": "67",
+      "isCompleted": "1",
+      "assignedBy": "NULL",
+      "assignmentType": "NULL",
+      "createdAt": "2025-11-02 15:10:57",
+      "updatedAt": "2025-11-02 15:15:13"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tchildId\tmoduleId\tstartedAt\tcompletedAt\ttotalQuestions\tcorrectAnswers\twrongAnswers\tskippedQuestions\ttotalPoints\ttimeTaken\tscorePercentage\tisCompleted\tassignedBy\tassignmentType\tcreatedAt\tupdatedAt\n120001\t180009\t30001\t2025-11-02 15:10:57\t2025-11-02 15:15:14\t12\t8\t3\t1\t24\t247\t67\t1\tNULL\tNULL\t2025-11-02 15:10:57\t2025-11-02 15:15:13\n",
+  "stderr": "",
+  "execution_time_ms": 2466
+}

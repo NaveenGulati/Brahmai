@@ -38,8 +38,8 @@ export default function QuestionBankManager() {
   // Mutations
   const bulkUploadMutation = trpc.qbAdmin.bulkUploadQuestions.useMutation({
     onSuccess: (result) => {
-      toast.success(`Uploaded ${result.created} questions! Created ${result.subjectsCreated} subjects and ${result.modulesCreated} topics.`);
-      if (result.errors.length > 0) {
+      toast.success(`Uploaded ${result.created} questions!`);
+      if (result.errors && result.errors.length > 0) {
         toast.error(`${result.errors.length} errors occurred. Check console for details.`);
         console.error("Upload errors:", result.errors);
       }
@@ -120,6 +120,7 @@ export default function QuestionBankManager() {
       scope: question.scope,
       questionType: question.questionType,
       questionText: question.questionText,
+      options: question.options || [],
       correctAnswer: question.correctAnswer,
       explanation: question.explanation || "",
       difficulty: question.difficulty,
@@ -314,6 +315,36 @@ export default function QuestionBankManager() {
                           <Input
                             value={editFormData.topic}
                             onChange={(e) => setEditFormData({ ...editFormData, topic: e.target.value })}
+                            className="h-8"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Question Type</Label>
+                          <Select
+                            value={editFormData.questionType}
+                            onValueChange={(val) => setEditFormData({ ...editFormData, questionType: val })}
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="mcq">Multiple Choice</SelectItem>
+                              <SelectItem value="true_false">True/False</SelectItem>
+                              <SelectItem value="fill_blank">Fill in the Blank</SelectItem>
+                              <SelectItem value="match">Match</SelectItem>
+                              <SelectItem value="image_based">Image Based</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Options (comma-separated)</Label>
+                          <Input
+                            value={Array.isArray(editFormData.options) ? editFormData.options.join(', ') : ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, options: e.target.value.split(',').map(o => o.trim()) })}
+                            placeholder="Option 1, Option 2, Option 3"
                             className="h-8"
                           />
                         </div>

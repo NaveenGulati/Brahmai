@@ -1,0 +1,21 @@
+{
+  "query": "\nSELECT id, boardId, gradeId, subjectId, moduleId, topic, questionText, difficulty, points \nFROM questions \nWHERE topic = 'El verbo Gustar' \nLIMIT 3;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \nSELECT id, boardId, gradeId, subjectId, moduleId, topic, questionText, difficulty, points \nFROM questions \nWHERE topic = 'El verbo Gustar' \nLIMIT 3;\n",
+  "rows": [
+    {
+      "id": "30001",
+      "boardId": "2",
+      "gradeId": "7",
+      "subjectId": "30001",
+      "moduleId": "30001",
+      "topic": "El verbo Gustar",
+      "questionText": "¿Cuál es el pronombre correcto para 'yo' en la expresión con gustar?",
+      "difficulty": "easy",
+      "points": "2"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tboardId\tgradeId\tsubjectId\tmoduleId\ttopic\tquestionText\tdifficulty\tpoints\n30001\t2\t7\t30001\t30001\tEl verbo Gustar\t¿Cuál es el pronombre correcto para 'yo' en la expresión con gustar?\teasy\t2\n",
+  "stderr": "",
+  "execution_time_ms": 1525
+}

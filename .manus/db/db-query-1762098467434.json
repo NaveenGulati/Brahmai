@@ -1,0 +1,76 @@
+{
+  "query": "\nSELECT q.id, q.questionText, q.difficulty, qr.isCorrect\nFROM quizResponses qr\nJOIN questions q ON qr.questionId = q.id\nWHERE qr.sessionId = 120001\nORDER BY qr.id\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \nSELECT q.id, q.questionText, q.difficulty, qr.isCorrect\nFROM quizResponses qr\nJOIN questions q ON qr.questionId = q.id\nWHERE qr.sessionId = 120001\nORDER BY qr.id\n",
+  "rows": [
+    {
+      "id": "60022",
+      "questionText": "‘Me gusta el libro’ significa literalmente 'The book pleases me'.",
+      "difficulty": "medium",
+      "isCorrect": "0"
+    },
+    {
+      "id": "60004",
+      "questionText": "¿Cuál es el pronombre correcto para 'yo' en la expresión con gustar?",
+      "difficulty": "easy",
+      "isCorrect": "1"
+    },
+    {
+      "id": "60032",
+      "questionText": "¿Cuál es la forma correcta? 'We don’t like vegetables.'",
+      "difficulty": "medium",
+      "isCorrect": "1"
+    },
+    {
+      "id": "60031",
+      "questionText": "‘A ellos les gusta bailar’ es gramaticalmente incorrecto.",
+      "difficulty": "medium",
+      "isCorrect": "0"
+    },
+    {
+      "id": "60031",
+      "questionText": "‘A ellos les gusta bailar’ es gramaticalmente incorrecto.",
+      "difficulty": "medium",
+      "isCorrect": "0"
+    },
+    {
+      "id": "60016",
+      "questionText": "‘Le gusta el fútbol’ puede referirse a él o a ella.",
+      "difficulty": "medium",
+      "isCorrect": "1"
+    },
+    {
+      "id": "60017",
+      "questionText": "¿Qué frase es correcta?",
+      "difficulty": "medium",
+      "isCorrect": "1"
+    },
+    {
+      "id": "60030",
+      "questionText": "Elige la oración correcta:",
+      "difficulty": "medium",
+      "isCorrect": "1"
+    },
+    {
+      "id": "60040",
+      "questionText": "¿Cómo se traduce 'A nosotros nos gusta leer y escribir'?",
+      "difficulty": "hard",
+      "isCorrect": "1"
+    },
+    {
+      "id": "60041",
+      "questionText": "En inglés y español, la estructura de 'gustar' es igual.",
+      "difficulty": "hard",
+      "isCorrect": "1"
+    },
+    {
+      "id": "60035",
+      "questionText": "Selecciona la estructura correcta:",
+      "difficulty": "hard",
+      "isCorrect": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tquestionText\tdifficulty\tisCorrect\n60022\t‘Me gusta el libro’ significa literalmente 'The book pleases me'.\tmedium\t0\n60004\t¿Cuál es el pronombre correcto para 'yo' en la expresión con gustar?\teasy\t1\n60032\t¿Cuál es la forma correcta? 'We don’t like vegetables.'\tmedium\t1\n60031\t‘A ellos les gusta bailar’ es gramaticalmente incorrecto.\tmedium\t0\n60031\t‘A ellos les gusta bailar’ es gramaticalmente incorrecto.\tmedium\t0\n60016\t‘Le gusta el fútbol’ puede referirse a él o a ella.\tmedium\t1\n60017\t¿Qué frase es correcta?\tmedium\t1\n60030\tElige la oración correcta:\tmedium\t1\n60040\t¿Cómo se traduce 'A nosotros nos gusta leer y escribir'?\thard\t1\n60041\tEn inglés y español, la estructura de 'gustar' es igual.\thard\t1\n60035\tSelecciona la estructura correcta:\thard\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1536
+}

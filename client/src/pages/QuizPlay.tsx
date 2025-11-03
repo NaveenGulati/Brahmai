@@ -140,9 +140,19 @@ export default function QuizPlay() {
 
   useEffect(() => {
     if (moduleId && !sessionId && isReady) {
+      // Check if this quiz is from a challenge
+      const challengeIdStr = localStorage.getItem('currentChallengeId');
+      const challengeId = challengeIdStr ? parseInt(challengeIdStr, 10) : undefined;
+      
+      // Clear the challenge ID from localStorage after reading
+      if (challengeId) {
+        localStorage.removeItem('currentChallengeId');
+      }
+      
       startQuizMutation.mutate({ 
         moduleId,
-        childId: childUser?.id
+        childId: childUser?.id,
+        challengeId
       });
     }
   }, [moduleId, isReady]);

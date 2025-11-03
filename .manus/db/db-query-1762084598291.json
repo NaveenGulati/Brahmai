@@ -1,0 +1,15 @@
+{
+  "query": "\nSELECT m.id, m.name as moduleName, s.name as subjectName \nFROM modules m \nJOIN subjects s ON m.subjectId = s.id \nWHERE m.id = 30001;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \nSELECT m.id, m.name as moduleName, s.name as subjectName \nFROM modules m \nJOIN subjects s ON m.subjectId = s.id \nWHERE m.id = 30001;\n",
+  "rows": [
+    {
+      "id": "30001",
+      "moduleName": "El verbo Gustar",
+      "subjectName": "Spanish"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tmoduleName\tsubjectName\n30001\tEl verbo Gustar\tSpanish\n",
+  "stderr": "",
+  "execution_time_ms": 1540
+}

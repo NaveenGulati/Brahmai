@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE challenges ADD COLUMN useComplexityBoundaries BOOLEAN DEFAULT TRUE",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute ALTER TABLE challenges ADD COLUMN useComplexityBoundaries BOOLEAN DEFAULT TRUE",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2121
+}

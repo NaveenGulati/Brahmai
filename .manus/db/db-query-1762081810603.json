@@ -1,0 +1,60 @@
+{
+  "query": "\nSELECT * FROM boards;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \nSELECT * FROM boards;\n",
+  "rows": [
+    {
+      "id": "1",
+      "code": "CBSE",
+      "name": "Central Board of Secondary Education",
+      "country": "India",
+      "description": "NULL",
+      "isActive": "1",
+      "displayOrder": "1",
+      "createdAt": "2025-10-31 05:54:59"
+    },
+    {
+      "id": "2",
+      "code": "ICSE",
+      "name": "Indian Certificate of Secondary Education",
+      "country": "India",
+      "description": "NULL",
+      "isActive": "1",
+      "displayOrder": "2",
+      "createdAt": "2025-10-31 05:54:59"
+    },
+    {
+      "id": "3",
+      "code": "IB",
+      "name": "International Baccalaureate",
+      "country": "International",
+      "description": "NULL",
+      "isActive": "1",
+      "displayOrder": "3",
+      "createdAt": "2025-10-31 05:54:59"
+    },
+    {
+      "id": "4",
+      "code": "STATE_UP",
+      "name": "Uttar Pradesh State Board",
+      "country": "India",
+      "description": "NULL",
+      "isActive": "1",
+      "displayOrder": "4",
+      "createdAt": "2025-10-31 05:54:59"
+    },
+    {
+      "id": "5",
+      "code": "STATE_MH",
+      "name": "Maharashtra State Board",
+      "country": "India",
+      "description": "NULL",
+      "isActive": "1",
+      "displayOrder": "5",
+      "createdAt": "2025-10-31 05:54:59"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcode\tname\tcountry\tdescription\tisActive\tdisplayOrder\tcreatedAt\n1\tCBSE\tCentral Board of Secondary Education\tIndia\tNULL\t1\t1\t2025-10-31 05:54:59\n2\tICSE\tIndian Certificate of Secondary Education\tIndia\tNULL\t1\t2\t2025-10-31 05:54:59\n3\tIB\tInternational Baccalaureate\tInternational\tNULL\t1\t3\t2025-10-31 05:54:59\n4\tSTATE_UP\tUttar Pradesh State Board\tIndia\tNULL\t1\t4\t2025-10-31 05:54:59\n5\tSTATE_MH\tMaharashtra State Board\tIndia\tNULL\t1\t5\t2025-10-31 05:54:59\n",
+  "stderr": "",
+  "execution_time_ms": 1541
+}

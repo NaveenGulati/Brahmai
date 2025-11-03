@@ -1,0 +1,22 @@
+{
+  "query": "\nSELECT id, questionType, options, questionText \nFROM questions \nWHERE subject = 'Spanish' \nLIMIT 3;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \nSELECT id, questionType, options, questionText \nFROM questions \nWHERE subject = 'Spanish' \nLIMIT 3;\n",
+  "rows": [
+    {
+      "id": "30001",
+      "questionType": "mcq",
+      "options": "[\"me\", \"te\", \"le\", \"nos\"]",
+      "questionText": "¿Cuál es el pronombre correcto para 'yo' en la expresión con gustar?"
+    },
+    {
+      "id": "60001",
+      "questionType": "mcq",
+      "options": "[\"le\", \"te\", \"nos\", \"les\"]",
+      "questionText": "¿Qué pronombre se usa con 'tú'?"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tquestionType\toptions\tquestionText\n30001\tmcq\t[\"me\", \"te\", \"le\", \"nos\"]\t¿Cuál es el pronombre correcto para 'yo' en la expresión con gustar?\n60001\tmcq\t[\"le\", \"te\", \"nos\", \"les\"]\t¿Qué pronombre se usa con 'tú'?\n",
+  "stderr": "",
+  "execution_time_ms": 1528
+}

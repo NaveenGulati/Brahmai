@@ -1,0 +1,9 @@
+{
+  "query": "\nUPDATE questions q\nLEFT JOIN boards b ON q.boardId = b.id\nLEFT JOIN grades g ON q.gradeId = g.id\nLEFT JOIN subjects s ON q.subjectId = s.id\nSET \n  q.board = COALESCE(b.code, 'ICSE'),\n  q.grade_text = COALESCE(g.level, 7),\n  q.subject_text = COALESCE(s.name, 'Unknown');\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \nUPDATE questions q\nLEFT JOIN boards b ON q.boardId = b.id\nLEFT JOIN grades g ON q.gradeId = g.id\nLEFT JOIN subjects s ON q.subjectId = s.id\nSET \n  q.board = COALESCE(b.code, 'ICSE'),\n  q.grade_text = COALESCE(g.level, 7),\n  q.subject_text = COALESCE(s.name, 'Unknown');\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1584
+}

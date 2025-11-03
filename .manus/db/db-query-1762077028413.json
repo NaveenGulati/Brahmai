@@ -1,0 +1,15 @@
+{
+  "query": "\n-- First check if we have any parent users\nSELECT id, name, role FROM users WHERE role = 'parent' LIMIT 1;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \n-- First check if we have any parent users\nSELECT id, name, role FROM users WHERE role = 'parent' LIMIT 1;\n",
+  "rows": [
+    {
+      "id": "3",
+      "name": "Naveen Gulati",
+      "role": "parent"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\trole\n3\tNaveen Gulati\tparent\n",
+  "stderr": "",
+  "execution_time_ms": 1513
+}

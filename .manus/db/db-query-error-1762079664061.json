@@ -1,0 +1,8 @@
+{
+  "query": "\nINSERT INTO users (name, username, passwordHash, email, role, isActive, openId, createdAt, updatedAt, lastSignedIn)\nVALUES ('QB Admin', 'qbadmin', '$2b$10$3xOCqkr9HR3HLDAbPYqUI.yXit0O3/eIpE1AsBl9m5ap6l0VoT2pe', 'qbadmin@test.com', 'qb_admin', 1, 'local_qbadmin', NOW(), NOW(), NOW());\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \nINSERT INTO users (name, username, passwordHash, email, role, isActive, openId, createdAt, updatedAt, lastSignedIn)\nVALUES ('QB Admin', 'qbadmin', '$2b$10$3xOCqkr9HR3HLDAbPYqUI.yXit0O3/eIpE1AsBl9m5ap6l0VoT2pe', 'qbadmin@test.com', 'qb_admin', 1, 'local_qbadmin', NOW(), NOW(), NOW());\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1062 (23000) at line 2: Duplicate entry '?' for key 'users.users_email_unique'"
+  ]
+}

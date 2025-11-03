@@ -1,0 +1,9 @@
+{
+  "query": "\nUPDATE users \nSET passwordHash = '$2b$10$3xOCqkr9HR3HLDAbPYqUI.yXit0O3/eIpE1AsBl9m5ap6l0VoT2pe',\n    username = 'qbadmin'\nWHERE email = 'qbadmin@test.com';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \nUPDATE users \nSET passwordHash = '$2b$10$3xOCqkr9HR3HLDAbPYqUI.yXit0O3/eIpE1AsBl9m5ap6l0VoT2pe',\n    username = 'qbadmin'\nWHERE email = 'qbadmin@test.com';\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1522
+}

@@ -1,0 +1,17 @@
+{
+  "query": "\nSELECT id, username, email, role, openId FROM users WHERE username = 'qbadmin' OR email = 'qbadmin@test.com';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \nSELECT id, username, email, role, openId FROM users WHERE username = 'qbadmin' OR email = 'qbadmin@test.com';\n",
+  "rows": [
+    {
+      "id": "450038",
+      "username": "qbadmin",
+      "email": "qbadmin@test.com",
+      "role": "qb_admin",
+      "openId": "dev_qbadmin_1761907128323"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tusername\temail\trole\topenId\n450038\tqbadmin\tqbadmin@test.com\tqb_admin\tdev_qbadmin_1761907128323\n",
+  "stderr": "",
+  "execution_time_ms": 1512
+}

@@ -6,9 +6,10 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import { getDb, generateAudioForQuestion, generateDetailedExplanationForQuestion } from "./db";
-import { quizSessions, aiExplanationCache } from "../drizzle/schema";
+import { quizSessions, aiExplanationCache, challenges } from "../drizzle/schema";
 import { eq, and, lt, desc } from "drizzle-orm";
 import { authRouter } from "./authRouter";
+import { adaptiveChallengeRouter } from "./adaptive-challenge-router";
 
 // Custom procedure for child access
 const childProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -384,6 +385,9 @@ Format your response in clean markdown with:
         
         return challengesWithResults;
       }),
+
+    // ===== ADAPTIVE CHALLENGE CREATION =====
+    ...adaptiveChallengeRouter._def.procedures,
   }),
 
   // ============= CHILD MODULE =============
@@ -404,7 +408,8 @@ Format your response in clean markdown with:
     startQuiz: publicProcedure
       .input(z.object({ 
         moduleId: z.number(),
-        childId: z.number().optional()
+        childId: z.number().optional(),
+        challengeId: z.number().optional()
       }))
       .mutation(async ({ input, ctx }) => {
         const userId = input.childId || ctx.user?.id;
@@ -412,14 +417,45 @@ Format your response in clean markdown with:
           throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User ID required' });
         }
 
-        // Get all available questions for this module
-        const allQuestions = await db.getQuestionsByModule(input.moduleId);
+        let allQuestions;
+        let quizSize;
+
+        // Check if this is from a challenge with pre-selected questions
+        if (input.challengeId) {
+          const database = await getDb();
+          if (database) {
+            const challengeData = await database
+              .select()
+              .from(challenges)
+              .where(eq(challenges.id, input.challengeId))
+              .limit(1);
+
+            if (challengeData.length > 0) {
+              const challenge = challengeData[0];
+              
+              // If challenge has pre-selected questions (bounded mode), use them
+              if (challenge.useComplexityBoundaries && challenge.selectedQuestionIds) {
+                const questionIds = JSON.parse(challenge.selectedQuestionIds as string) as number[];
+                allQuestions = await db.getQuestionsByIds(questionIds);
+                quizSize = challenge.questionCount || allQuestions.length;
+              }
+            }
+          }
+        }
+
+        // Fallback to module-based selection (fully adaptive or no challenge)
+        if (!allQuestions) {
+          allQuestions = await db.getQuestionsByModule(input.moduleId);
+          quizSize = Math.min(allQuestions.length, Math.floor(Math.random() * 6) + 10);
+        }
         if (allQuestions.length === 0) {
           throw new TRPCError({ code: 'NOT_FOUND', message: 'No questions found for this module' });
         }
 
-        // Determine quiz size (10-15 questions)
-        const quizSize = Math.min(allQuestions.length, Math.floor(Math.random() * 6) + 10);
+        // Ensure quizSize is set (fallback if not set by challenge)
+        if (!quizSize) {
+          quizSize = Math.min(allQuestions.length, Math.floor(Math.random() * 6) + 10);
+        }
 
         // Create quiz session
         const sessionId = await db.createQuizSession({
@@ -667,6 +703,15 @@ Format your response in clean markdown with:
             // First activity
             await db.updateChildStreak(userId, 1, 1);
           }
+        }
+
+        // Trigger performance analysis for adaptive challenge system
+        try {
+          const { analyzeQuizPerformance } = await import('./performance-analyzer');
+          await analyzeQuizPerformance(input.sessionId);
+        } catch (error) {
+          console.error('[Complete Quiz] Failed to analyze performance:', error);
+          // Don't fail the quiz completion if analysis fails
         }
 
         return {
@@ -1038,14 +1083,14 @@ Format your response in clean markdown with:
         return db.deleteQuestion(input.id);
       }),
 
-    // Bulk upload questions
+    // Bulk upload questions (user-friendly format with text fields)
     bulkUploadQuestions: qbAdminProcedure
       .input(z.object({
         questions: z.array(z.object({
-          boardId: z.number(),
-          gradeId: z.number(),
-          subjectId: z.number(),
-          moduleId: z.number().optional(),
+          // User-friendly text fields
+          board: z.string(),
+          grade: z.number(),
+          subject: z.string(),
           topic: z.string(),
           subTopic: z.string().optional(),
           scope: z.enum(['School', 'Olympiad', 'Competitive', 'Advanced']),
@@ -1061,11 +1106,7 @@ Format your response in clean markdown with:
         }))
       }))
       .mutation(async ({ input, ctx }) => {
-        const questionsWithSubmitter = input.questions.map(q => ({
-          ...q,
-          submittedBy: ctx.user.id
-        }));
-        return db.bulkUploadQuestionsWithMetadata(questionsWithSubmitter);
+        return db.bulkUploadQuestionsUserFriendly(input.questions, ctx.user.id);
       }),
 
     // Delete question permanently
@@ -1099,7 +1140,7 @@ Format your response in clean markdown with:
     getUniqueTopics: qbAdminProcedure
       .input(z.object({ subject: z.string() }))
       .query(async ({ input }) => {
-        return db.getUniqueTopicsForSubject(parseInt(input.subject));
+        return db.getUniqueTopicsForSubject(input.subject);
       }),
   }),
 

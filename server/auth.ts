@@ -27,30 +27,42 @@ export async function authenticateChild(username: string, password: string) {
     throw new Error('Database not available');
   }
 
+  console.log('[Auth] Attempting login for username:', username);
+
   const result = await db
     .select()
     .from(users)
     .where(eq(users.username, username))
     .limit(1);
 
+  console.log('[Auth] Query result:', result.length, 'users found');
+
   if (result.length === 0) {
+    console.log('[Auth] No user found with username:', username);
     return null;
   }
 
   const user = result[0];
+  console.log('[Auth] User found:', { id: user.id, username: user.username, role: user.role, hasPasswordHash: !!user.passwordHash });
 
-  // Check if user is a child
-  if (user.role !== 'child') {
+  // Check if user is a child or qb_admin (both use local auth)
+  if (user.role !== 'child' && user.role !== 'qb_admin') {
+    console.log('[Auth] User is not a child or qb_admin, role:', user.role);
     return null;
   }
 
   // Verify password
   if (!user.passwordHash) {
+    console.log('[Auth] No password hash found for user');
     return null;
   }
 
+  console.log('[Auth] Verifying password...');
   const isValid = await verifyPassword(password, user.passwordHash);
+  console.log('[Auth] Password verification result:', isValid);
+  
   if (!isValid) {
+    console.log('[Auth] Password verification failed');
     return null;
   }
 

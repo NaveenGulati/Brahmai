@@ -1,0 +1,97 @@
+{
+  "query": "SHOW TABLES",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute SHOW TABLES",
+  "rows": [
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "achievements"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "activityLog"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "aiExplanationCache"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "announcements"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "auditLog"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "boardGradeSubjects"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "boards"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "challenges"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "childProfiles"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "gradeHistory"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "grades"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "messages"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "modules"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "parentProfiles"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "platformSettings"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "qbAdminAssignments"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "questionReports"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "questions"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "quizResponses"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "quizSessions"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "studentGroupMembers"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "studentGroups"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "studentTopicPerformance"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "subjects"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "teacherProfiles"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "teacherStudentAssignments"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "userAchievements"
+    },
+    {
+      "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_JbjjhFNe4aEjNxVY9pJJsJ\n__drizzle_migrations\nachievements\nactivityLog\naiExplanationCache\nannouncements\nauditLog\nboardGradeSubjects\nboards\nchallenges\nchildProfiles\ngradeHistory\ngrades\nmessages\nmodules\nparentProfiles\nplatformSettings\nqbAdminAssignments\nquestionReports\nquestions\nquizResponses\nquizSessions\nstudentGroupMembers\nstudentGroups\nstudentTopicPerformance\nsubjects\nteacherProfiles\nteacherStudentAssignments\nuserAchievements\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 1563
+}

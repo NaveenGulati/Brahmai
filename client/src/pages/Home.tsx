@@ -4,13 +4,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { APP_LOGO, APP_TITLE, getLoginUrl, getGoogleLoginUrl } from "@/const";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
+import { DevLogin } from "@/components/DevLogin";
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Don't auto-redirect on home page - let users see login options after logout
-  // Users will be redirected after successful login via OAuth callback
+  // Auto-redirect authenticated users to their dashboard
+  useEffect(() => {
+    if (!loading && isAuthenticated && user) {
+      if (user.role === 'parent') {
+        setLocation('/parent');
+      } else if (user.role === 'child') {
+        setLocation('/child-dashboard');
+      } else if (user.role === 'qb_admin') {
+        setLocation('/qb-admin');
+      } else if (user.role === 'teacher') {
+        setLocation('/teacher');
+      } else if (user.role === 'superadmin') {
+        setLocation('/superadmin');
+      }
+    }
+  }, [loading, isAuthenticated, user, setLocation]);
 
   if (loading) {
     return (
@@ -165,6 +180,9 @@ export default function Home() {
                   </Button>
                 </CardContent>
               </Card>
+
+              {/* Developer Login Panel */}
+              {process.env.NODE_ENV === 'development' && <DevLogin />}
             </CardContent>
           </Card>
         </div>

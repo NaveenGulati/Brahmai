@@ -290,14 +290,11 @@ export const modules = mysqlTable("modules", {
 export const questions = mysqlTable("questions", {
   id: int("id").autoincrement().primaryKey(),
   
-  // Content classification
-  boardId: int("boardId").notNull(), // FK to boards
-  gradeId: int("gradeId").notNull(), // FK to grades
-  subjectId: int("subjectId").notNull(), // FK to subjects
-  moduleId: int("moduleId"), // FK to modules (optional for flexibility)
-  
-  // Additional categorization
-  topic: varchar("topic", { length: 200 }), // Main topic
+  // Content classification (free text for flexibility)
+  board: varchar("board", { length: 50 }).notNull(), // e.g., "ICSE", "CBSE"
+  grade: int("grade").notNull(), // e.g., 7, 8, 9
+  subject: varchar("subject", { length: 100 }).notNull(), // e.g., "Mathematics", "Spanish"
+  topic: varchar("topic", { length: 200 }).notNull(), // Main topic
   subTopic: varchar("subTopic", { length: 200 }), // Granular sub-topic
   scope: mysqlEnum("scope", ["School", "Olympiad", "Competitive", "Advanced"]).default("School").notNull(),
   
@@ -436,6 +433,15 @@ export const challenges = mysqlTable("challenges", {
   title: varchar("title", { length: 200 }).notNull(),
   message: text("message"),
   
+  // Adaptive challenge configuration
+  questionCount: int("questionCount").default(10).notNull(), // Number of questions (10-100)
+  complexity: int("complexity").default(5).notNull(), // Complexity level (1-10)
+  focusArea: mysqlEnum("focusArea", ["strengthen", "improve", "neutral"]).default("neutral").notNull(),
+  estimatedDuration: int("estimatedDuration"), // Estimated duration in minutes
+  difficultyDistribution: json("difficultyDistribution"), // Actual difficulty mix used {easy: 30, medium: 50, hard: 20}
+  selectedQuestionIds: text("selectedQuestionIds"), // JSON array of pre-selected question IDs
+  useComplexityBoundaries: boolean("useComplexityBoundaries").default(true).notNull(), // If false, fully adaptive
+  
   // Scheduling
   startDate: timestamp("startDate"),
   dueDate: timestamp("dueDate"),
@@ -448,6 +454,45 @@ export const challenges = mysqlTable("challenges", {
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * ============================================
+ * STUDENT PERFORMANCE TRACKING
+ * ============================================
+ */
+
+/**
+ * Tracks student performance per topic for adaptive challenge creation
+ * Updated after each quiz completion (rolling window of last 5 quizzes)
+ */
+export const studentTopicPerformance = mysqlTable("studentTopicPerformance", {
+  id: int("id").autoincrement().primaryKey(),
+  childId: int("childId").notNull(), // FK to childProfiles
+  subject: varchar("subject", { length: 100 }).notNull(),
+  topic: varchar("topic", { length: 200 }).notNull(),
+  
+  // Performance metrics (calculated from last 5 quizzes on this topic)
+  totalAttempts: int("totalAttempts").default(0).notNull(),
+  totalQuestions: int("totalQuestions").default(0).notNull(),
+  correctAnswers: int("correctAnswers").default(0).notNull(),
+  accuracyPercent: decimal("accuracyPercent", { precision: 5, scale: 2 }),
+  avgTimePerQuestion: int("avgTimePerQuestion"),
+  
+  // Difficulty-wise breakdown
+  easyCorrect: int("easyCorrect").default(0),
+  easyTotal: int("easyTotal").default(0),
+  mediumCorrect: int("mediumCorrect").default(0),
+  mediumTotal: int("mediumTotal").default(0),
+  hardCorrect: int("hardCorrect").default(0),
+  hardTotal: int("hardTotal").default(0),
+  
+  // Classification
+  performanceLevel: mysqlEnum("performanceLevel", ["weak", "neutral", "strong"]).notNull(),
+  confidenceScore: decimal("confidenceScore", { precision: 5, scale: 2 }),
+  
+  lastUpdated: timestamp("lastUpdated").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
 /**
@@ -654,4 +699,6 @@ export type QBAdminAssignment = typeof qbAdminAssignments.$inferSelect;
 export type InsertQBAdminAssignment = typeof qbAdminAssignments.$inferInsert;
 export type GradeHistory = typeof gradeHistory.$inferSelect;
 export type InsertGradeHistory = typeof gradeHistory.$inferInsert;
+export type StudentTopicPerformance = typeof studentTopicPerformance.$inferSelect;
+export type InsertStudentTopicPerformance = typeof studentTopicPerformance.$inferInsert;
 

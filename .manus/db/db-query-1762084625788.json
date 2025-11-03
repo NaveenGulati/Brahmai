@@ -1,0 +1,14 @@
+{
+  "query": "\nSELECT DISTINCT subject, topic \nFROM questions \nWHERE subject = 'Spanish' AND isActive = 1;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \nSELECT DISTINCT subject, topic \nFROM questions \nWHERE subject = 'Spanish' AND isActive = 1;\n",
+  "rows": [
+    {
+      "subject": "Spanish",
+      "topic": "El verbo Gustar"
+    }
+  ],
+  "messages": [],
+  "stdout": "subject\ttopic\nSpanish\tEl verbo Gustar\n",
+  "stderr": "",
+  "execution_time_ms": 1537
+}

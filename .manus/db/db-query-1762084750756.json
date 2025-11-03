@@ -1,0 +1,45 @@
+{
+  "query": "\nSELECT id, subject, topic, status, isActive \nFROM questions \nWHERE subject = 'Spanish' \nLIMIT 5;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \nSELECT id, subject, topic, status, isActive \nFROM questions \nWHERE subject = 'Spanish' \nLIMIT 5;\n",
+  "rows": [
+    {
+      "id": "30001",
+      "subject": "Spanish",
+      "topic": "El verbo Gustar",
+      "status": "draft",
+      "isActive": "0"
+    },
+    {
+      "id": "60001",
+      "subject": "Spanish",
+      "topic": "El verbo Gustar",
+      "status": "draft",
+      "isActive": "0"
+    },
+    {
+      "id": "60002",
+      "subject": "Spanish",
+      "topic": "El verbo Gustar",
+      "status": "draft",
+      "isActive": "0"
+    },
+    {
+      "id": "60003",
+      "subject": "Spanish",
+      "topic": "El verbo Gustar",
+      "status": "draft",
+      "isActive": "0"
+    },
+    {
+      "id": "60004",
+      "subject": "Spanish",
+      "topic": "El verbo Gustar",
+      "status": "draft",
+      "isActive": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsubject\ttopic\tstatus\tisActive\n30001\tSpanish\tEl verbo Gustar\tdraft\t0\n60001\tSpanish\tEl verbo Gustar\tdraft\t0\n60002\tSpanish\tEl verbo Gustar\tdraft\t0\n60003\tSpanish\tEl verbo Gustar\tdraft\t0\n60004\tSpanish\tEl verbo Gustar\tdraft\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1593
+}

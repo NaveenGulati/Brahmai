@@ -337,6 +337,32 @@ export async function getQuestionsByModule(moduleId: number, limit?: number) {
   const db = await getDb();
   if (!db) return [];
   
+  // First, get the module's subject and topic
+  const moduleData = await db
+    .select({
+      subjectId: modules.subjectId,
+      name: modules.name,
+    })
+    .from(modules)
+    .where(eq(modules.id, moduleId))
+    .limit(1);
+  
+  if (moduleData.length === 0) return [];
+  
+  // Get subject name
+  const subjectData = await db
+    .select({ name: subjects.name })
+    .from(subjects)
+    .where(eq(subjects.id, moduleData[0].subjectId))
+    .limit(1);
+  
+  if (subjectData.length === 0) return [];
+  
+  const subjectName = subjectData[0].name;
+  const topicName = moduleData[0].name;
+  
+  // Now fetch questions by subject (and optionally topic if it matches)
+  // If topic name matches a question topic exactly, use it; otherwise just match by subject
   let query = db.select({
     id: questions.id,
     questionType: questions.questionType,
@@ -353,7 +379,7 @@ export async function getQuestionsByModule(moduleId: number, limit?: number) {
   })
     .from(questions)
     .where(and(
-      eq(questions.moduleId, moduleId),
+      eq(questions.subject, subjectName),
       eq(questions.status, 'approved'),
       eq(questions.isActive, true)
     ));
@@ -834,6 +860,7 @@ export async function updateQuestion(id: number, data: Partial<InsertQuestion>) 
 export async function deleteQuestion(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  // Soft delete - set isActive to false to preserve quiz history
   return db.update(questions).set({ isActive: false }).where(eq(questions.id, id));
 }
 
@@ -1016,27 +1043,29 @@ export async function deleteChallenge(id: number) {
 // ============= QUESTION BANK FILTER FUNCTIONS =============
 
 export async function getAllQuestionsWithFilters(filters: {
-  boardId?: number;
-  gradeId?: number;
-  subjectId?: number;
-  moduleId?: number;
+  board?: string;
+  grade?: number;
+  subject?: string;
   topic?: string;
   difficulty?: string;
   status?: string;
+  scope?: string;
   limit?: number;
   offset?: number;
 }) {
   const db = await getDb();
   if (!db) return [];
   
-  const conditions = [];
-  if (filters.boardId) conditions.push(eq(questions.boardId, filters.boardId));
-  if (filters.gradeId) conditions.push(eq(questions.gradeId, filters.gradeId));
-  if (filters.subjectId) conditions.push(eq(questions.subjectId, filters.subjectId));
-  if (filters.moduleId) conditions.push(eq(questions.moduleId, filters.moduleId));
+  const conditions = [
+    eq(questions.isActive, true) // Only show active questions
+  ];
+  if (filters.board) conditions.push(eq(questions.board, filters.board));
+  if (filters.grade) conditions.push(eq(questions.grade, filters.grade));
+  if (filters.subject) conditions.push(eq(questions.subject, filters.subject));
   if (filters.topic) conditions.push(eq(questions.topic, filters.topic));
   if (filters.difficulty) conditions.push(eq(questions.difficulty, filters.difficulty as any));
   if (filters.status) conditions.push(eq(questions.status, filters.status as any));
+  if (filters.scope) conditions.push(eq(questions.scope, filters.scope as any));
   
   let query = db.select().from(questions);
   
@@ -1057,35 +1086,34 @@ export async function getAllQuestionsWithFilters(filters: {
   return query;
 }
 
-export async function getUniqueSubjects(boardId?: number, gradeId?: number) {
+export async function getUniqueSubjects(board?: string, grade?: number) {
   const db = await getDb();
   if (!db) return [];
   
   const conditions = [];
-  if (boardId) conditions.push(eq(questions.boardId, boardId));
-  if (gradeId) conditions.push(eq(questions.gradeId, gradeId));
+  if (board) conditions.push(eq(questions.board, board));
+  if (grade) conditions.push(eq(questions.grade, grade));
   
   let query = db.selectDistinct({
-    subjectName: subjects.name,
+    subject: questions.subject,
   })
-    .from(questions)
-    .innerJoin(subjects, eq(questions.subjectId, subjects.id));
+    .from(questions);
   
   if (conditions.length > 0) {
     query = query.where(and(...conditions)) as any;
   }
   
   const result = await query;
-  return result.map(r => r.subjectName);
+  return result.map(r => r.subject);
 }
 
-export async function getUniqueTopicsForSubject(subjectId: number, boardId?: number, gradeId?: number) {
+export async function getUniqueTopicsForSubject(subject: string, board?: string, grade?: number) {
   const db = await getDb();
   if (!db) return [];
   
-  const conditions = [eq(questions.subjectId, subjectId)];
-  if (boardId) conditions.push(eq(questions.boardId, boardId));
-  if (gradeId) conditions.push(eq(questions.gradeId, gradeId));
+  const conditions = [eq(questions.subject, subject)];
+  if (board) conditions.push(eq(questions.board, board));
+  if (grade) conditions.push(eq(questions.grade, grade));
   
   const result = await db.selectDistinct({
     topic: questions.topic,
@@ -1482,6 +1510,9 @@ export async function getUsersByRole(role: 'parent' | 'child' | 'teacher' | 'qb_
 // ==================== Shared AI Explanation & Audio Functions ====================
 
 import { invokeLLM } from './_core/llm';
+import { bulkUploadQuestionsUserFriendly as bulkUploadUserFriendly } from './db-upload-helper';
+
+export { bulkUploadUserFriendly as bulkUploadQuestionsUserFriendly };
 import { generateSpeech } from './_core/googleTTS';
 
 /**

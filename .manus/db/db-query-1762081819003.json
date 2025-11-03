@@ -1,0 +1,23 @@
+{
+  "query": "\nSELECT * FROM subjects WHERE name LIKE '%Spanish%';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \nSELECT * FROM subjects WHERE name LIKE '%Spanish%';\n",
+  "rows": [
+    {
+      "id": "30001",
+      "name": "Spanish",
+      "code": "SPANISH",
+      "description": "NULL",
+      "icon": "NULL",
+      "color": "NULL",
+      "category": "core",
+      "isActive": "1",
+      "displayOrder": "0",
+      "createdAt": "2025-11-02 11:08:53",
+      "updatedAt": "2025-11-02 11:08:53"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcode\tdescription\ticon\tcolor\tcategory\tisActive\tdisplayOrder\tcreatedAt\tupdatedAt\n30001\tSpanish\tSPANISH\tNULL\tNULL\tNULL\tcore\t1\t0\t2025-11-02 11:08:53\t2025-11-02 11:08:53\n",
+  "stderr": "",
+  "execution_time_ms": 1540
+}

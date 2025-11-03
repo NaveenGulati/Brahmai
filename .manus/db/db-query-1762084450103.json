@@ -1,0 +1,28 @@
+{
+  "query": "SELECT * FROM challenges ORDER BY createdAt DESC LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute SELECT * FROM challenges ORDER BY createdAt DESC LIMIT 1;",
+  "rows": [
+    {
+      "id": "1",
+      "assignedBy": "30001",
+      "assignedTo": "180009",
+      "assignedToType": "individual",
+      "groupId": "NULL",
+      "moduleId": "30001",
+      "title": "Complete El verbo Gustar quiz",
+      "message": "Your parent wants you to practice **Spanish - El verbo Gustar**",
+      "startDate": "NULL",
+      "dueDate": "NULL",
+      "expiresAt": "NULL",
+      "status": "pending",
+      "completedAt": "NULL",
+      "sessionId": "NULL",
+      "createdAt": "2025-11-02 11:51:31",
+      "updatedAt": "2025-11-02 11:51:31"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tassignedBy\tassignedTo\tassignedToType\tgroupId\tmoduleId\ttitle\tmessage\tstartDate\tdueDate\texpiresAt\tstatus\tcompletedAt\tsessionId\tcreatedAt\tupdatedAt\n1\t30001\t180009\tindividual\tNULL\t30001\tComplete El verbo Gustar quiz\tYour parent wants you to practice **Spanish - El verbo Gustar**\tNULL\tNULL\tNULL\tpending\tNULL\tNULL\t2025-11-02 11:51:31\t2025-11-02 11:51:31\n",
+  "stderr": "",
+  "execution_time_ms": 1531
+}

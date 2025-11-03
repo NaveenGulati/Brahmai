@@ -1,0 +1,20 @@
+{
+  "query": "\nSELECT id, name, username, email, role, passwordHash, openId, isActive \nFROM users \nWHERE username = 'demo_student';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \nSELECT id, name, username, email, role, passwordHash, openId, isActive \nFROM users \nWHERE username = 'demo_student';\n",
+  "rows": [
+    {
+      "id": "1290009",
+      "name": "Demo Student",
+      "username": "demo_student",
+      "email": "demo@student.com",
+      "role": "child",
+      "passwordHash": "$2b$10$kokDBnQinBDw3aYzfHhrOujYqVixBJVKrL.LNhIT9FOwnZfOILKXm",
+      "openId": "local_demo_student",
+      "isActive": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tusername\temail\trole\tpasswordHash\topenId\tisActive\n1290009\tDemo Student\tdemo_student\tdemo@student.com\tchild\t$2b$10$kokDBnQinBDw3aYzfHhrOujYqVixBJVKrL.LNhIT9FOwnZfOILKXm\tlocal_demo_student\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1545
+}

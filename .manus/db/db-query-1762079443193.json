@@ -1,0 +1,17 @@
+{
+  "query": "\nSELECT id, username, role, passwordHash IS NOT NULL as hasPassword, LENGTH(passwordHash) as hashLength\nFROM users \nWHERE username = 'demo_student';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3jAcJMG4wP9JZTZ.root --database JbjjhFNe4aEjNxVY9pJJsJ --execute \nSELECT id, username, role, passwordHash IS NOT NULL as hasPassword, LENGTH(passwordHash) as hashLength\nFROM users \nWHERE username = 'demo_student';\n",
+  "rows": [
+    {
+      "id": "1290009",
+      "username": "demo_student",
+      "role": "child",
+      "hasPassword": "1",
+      "hashLength": "60"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tusername\trole\thasPassword\thashLength\n1290009\tdemo_student\tchild\t1\t60\n",
+  "stderr": "",
+  "execution_time_ms": 1644
+}
