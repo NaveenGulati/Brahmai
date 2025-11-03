@@ -2,6 +2,17 @@ import { pgTable, pgEnum, serial, integer, varchar, text, timestamp, boolean, js
 
 /**
  * ============================================
+ * ENUMS - Must be defined before tables
+ * ============================================
+ */
+export const roleEnum = pgEnum("role", ["parent", "child", "teacher", "superadmin", "qb_admin"]);
+export const boardEnum = pgEnum("board", ["CBSE", "ICSE", "IB", "State", "Other"]);
+export const difficultyEnum = pgEnum("difficulty", ["easy", "medium", "hard"]);
+export const questionTypeEnum = pgEnum("question_type", ["multiple_choice", "true_false", "fill_blank", "short_answer"]);
+export const challengeStatusEnum = pgEnum("challenge_status", ["pending", "in_progress", "completed", "expired"]);
+
+/**
+ * ============================================
  * CORE USER & AUTHENTICATION TABLES
  * ============================================
  */
@@ -16,7 +27,7 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 320 }).unique(), // Email (unique for teachers, parents with OAuth)
   name: text("name"),
   loginMethod: varchar("loginMethod", { length: 64 }), // oauth, local, google, etc.
-  role: pgEnum("role", ["parent", "child", "teacher", "superadmin", "qb_admin"]).notNull(),
+  role: roleEnum().notNull(),
   
   // Local authentication (for children and optionally teachers)
   username: varchar("username", { length: 50 }).unique(), // For local login
@@ -59,7 +70,7 @@ export const childProfiles = pgTable("childProfiles", {
   
   // Academic information
   currentGrade: integer("currentGrade").notNull(), // Current grade (1-12)
-  board: pgEnum("board", ["CBSE", "ICSE", "IB", "State", "Other"]).notNull(),
+  board: boardEnum().notNull(),
   schoolName: varchar("schoolName", { length: 200 }),
   
   // Gamification
@@ -82,7 +93,7 @@ export const gradeHistory = pgTable("gradeHistory", {
   id: serial("id").primaryKey(),
   childId: integer("childId").notNull(), // FK to childProfiles
   grade: integer("grade").notNull(),
-  board: pgEnum("board", ["CBSE", "ICSE", "IB", "State", "Other"]).notNull(),
+  board: boardEnum().notNull(),
   startDate: timestamp("startDate").notNull(),
   endDate: timestamp("endDate"), // Null if current grade
   academicYear: varchar("academicYear", { length: 20 }), // e.g., "2024-25"
@@ -137,12 +148,12 @@ export const teacherStudentAssignments = pgTable("teacherStudentAssignments", {
   parentId: integer("parentId").notNull(), // FK to users (parent who made assignment)
   
   // Access control
-  board: pgEnum("board", ["CBSE", "ICSE", "IB", "State", "Other"]).notNull(),
+  board: boardEnum().notNull(),
   grade: integer("grade").notNull(), // Grade at time of assignment
   subjectIds: jsonb("subjectIds").notNull(), // Array of subject IDs teacher can access
   
   // Status
-  status: pgEnum("status", ["active", "inactive", "completed"]).default("active").notNull(),
+  status: varchar("status", { length: 20 }).default("active").notNull(),
   
   // Dates
   assignedAt: timestamp("assignedAt").defaultNow().notNull(),
@@ -167,7 +178,7 @@ export const studentGroups = pgTable("studentGroups", {
   teacherId: integer("teacherId").notNull(), // FK to users (teacher)
   name: varchar("name", { length: 100 }).notNull(), // e.g., "Grade 7 Batch A"
   description: text("description"),
-  board: pgEnum("board", ["CBSE", "ICSE", "IB", "State", "Other"]).notNull(),
+  board: boardEnum().notNull(),
   grade: integer("grade").notNull(),
   subjectId: integer("subjectId"), // Optional: group specific to a subject
   isActive: boolean("isActive").default(true).notNull(),
@@ -230,7 +241,7 @@ export const subjects = pgTable("subjects", {
   description: text("description"),
   icon: varchar("icon", { length: 100 }), // Emoji or icon name
   color: varchar("color", { length: 20 }), // Hex color for UI
-  category: pgEnum("category", ["core", "language", "elective", "skill"]).default("core"),
+  category: varchar("category", { length: 20 }).default("core"),
   isActive: boolean("isActive").default(true).notNull(),
   displayOrder: integer("displayOrder").default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -271,7 +282,7 @@ export const modules = pgTable("modules", {
   
   // Metadata
   estimatedTime: integer("estimatedTime"), // Minutes to complete
-  difficulty: pgEnum("difficulty", ["beginner", "intermediate", "advanced"]).default("intermediate"),
+  difficulty: difficultyEnum().default("intermediate"),
   
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -296,10 +307,10 @@ export const questions = pgTable("questions", {
   subject: varchar("subject", { length: 100 }).notNull(), // e.g., "Mathematics", "Spanish"
   topic: varchar("topic", { length: 200 }).notNull(), // Main topic
   subTopic: varchar("subTopic", { length: 200 }), // Granular sub-topic
-  scope: pgEnum("scope", ["School", "Olympiad", "Competitive", "Advanced"]).default("School").notNull(),
+  scope: varchar("scope", { length: 20 }).default("School").notNull(),
   
   // Question content
-  questionType: pgEnum("questionType", [
+  questionType: varchar("questionType", { length: 50 }) [
     "mcq",           // Multiple choice
     "true_false",    // True/False
     "fill_blank",    // Fill in the blanks
@@ -315,12 +326,12 @@ export const questions = pgTable("questions", {
   explanation: text("explanation"), // Brief explanation
   
   // Difficulty & scoring
-  difficulty: pgEnum("difficulty", ["easy", "medium", "hard"]).default("medium").notNull(),
+  difficulty: difficultyEnum().default("medium").notNull(),
   points: integer("points").default(10),
   timeLimit: integer("timeLimit").default(60), // Seconds
   
   // Approval workflow
-  status: pgEnum("status", ["draft", "pending_review", "approved", "rejected", "archived"]).default("draft").notNull(),
+  status: varchar("status", { length: 50 }).default("draft").notNull(),
   submittedBy: integer("submittedBy").notNull(), // FK to users (QB Admin)
   reviewedBy: integer("reviewedBy"), // FK to users (SuperAdmin)
   reviewedAt: timestamp("reviewedAt"),
@@ -345,9 +356,9 @@ export const questionReports = pgTable("questionReports", {
   id: serial("id").primaryKey(),
   questionId: integer("questionId").notNull(), // FK to questions
   reportedBy: integer("reportedBy").notNull(), // FK to users
-  reportType: pgEnum("reportType", ["incorrect_answer", "typo", "unclear", "inappropriate", "other"]).notNull(),
+  reportType: varchar("reportType", { length: 50 }).notNull(),
   description: text("description"),
-  status: pgEnum("status", ["pending", "reviewed", "resolved", "dismissed"]).default("pending").notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
   resolvedBy: integer("resolvedBy"), // FK to users (admin)
   resolvedAt: timestamp("resolvedAt"),
   resolutionNotes: text("resolutionNotes"),
@@ -398,7 +409,7 @@ export const quizSessions = pgTable("quizSessions", {
   
   // Context (who assigned this quiz?)
   assignedBy: integer("assignedBy"), // FK to users (teacher or parent)
-  assignmentType: pgEnum("assignmentType", ["self", "parent_challenge", "teacher_assignment", "group_assignment"]),
+  assignmentType: varchar("assignmentType", { length: 50 }),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -425,7 +436,7 @@ export const challenges = pgTable("challenges", {
   id: serial("id").primaryKey(),
   assignedBy: integer("assignedBy").notNull(), // FK to users (parent or teacher)
   assignedTo: integer("assignedTo").notNull(), // FK to childProfiles
-  assignedToType: pgEnum("assignedToType", ["individual", "group"]).default("individual").notNull(),
+  assignedToType: varchar("assignedToType", { length: 20 }).default("individual").notNull(),
   groupId: integer("groupId"), // FK to studentGroups (if group assignment)
   
   // Challenge details
@@ -436,7 +447,7 @@ export const challenges = pgTable("challenges", {
   // Adaptive challenge configuration
   questionCount: integer("questionCount").default(10).notNull(), // Number of questions (10-100)
   complexity: integer("complexity").default(5).notNull(), // Complexity level (1-10)
-  focusArea: pgEnum("focusArea", ["strengthen", "improve", "neutral"]).default("neutral").notNull(),
+  focusArea: varchar("focusArea", { length: 20 }).default("neutral").notNull(),
   estimatedDuration: integer("estimatedDuration"), // Estimated duration in minutes
   difficultyDistribution: jsonb("difficultyDistribution"), // Actual difficulty mix used {easy: 30, medium: 50, hard: 20}
   selectedQuestionIds: text("selectedQuestionIds"), // JSON array of pre-selected question IDs
@@ -448,7 +459,7 @@ export const challenges = pgTable("challenges", {
   expiresAt: timestamp("expiresAt"),
   
   // Status
-  status: pgEnum("status", ["pending", "in_progress", "completed", "expired"]).default("pending").notNull(),
+  status: challengeStatusEnum().default("pending").notNull(),
   completedAt: timestamp("completedAt"),
   sessionId: integer("sessionId"), // FK to quizSessions (when completed)
   
@@ -488,7 +499,7 @@ export const studentTopicPerformance = pgTable("studentTopicPerformance", {
   hardTotal: integer("hardTotal").default(0),
   
   // Classification
-  performanceLevel: pgEnum("performanceLevel", ["weak", "neutral", "strong"]).notNull(),
+  performanceLevel: varchar("performanceLevel", { length: 20 }).notNull(),
   confidenceScore: numeric("confidenceScore", { precision: 5, scale: 2 }),
   
   lastUpdated: timestamp("lastUpdated").defaultNow().notNull(),
@@ -509,10 +520,10 @@ export const achievements = pgTable("achievements", {
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
   icon: varchar("icon", { length: 100 }),
-  category: pgEnum("category", ["streak", "score", "completion", "speed", "special"]).default("completion"),
+  category: varchar("category", { length: 20 }).default("completion"),
   criteria: text("criteria"), // JSON describing how to earn
   points: integer("points").default(0),
-  rarity: pgEnum("rarity", ["common", "rare", "epic", "legendary"]).default("common"),
+  rarity: varchar("rarity", { length: 20 }).default("common"),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -560,7 +571,7 @@ export const messages = pgTable("messages", {
   toUserId: integer("toUserId").notNull(), // FK to users
   subject: varchar("subject", { length: 200 }),
   content: text("content").notNull(),
-  messageType: pgEnum("messageType", ["direct", "announcement", "system"]).default("direct").notNull(),
+  messageType: varchar("messageType", { length: 20 }).default("direct").notNull(),
   
   // Context
   relatedEntityType: varchar("relatedEntityType", { length: 50 }), // quiz_session, challenge, etc.
@@ -580,12 +591,12 @@ export const messages = pgTable("messages", {
 export const announcements = pgTable("announcements", {
   id: serial("id").primaryKey(),
   createdBy: integer("createdBy").notNull(), // FK to users (teacher)
-  targetType: pgEnum("targetType", ["group", "individual", "all_students"]).notNull(),
+  targetType: varchar("targetType", { length: 20 }).notNull(),
   targetId: integer("targetId"), // groupId or childId
   
   title: varchar("title", { length: 200 }).notNull(),
   content: text("content").notNull(),
-  priority: pgEnum("priority", ["low", "normal", "high", "urgent"]).default("normal").notNull(),
+  priority: varchar("priority", { length: 20 }).default("normal").notNull(),
   
   expiresAt: timestamp("expiresAt"),
   isActive: boolean("isActive").default(true).notNull(),
@@ -642,7 +653,7 @@ export const auditLog = pgTable("auditLog", {
 export const platformSettings = pgTable("platformSettings", {
   key: varchar("key", { length: 100 }).primaryKey(),
   value: text("value").notNull(),
-  valueType: pgEnum("valueType", ["string", "number", "boolean", "json"]).default("string").notNull(),
+  valueType: varchar("valueType", { length: 20 }).default("string").notNull(),
   description: text("description"),
   isPublic: boolean("isPublic").default(false).notNull(), // Can non-admins read this?
   updatedBy: integer("updatedBy"), // FK to users
