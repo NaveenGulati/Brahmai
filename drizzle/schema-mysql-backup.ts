@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, serial, integer, varchar, text, timestamp, boolean, jsonb, numeric, uniqueIndex } from "drizzle-orm/pg-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json, decimal, uniqueIndex } from "drizzle-orm/mysql-core";
 
 /**
  * ============================================
@@ -10,13 +10,13 @@ import { pgTable, pgEnum, serial, integer, varchar, text, timestamp, boolean, js
  * Main users table - supports all user types in the platform
  * Roles: parent, child, teacher, superadmin, qb_admin
  */
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+export const users = mysqlTable("users", {
+  id: int("id").autoincrement().primaryKey(),
   openId: varchar("openId", { length: 64 }).unique(), // OAuth ID (nullable for local accounts)
   email: varchar("email", { length: 320 }).unique(), // Email (unique for teachers, parents with OAuth)
   name: text("name"),
   loginMethod: varchar("loginMethod", { length: 64 }), // oauth, local, google, etc.
-  role: pgEnum("role", ["parent", "child", "teacher", "superadmin", "qb_admin"]).notNull(),
+  role: mysqlEnum("role", ["parent", "child", "teacher", "superadmin", "qb_admin"]).notNull(),
   
   // Local authentication (for children and optionally teachers)
   username: varchar("username", { length: 50 }).unique(), // For local login
@@ -28,16 +28,16 @@ export const users = pgTable("users", {
   
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
 /**
  * Parent profiles - extended information for parents
  */
-export const parentProfiles = pgTable("parentProfiles", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull().unique(), // FK to users table
+export const parentProfiles = mysqlTable("parentProfiles", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(), // FK to users table
   phone: varchar("phone", { length: 20 }),
   address: text("address"),
   city: varchar("city", { length: 100 }),
@@ -46,43 +46,43 @@ export const parentProfiles = pgTable("parentProfiles", {
   timezone: varchar("timezone", { length: 50 }).default("Asia/Kolkata"),
   preferredLanguage: varchar("preferredLanguage", { length: 10 }).default("en"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 /**
  * Child profiles - students in the system
  */
-export const childProfiles = pgTable("childProfiles", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull().unique(), // FK to users table
-  parentId: integer("parentId").notNull(), // FK to users table (parent)
+export const childProfiles = mysqlTable("childProfiles", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(), // FK to users table
+  parentId: int("parentId").notNull(), // FK to users table (parent)
   
   // Academic information
-  currentGrade: integer("currentGrade").notNull(), // Current grade (1-12)
-  board: pgEnum("board", ["CBSE", "ICSE", "IB", "State", "Other"]).notNull(),
+  currentGrade: int("currentGrade").notNull(), // Current grade (1-12)
+  board: mysqlEnum("board", ["CBSE", "ICSE", "IB", "State", "Other"]).notNull(),
   schoolName: varchar("schoolName", { length: 200 }),
   
   // Gamification
-  totalPoints: integer("totalPoints").default(0),
-  currentStreak: integer("currentStreak").default(0),
-  longestStreak: integer("longestStreak").default(0),
+  totalPoints: int("totalPoints").default(0),
+  currentStreak: int("currentStreak").default(0),
+  longestStreak: int("longestStreak").default(0),
   lastActivityDate: timestamp("lastActivityDate"),
   
   // Settings
-  learningPreferences: jsonb("learningPreferences"), // Difficulty preferences, pace, etc.
+  learningPreferences: json("learningPreferences"), // Difficulty preferences, pace, etc.
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 /**
  * Grade history - tracks student progression through grades
  */
-export const gradeHistory = pgTable("gradeHistory", {
-  id: serial("id").primaryKey(),
-  childId: integer("childId").notNull(), // FK to childProfiles
-  grade: integer("grade").notNull(),
-  board: pgEnum("board", ["CBSE", "ICSE", "IB", "State", "Other"]).notNull(),
+export const gradeHistory = mysqlTable("gradeHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  childId: int("childId").notNull(), // FK to childProfiles
+  grade: int("grade").notNull(),
+  board: mysqlEnum("board", ["CBSE", "ICSE", "IB", "State", "Other"]).notNull(),
   startDate: timestamp("startDate").notNull(),
   endDate: timestamp("endDate"), // Null if current grade
   academicYear: varchar("academicYear", { length: 20 }), // e.g., "2024-25"
@@ -92,15 +92,15 @@ export const gradeHistory = pgTable("gradeHistory", {
 /**
  * Teacher profiles - educators in the system
  */
-export const teacherProfiles = pgTable("teacherProfiles", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull().unique(), // FK to users table
+export const teacherProfiles = mysqlTable("teacherProfiles", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(), // FK to users table
   
   // Professional information
   bio: text("bio"),
   qualifications: text("qualifications"), // Degrees, certifications
-  experience: integer("experience"), // Years of experience
-  specializations: jsonb("specializations"), // ["CBSE Math", "ICSE Science", "Olympiad"]
+  experience: int("experience"), // Years of experience
+  specializations: json("specializations"), // ["CBSE Math", "ICSE Science", "Olympiad"]
   
   // Contact
   phone: varchar("phone", { length: 20 }),
@@ -110,15 +110,15 @@ export const teacherProfiles = pgTable("teacherProfiles", {
   
   // Platform settings
   isPublicProfile: boolean("isPublicProfile").default(false), // For future marketplace
-  hourlyRate: numeric("hourlyRate", { precision: 10, scale: 2 }), // For future monetization
+  hourlyRate: decimal("hourlyRate", { precision: 10, scale: 2 }), // For future monetization
   
   // Verification
   isVerified: boolean("isVerified").default(false), // Admin verification
   verifiedAt: timestamp("verifiedAt"),
-  verifiedBy: integer("verifiedBy"), // FK to users (superadmin)
+  verifiedBy: int("verifiedBy"), // FK to users (superadmin)
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 /**
@@ -130,19 +130,19 @@ export const teacherProfiles = pgTable("teacherProfiles", {
 /**
  * Teacher-student assignments - maps teachers to students with subject access
  */
-export const teacherStudentAssignments = pgTable("teacherStudentAssignments", {
-  id: serial("id").primaryKey(),
-  teacherId: integer("teacherId").notNull(), // FK to users (teacher)
-  childId: integer("childId").notNull(), // FK to childProfiles
-  parentId: integer("parentId").notNull(), // FK to users (parent who made assignment)
+export const teacherStudentAssignments = mysqlTable("teacherStudentAssignments", {
+  id: int("id").autoincrement().primaryKey(),
+  teacherId: int("teacherId").notNull(), // FK to users (teacher)
+  childId: int("childId").notNull(), // FK to childProfiles
+  parentId: int("parentId").notNull(), // FK to users (parent who made assignment)
   
   // Access control
-  board: pgEnum("board", ["CBSE", "ICSE", "IB", "State", "Other"]).notNull(),
-  grade: integer("grade").notNull(), // Grade at time of assignment
-  subjectIds: jsonb("subjectIds").notNull(), // Array of subject IDs teacher can access
+  board: mysqlEnum("board", ["CBSE", "ICSE", "IB", "State", "Other"]).notNull(),
+  grade: int("grade").notNull(), // Grade at time of assignment
+  subjectIds: json("subjectIds").notNull(), // Array of subject IDs teacher can access
   
   // Status
-  status: pgEnum("status", ["active", "inactive", "completed"]).default("active").notNull(),
+  status: mysqlEnum("status", ["active", "inactive", "completed"]).default("active").notNull(),
   
   // Dates
   assignedAt: timestamp("assignedAt").defaultNow().notNull(),
@@ -153,7 +153,7 @@ export const teacherStudentAssignments = pgTable("teacherStudentAssignments", {
   assignmentNotes: text("assignmentNotes"), // Parent's notes about this assignment
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
   // Unique constraint: one teacher-child-subject combination at a time
   uniqueAssignment: uniqueIndex("unique_teacher_child").on(table.teacherId, table.childId, table.status),
@@ -162,28 +162,28 @@ export const teacherStudentAssignments = pgTable("teacherStudentAssignments", {
 /**
  * Student groups/classes - for bulk operations by teachers
  */
-export const studentGroups = pgTable("studentGroups", {
-  id: serial("id").primaryKey(),
-  teacherId: integer("teacherId").notNull(), // FK to users (teacher)
+export const studentGroups = mysqlTable("studentGroups", {
+  id: int("id").autoincrement().primaryKey(),
+  teacherId: int("teacherId").notNull(), // FK to users (teacher)
   name: varchar("name", { length: 100 }).notNull(), // e.g., "Grade 7 Batch A"
   description: text("description"),
-  board: pgEnum("board", ["CBSE", "ICSE", "IB", "State", "Other"]).notNull(),
-  grade: integer("grade").notNull(),
-  subjectId: integer("subjectId"), // Optional: group specific to a subject
+  board: mysqlEnum("board", ["CBSE", "ICSE", "IB", "State", "Other"]).notNull(),
+  grade: int("grade").notNull(),
+  subjectId: int("subjectId"), // Optional: group specific to a subject
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 /**
  * Student group members - many-to-many relationship
  */
-export const studentGroupMembers = pgTable("studentGroupMembers", {
-  id: serial("id").primaryKey(),
-  groupId: integer("groupId").notNull(), // FK to studentGroups
-  childId: integer("childId").notNull(), // FK to childProfiles
+export const studentGroupMembers = mysqlTable("studentGroupMembers", {
+  id: int("id").autoincrement().primaryKey(),
+  groupId: int("groupId").notNull(), // FK to studentGroups
+  childId: int("childId").notNull(), // FK to childProfiles
   addedAt: timestamp("addedAt").defaultNow().notNull(),
-  addedBy: integer("addedBy").notNull(), // FK to users (teacher)
+  addedBy: int("addedBy").notNull(), // FK to users (teacher)
 }, (table) => ({
   uniqueMember: uniqueIndex("unique_group_child").on(table.groupId, table.childId),
 }));
@@ -197,25 +197,25 @@ export const studentGroupMembers = pgTable("studentGroupMembers", {
 /**
  * Boards - educational boards (CBSE, ICSE, etc.)
  */
-export const boards = pgTable("boards", {
-  id: serial("id").primaryKey(),
+export const boards = mysqlTable("boards", {
+  id: int("id").autoincrement().primaryKey(),
   code: varchar("code", { length: 20 }).notNull().unique(), // CBSE, ICSE, IB, STATE_UP
   name: varchar("name", { length: 100 }).notNull(), // Central Board of Secondary Education
   country: varchar("country", { length: 100 }).default("India"),
   description: text("description"),
   isActive: boolean("isActive").default(true).notNull(),
-  displayOrder: integer("displayOrder").default(0),
+  displayOrder: int("displayOrder").default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
 /**
  * Grades - grade levels (1-12, plus special categories)
  */
-export const grades = pgTable("grades", {
-  id: serial("id").primaryKey(),
-  level: integer("level").notNull().unique(), // 1-12
+export const grades = mysqlTable("grades", {
+  id: int("id").autoincrement().primaryKey(),
+  level: int("level").notNull().unique(), // 1-12
   name: varchar("name", { length: 50 }).notNull(), // "Grade 7", "Class 7"
-  displayOrder: integer("displayOrder").notNull(),
+  displayOrder: int("displayOrder").notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -223,30 +223,30 @@ export const grades = pgTable("grades", {
 /**
  * Subjects - academic subjects
  */
-export const subjects = pgTable("subjects", {
-  id: serial("id").primaryKey(),
+export const subjects = mysqlTable("subjects", {
+  id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 100 }).notNull(), // Mathematics, Physics, Chemistry
   code: varchar("code", { length: 20 }).notNull().unique(), // MATH, PHY, CHEM
   description: text("description"),
   icon: varchar("icon", { length: 100 }), // Emoji or icon name
   color: varchar("color", { length: 20 }), // Hex color for UI
-  category: pgEnum("category", ["core", "language", "elective", "skill"]).default("core"),
+  category: mysqlEnum("category", ["core", "language", "elective", "skill"]).default("core"),
   isActive: boolean("isActive").default(true).notNull(),
-  displayOrder: integer("displayOrder").default(0),
+  displayOrder: int("displayOrder").default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 /**
  * Board-Grade-Subject mapping - defines which subjects are available for each board-grade combination
  */
-export const boardGradeSubjects = pgTable("boardGradeSubjects", {
-  id: serial("id").primaryKey(),
-  boardId: integer("boardId").notNull(), // FK to boards
-  gradeId: integer("gradeId").notNull(), // FK to grades
-  subjectId: integer("subjectId").notNull(), // FK to subjects
+export const boardGradeSubjects = mysqlTable("boardGradeSubjects", {
+  id: int("id").autoincrement().primaryKey(),
+  boardId: int("boardId").notNull(), // FK to boards
+  gradeId: int("gradeId").notNull(), // FK to grades
+  subjectId: int("subjectId").notNull(), // FK to subjects
   isCompulsory: boolean("isCompulsory").default(true), // vs elective
-  displayOrder: integer("displayOrder").default(0),
+  displayOrder: int("displayOrder").default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({
   uniqueMapping: uniqueIndex("unique_board_grade_subject").on(table.boardId, table.gradeId, table.subjectId),
@@ -255,27 +255,27 @@ export const boardGradeSubjects = pgTable("boardGradeSubjects", {
 /**
  * Modules/Topics within each subject
  */
-export const modules = pgTable("modules", {
-  id: serial("id").primaryKey(),
-  subjectId: integer("subjectId").notNull(), // FK to subjects
-  boardId: integer("boardId"), // Optional: module specific to a board
-  gradeId: integer("gradeId"), // Optional: module specific to a grade
+export const modules = mysqlTable("modules", {
+  id: int("id").autoincrement().primaryKey(),
+  subjectId: int("subjectId").notNull(), // FK to subjects
+  boardId: int("boardId"), // Optional: module specific to a board
+  gradeId: int("gradeId"), // Optional: module specific to a grade
   
   name: varchar("name", { length: 200 }).notNull(), // "Algebra - Linear Equations"
   description: text("description"),
   
   // Curriculum sequencing
-  parentModuleId: integer("parentModuleId"), // For hierarchical topics
-  prerequisiteModuleIds: jsonb("prerequisiteModuleIds"), // Modules that must be completed first
-  orderIndex: integer("orderIndex").default(0),
+  parentModuleId: int("parentModuleId"), // For hierarchical topics
+  prerequisiteModuleIds: json("prerequisiteModuleIds"), // Modules that must be completed first
+  orderIndex: int("orderIndex").default(0),
   
   // Metadata
-  estimatedTime: integer("estimatedTime"), // Minutes to complete
-  difficulty: pgEnum("difficulty", ["beginner", "intermediate", "advanced"]).default("intermediate"),
+  estimatedTime: int("estimatedTime"), // Minutes to complete
+  difficulty: mysqlEnum("difficulty", ["beginner", "intermediate", "advanced"]).default("intermediate"),
   
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 /**
@@ -287,19 +287,19 @@ export const modules = pgTable("modules", {
 /**
  * Question bank - stores all questions with comprehensive metadata
  */
-export const questions = pgTable("questions", {
-  id: serial("id").primaryKey(),
+export const questions = mysqlTable("questions", {
+  id: int("id").autoincrement().primaryKey(),
   
   // Content classification (free text for flexibility)
   board: varchar("board", { length: 50 }).notNull(), // e.g., "ICSE", "CBSE"
-  grade: integer("grade").notNull(), // e.g., 7, 8, 9
+  grade: int("grade").notNull(), // e.g., 7, 8, 9
   subject: varchar("subject", { length: 100 }).notNull(), // e.g., "Mathematics", "Spanish"
   topic: varchar("topic", { length: 200 }).notNull(), // Main topic
   subTopic: varchar("subTopic", { length: 200 }), // Granular sub-topic
-  scope: pgEnum("scope", ["School", "Olympiad", "Competitive", "Advanced"]).default("School").notNull(),
+  scope: mysqlEnum("scope", ["School", "Olympiad", "Competitive", "Advanced"]).default("School").notNull(),
   
   // Question content
-  questionType: pgEnum("questionType", [
+  questionType: mysqlEnum("questionType", [
     "mcq",           // Multiple choice
     "true_false",    // True/False
     "fill_blank",    // Fill in the blanks
@@ -310,45 +310,45 @@ export const questions = pgTable("questions", {
   questionImage: varchar("questionImage", { length: 500 }), // URL to image
   
   // Answer data
-  options: jsonb("options"), // MCQ options, match pairs, etc.
+  options: json("options"), // MCQ options, match pairs, etc.
   correctAnswer: text("correctAnswer").notNull(),
   explanation: text("explanation"), // Brief explanation
   
   // Difficulty & scoring
-  difficulty: pgEnum("difficulty", ["easy", "medium", "hard"]).default("medium").notNull(),
-  points: integer("points").default(10),
-  timeLimit: integer("timeLimit").default(60), // Seconds
+  difficulty: mysqlEnum("difficulty", ["easy", "medium", "hard"]).default("medium").notNull(),
+  points: int("points").default(10),
+  timeLimit: int("timeLimit").default(60), // Seconds
   
   // Approval workflow
-  status: pgEnum("status", ["draft", "pending_review", "approved", "rejected", "archived"]).default("draft").notNull(),
-  submittedBy: integer("submittedBy").notNull(), // FK to users (QB Admin)
-  reviewedBy: integer("reviewedBy"), // FK to users (SuperAdmin)
+  status: mysqlEnum("status", ["draft", "pending_review", "approved", "rejected", "archived"]).default("draft").notNull(),
+  submittedBy: int("submittedBy").notNull(), // FK to users (QB Admin)
+  reviewedBy: int("reviewedBy"), // FK to users (SuperAdmin)
   reviewedAt: timestamp("reviewedAt"),
   reviewNotes: text("reviewNotes"),
   
   // Quality metrics (populated over time)
-  timesUsed: integer("timesUsed").default(0),
-  averageScore: numeric("averageScore", { precision: 5, scale: 2 }), // Percentage
-  reportCount: integer("reportCount").default(0), // Times reported as problematic
+  timesUsed: int("timesUsed").default(0),
+  averageScore: decimal("averageScore", { precision: 5, scale: 2 }), // Percentage
+  reportCount: int("reportCount").default(0), // Times reported as problematic
   
   // Metadata
-  tags: jsonb("tags"), // Additional searchable tags
+  tags: json("tags"), // Additional searchable tags
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 /**
  * Question reports - users flag problematic questions
  */
-export const questionReports = pgTable("questionReports", {
-  id: serial("id").primaryKey(),
-  questionId: integer("questionId").notNull(), // FK to questions
-  reportedBy: integer("reportedBy").notNull(), // FK to users
-  reportType: pgEnum("reportType", ["incorrect_answer", "typo", "unclear", "inappropriate", "other"]).notNull(),
+export const questionReports = mysqlTable("questionReports", {
+  id: int("id").autoincrement().primaryKey(),
+  questionId: int("questionId").notNull(), // FK to questions
+  reportedBy: int("reportedBy").notNull(), // FK to users
+  reportType: mysqlEnum("reportType", ["incorrect_answer", "typo", "unclear", "inappropriate", "other"]).notNull(),
   description: text("description"),
-  status: pgEnum("status", ["pending", "reviewed", "resolved", "dismissed"]).default("pending").notNull(),
-  resolvedBy: integer("resolvedBy"), // FK to users (admin)
+  status: mysqlEnum("status", ["pending", "reviewed", "resolved", "dismissed"]).default("pending").notNull(),
+  resolvedBy: int("resolvedBy"), // FK to users (admin)
   resolvedAt: timestamp("resolvedAt"),
   resolutionNotes: text("resolutionNotes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -357,12 +357,12 @@ export const questionReports = pgTable("questionReports", {
 /**
  * AI Explanation Cache - stores AI-generated detailed explanations
  */
-export const aiExplanationCache = pgTable("aiExplanationCache", {
-  questionId: integer("questionId").primaryKey().notNull(),
+export const aiExplanationCache = mysqlTable("aiExplanationCache", {
+  questionId: int("questionId").primaryKey().notNull(),
   detailedExplanation: text("detailedExplanation").notNull(),
   audioUrl: text("audioUrl"),
   generatedAt: timestamp("generatedAt").defaultNow().notNull(),
-  timesUsed: integer("timesUsed").default(1).notNull(),
+  timesUsed: int("timesUsed").default(1).notNull(),
   lastUsedAt: timestamp("lastUsedAt").defaultNow().notNull(),
 });
 
@@ -375,70 +375,70 @@ export const aiExplanationCache = pgTable("aiExplanationCache", {
 /**
  * Quiz sessions - tracks each quiz attempt
  */
-export const quizSessions = pgTable("quizSessions", {
-  id: serial("id").primaryKey(),
-  childId: integer("childId").notNull(), // FK to childProfiles
-  moduleId: integer("moduleId").notNull(), // FK to modules
+export const quizSessions = mysqlTable("quizSessions", {
+  id: int("id").autoincrement().primaryKey(),
+  childId: int("childId").notNull(), // FK to childProfiles
+  moduleId: int("moduleId").notNull(), // FK to modules
   
   // Session metadata
   startedAt: timestamp("startedAt").defaultNow().notNull(),
   completedAt: timestamp("completedAt"),
-  totalQuestions: integer("totalQuestions").notNull(),
+  totalQuestions: int("totalQuestions").notNull(),
   
   // Results
-  correctAnswers: integer("correctAnswers").default(0),
-  wrongAnswers: integer("wrongAnswers").default(0),
-  skippedQuestions: integer("skippedQuestions").default(0),
-  totalPoints: integer("totalPoints").default(0),
-  timeTaken: integer("timeTaken").default(0), // Seconds
-  scorePercentage: integer("scorePercentage").default(0),
+  correctAnswers: int("correctAnswers").default(0),
+  wrongAnswers: int("wrongAnswers").default(0),
+  skippedQuestions: int("skippedQuestions").default(0),
+  totalPoints: int("totalPoints").default(0),
+  timeTaken: int("timeTaken").default(0), // Seconds
+  scorePercentage: int("scorePercentage").default(0),
   
   // Status
   isCompleted: boolean("isCompleted").default(false).notNull(),
   
   // Context (who assigned this quiz?)
-  assignedBy: integer("assignedBy"), // FK to users (teacher or parent)
-  assignmentType: pgEnum("assignmentType", ["self", "parent_challenge", "teacher_assignment", "group_assignment"]),
+  assignedBy: int("assignedBy"), // FK to users (teacher or parent)
+  assignmentType: mysqlEnum("assignmentType", ["self", "parent_challenge", "teacher_assignment", "group_assignment"]),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 /**
  * Quiz responses - individual question responses
  */
-export const quizResponses = pgTable("quizResponses", {
-  id: serial("id").primaryKey(),
-  sessionId: integer("sessionId").notNull(), // FK to quizSessions
-  questionId: integer("questionId").notNull(), // FK to questions
+export const quizResponses = mysqlTable("quizResponses", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: int("sessionId").notNull(), // FK to quizSessions
+  questionId: int("questionId").notNull(), // FK to questions
   userAnswer: text("userAnswer"),
   isCorrect: boolean("isCorrect").notNull(),
-  pointsEarned: integer("pointsEarned").default(0),
-  timeSpent: integer("timeSpent").default(0), // Seconds
+  pointsEarned: int("pointsEarned").default(0),
+  timeSpent: int("timeSpent").default(0), // Seconds
   answeredAt: timestamp("answeredAt").defaultNow().notNull(),
 });
 
 /**
  * Challenges - assignments from parents or teachers
  */
-export const challenges = pgTable("challenges", {
-  id: serial("id").primaryKey(),
-  assignedBy: integer("assignedBy").notNull(), // FK to users (parent or teacher)
-  assignedTo: integer("assignedTo").notNull(), // FK to childProfiles
-  assignedToType: pgEnum("assignedToType", ["individual", "group"]).default("individual").notNull(),
-  groupId: integer("groupId"), // FK to studentGroups (if group assignment)
+export const challenges = mysqlTable("challenges", {
+  id: int("id").autoincrement().primaryKey(),
+  assignedBy: int("assignedBy").notNull(), // FK to users (parent or teacher)
+  assignedTo: int("assignedTo").notNull(), // FK to childProfiles
+  assignedToType: mysqlEnum("assignedToType", ["individual", "group"]).default("individual").notNull(),
+  groupId: int("groupId"), // FK to studentGroups (if group assignment)
   
   // Challenge details
-  moduleId: integer("moduleId").notNull(), // FK to modules
+  moduleId: int("moduleId").notNull(), // FK to modules
   title: varchar("title", { length: 200 }).notNull(),
   message: text("message"),
   
   // Adaptive challenge configuration
-  questionCount: integer("questionCount").default(10).notNull(), // Number of questions (10-100)
-  complexity: integer("complexity").default(5).notNull(), // Complexity level (1-10)
-  focusArea: pgEnum("focusArea", ["strengthen", "improve", "neutral"]).default("neutral").notNull(),
-  estimatedDuration: integer("estimatedDuration"), // Estimated duration in minutes
-  difficultyDistribution: jsonb("difficultyDistribution"), // Actual difficulty mix used {easy: 30, medium: 50, hard: 20}
+  questionCount: int("questionCount").default(10).notNull(), // Number of questions (10-100)
+  complexity: int("complexity").default(5).notNull(), // Complexity level (1-10)
+  focusArea: mysqlEnum("focusArea", ["strengthen", "improve", "neutral"]).default("neutral").notNull(),
+  estimatedDuration: int("estimatedDuration"), // Estimated duration in minutes
+  difficultyDistribution: json("difficultyDistribution"), // Actual difficulty mix used {easy: 30, medium: 50, hard: 20}
   selectedQuestionIds: text("selectedQuestionIds"), // JSON array of pre-selected question IDs
   useComplexityBoundaries: boolean("useComplexityBoundaries").default(true).notNull(), // If false, fully adaptive
   
@@ -448,12 +448,12 @@ export const challenges = pgTable("challenges", {
   expiresAt: timestamp("expiresAt"),
   
   // Status
-  status: pgEnum("status", ["pending", "in_progress", "completed", "expired"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "in_progress", "completed", "expired"]).default("pending").notNull(),
   completedAt: timestamp("completedAt"),
-  sessionId: integer("sessionId"), // FK to quizSessions (when completed)
+  sessionId: int("sessionId"), // FK to quizSessions (when completed)
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 /**
@@ -466,32 +466,32 @@ export const challenges = pgTable("challenges", {
  * Tracks student performance per topic for adaptive challenge creation
  * Updated after each quiz completion (rolling window of last 5 quizzes)
  */
-export const studentTopicPerformance = pgTable("studentTopicPerformance", {
-  id: serial("id").primaryKey(),
-  childId: integer("childId").notNull(), // FK to childProfiles
+export const studentTopicPerformance = mysqlTable("studentTopicPerformance", {
+  id: int("id").autoincrement().primaryKey(),
+  childId: int("childId").notNull(), // FK to childProfiles
   subject: varchar("subject", { length: 100 }).notNull(),
   topic: varchar("topic", { length: 200 }).notNull(),
   
   // Performance metrics (calculated from last 5 quizzes on this topic)
-  totalAttempts: integer("totalAttempts").default(0).notNull(),
-  totalQuestions: integer("totalQuestions").default(0).notNull(),
-  correctAnswers: integer("correctAnswers").default(0).notNull(),
-  accuracyPercent: numeric("accuracyPercent", { precision: 5, scale: 2 }),
-  avgTimePerQuestion: integer("avgTimePerQuestion"),
+  totalAttempts: int("totalAttempts").default(0).notNull(),
+  totalQuestions: int("totalQuestions").default(0).notNull(),
+  correctAnswers: int("correctAnswers").default(0).notNull(),
+  accuracyPercent: decimal("accuracyPercent", { precision: 5, scale: 2 }),
+  avgTimePerQuestion: int("avgTimePerQuestion"),
   
   // Difficulty-wise breakdown
-  easyCorrect: integer("easyCorrect").default(0),
-  easyTotal: integer("easyTotal").default(0),
-  mediumCorrect: integer("mediumCorrect").default(0),
-  mediumTotal: integer("mediumTotal").default(0),
-  hardCorrect: integer("hardCorrect").default(0),
-  hardTotal: integer("hardTotal").default(0),
+  easyCorrect: int("easyCorrect").default(0),
+  easyTotal: int("easyTotal").default(0),
+  mediumCorrect: int("mediumCorrect").default(0),
+  mediumTotal: int("mediumTotal").default(0),
+  hardCorrect: int("hardCorrect").default(0),
+  hardTotal: int("hardTotal").default(0),
   
   // Classification
-  performanceLevel: pgEnum("performanceLevel", ["weak", "neutral", "strong"]).notNull(),
-  confidenceScore: numeric("confidenceScore", { precision: 5, scale: 2 }),
+  performanceLevel: mysqlEnum("performanceLevel", ["weak", "neutral", "strong"]).notNull(),
+  confidenceScore: decimal("confidenceScore", { precision: 5, scale: 2 }),
   
-  lastUpdated: timestamp("lastUpdated").defaultNow().notNull(),
+  lastUpdated: timestamp("lastUpdated").defaultNow().onUpdateNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -504,15 +504,15 @@ export const studentTopicPerformance = pgTable("studentTopicPerformance", {
 /**
  * Achievements/Badges
  */
-export const achievements = pgTable("achievements", {
-  id: serial("id").primaryKey(),
+export const achievements = mysqlTable("achievements", {
+  id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
   icon: varchar("icon", { length: 100 }),
-  category: pgEnum("category", ["streak", "score", "completion", "speed", "special"]).default("completion"),
+  category: mysqlEnum("category", ["streak", "score", "completion", "speed", "special"]).default("completion"),
   criteria: text("criteria"), // JSON describing how to earn
-  points: integer("points").default(0),
-  rarity: pgEnum("rarity", ["common", "rare", "epic", "legendary"]).default("common"),
+  points: int("points").default(0),
+  rarity: mysqlEnum("rarity", ["common", "rare", "epic", "legendary"]).default("common"),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -520,12 +520,12 @@ export const achievements = pgTable("achievements", {
 /**
  * User achievements - tracks earned badges
  */
-export const userAchievements = pgTable("userAchievements", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(), // FK to users (child)
-  achievementId: integer("achievementId").notNull(), // FK to achievements
+export const userAchievements = mysqlTable("userAchievements", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(), // FK to users (child)
+  achievementId: int("achievementId").notNull(), // FK to achievements
   earnedAt: timestamp("earnedAt").defaultNow().notNull(),
-  progress: integer("progress").default(100), // For progressive achievements
+  progress: int("progress").default(100), // For progressive achievements
 }, (table) => ({
   uniqueAchievement: uniqueIndex("unique_user_achievement").on(table.userId, table.achievementId),
 }));
@@ -533,14 +533,14 @@ export const userAchievements = pgTable("userAchievements", {
 /**
  * Daily activity log for streak tracking
  */
-export const activityLog = pgTable("activityLog", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(), // FK to users (child)
+export const activityLog = mysqlTable("activityLog", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(), // FK to users (child)
   activityDate: timestamp("activityDate").notNull(),
-  quizzesTaken: integer("quizzesTaken").default(0),
-  questionsAnswered: integer("questionsAnswered").default(0),
-  pointsEarned: integer("pointsEarned").default(0),
-  timeSpent: integer("timeSpent").default(0), // Seconds
+  quizzesTaken: int("quizzesTaken").default(0),
+  questionsAnswered: int("questionsAnswered").default(0),
+  pointsEarned: int("pointsEarned").default(0),
+  timeSpent: int("timeSpent").default(0), // Seconds
 }, (table) => ({
   uniqueActivity: uniqueIndex("unique_user_date").on(table.userId, table.activityDate),
 }));
@@ -554,17 +554,17 @@ export const activityLog = pgTable("activityLog", {
 /**
  * Messages - in-app messaging between users
  */
-export const messages = pgTable("messages", {
-  id: serial("id").primaryKey(),
-  fromUserId: integer("fromUserId").notNull(), // FK to users
-  toUserId: integer("toUserId").notNull(), // FK to users
+export const messages = mysqlTable("messages", {
+  id: int("id").autoincrement().primaryKey(),
+  fromUserId: int("fromUserId").notNull(), // FK to users
+  toUserId: int("toUserId").notNull(), // FK to users
   subject: varchar("subject", { length: 200 }),
   content: text("content").notNull(),
-  messageType: pgEnum("messageType", ["direct", "announcement", "system"]).default("direct").notNull(),
+  messageType: mysqlEnum("messageType", ["direct", "announcement", "system"]).default("direct").notNull(),
   
   // Context
   relatedEntityType: varchar("relatedEntityType", { length: 50 }), // quiz_session, challenge, etc.
-  relatedEntityId: integer("relatedEntityId"),
+  relatedEntityId: int("relatedEntityId"),
   
   // Status
   isRead: boolean("isRead").default(false).notNull(),
@@ -577,21 +577,21 @@ export const messages = pgTable("messages", {
 /**
  * Announcements - broadcast messages from teachers to groups
  */
-export const announcements = pgTable("announcements", {
-  id: serial("id").primaryKey(),
-  createdBy: integer("createdBy").notNull(), // FK to users (teacher)
-  targetType: pgEnum("targetType", ["group", "individual", "all_students"]).notNull(),
-  targetId: integer("targetId"), // groupId or childId
+export const announcements = mysqlTable("announcements", {
+  id: int("id").autoincrement().primaryKey(),
+  createdBy: int("createdBy").notNull(), // FK to users (teacher)
+  targetType: mysqlEnum("targetType", ["group", "individual", "all_students"]).notNull(),
+  targetId: int("targetId"), // groupId or childId
   
   title: varchar("title", { length: 200 }).notNull(),
   content: text("content").notNull(),
-  priority: pgEnum("priority", ["low", "normal", "high", "urgent"]).default("normal").notNull(),
+  priority: mysqlEnum("priority", ["low", "normal", "high", "urgent"]).default("normal").notNull(),
   
   expiresAt: timestamp("expiresAt"),
   isActive: boolean("isActive").default(true).notNull(),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 /**
@@ -603,12 +603,12 @@ export const announcements = pgTable("announcements", {
 /**
  * QB Admin assignments - defines which QB Admins manage which domains
  */
-export const qbAdminAssignments = pgTable("qbAdminAssignments", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(), // FK to users (qb_admin)
-  boardId: integer("boardId"), // Null = all boards
-  gradeId: integer("gradeId"), // Null = all grades
-  subjectId: integer("subjectId"), // Null = all subjects
+export const qbAdminAssignments = mysqlTable("qbAdminAssignments", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(), // FK to users (qb_admin)
+  boardId: int("boardId"), // Null = all boards
+  gradeId: int("gradeId"), // Null = all grades
+  subjectId: int("subjectId"), // Null = all subjects
   
   // Permissions
   canCreate: boolean("canCreate").default(true).notNull(),
@@ -616,7 +616,7 @@ export const qbAdminAssignments = pgTable("qbAdminAssignments", {
   canDelete: boolean("canDelete").default(false).notNull(),
   canApprove: boolean("canApprove").default(false).notNull(), // Usually only SuperAdmin
   
-  assignedBy: integer("assignedBy").notNull(), // FK to users (superadmin)
+  assignedBy: int("assignedBy").notNull(), // FK to users (superadmin)
   assignedAt: timestamp("assignedAt").defaultNow().notNull(),
   isActive: boolean("isActive").default(true).notNull(),
 });
@@ -624,13 +624,13 @@ export const qbAdminAssignments = pgTable("qbAdminAssignments", {
 /**
  * Audit log - tracks important platform actions
  */
-export const auditLog = pgTable("auditLog", {
-  id: serial("id").primaryKey(),
-  userId: integer("userId").notNull(), // Who performed the action
+export const auditLog = mysqlTable("auditLog", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(), // Who performed the action
   action: varchar("action", { length: 100 }).notNull(), // create_user, delete_question, etc.
   entityType: varchar("entityType", { length: 50 }).notNull(), // user, question, assignment
-  entityId: integer("entityId"),
-  changes: jsonb("changes"), // Before/after values
+  entityId: int("entityId"),
+  changes: json("changes"), // Before/after values
   ipAddress: varchar("ipAddress", { length: 45 }),
   userAgent: text("userAgent"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -639,14 +639,14 @@ export const auditLog = pgTable("auditLog", {
 /**
  * Platform settings - key-value store for configuration
  */
-export const platformSettings = pgTable("platformSettings", {
+export const platformSettings = mysqlTable("platformSettings", {
   key: varchar("key", { length: 100 }).primaryKey(),
   value: text("value").notNull(),
-  valueType: pgEnum("valueType", ["string", "number", "boolean", "json"]).default("string").notNull(),
+  valueType: mysqlEnum("valueType", ["string", "number", "boolean", "json"]).default("string").notNull(),
   description: text("description"),
   isPublic: boolean("isPublic").default(false).notNull(), // Can non-admins read this?
-  updatedBy: integer("updatedBy"), // FK to users
-  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  updatedBy: int("updatedBy"), // FK to users
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 /**
