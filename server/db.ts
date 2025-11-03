@@ -430,8 +430,8 @@ export async function bulkCreateQuestions(questionsData: InsertQuestion[]) {
 export async function createQuizSession(data: InsertQuizSession) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(quizSessions).values(data);
-  return Number(result[0].insertId);
+  const result = await db.insert(quizSessions).values(data).returning({ id: quizSessions.id });
+  return result[0].id;
 }
 
 export async function getQuizSessionById(id: number) {
@@ -1209,8 +1209,8 @@ export async function createClass(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(studentGroups).values(data);
-  return { id: Number((result as any).insertId), ...data };
+  const result = await db.insert(studentGroups).values(data).returning({ id: studentGroups.id });
+  return { id: result[0].id, ...data };
 }
 
 export async function updateClass(
@@ -1598,10 +1598,11 @@ Write in a natural, spoken style as if you're talking to the student. Use short 
       timesUsed: 1,
       lastUsedAt: new Date(),
     })
-    .onDuplicateKeyUpdate({
+    .onConflictDoUpdate({
+      target: aiExplanationCache.questionId,
       set: {
         detailedExplanation,
-        timesUsed: sql`COALESCE(timesUsed, 0) + 1`,
+        timesUsed: sql`COALESCE(times_used, 0) + 1`,
         lastUsedAt: new Date(),
       },
     });

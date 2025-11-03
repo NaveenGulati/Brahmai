@@ -24,7 +24,7 @@ export function initializeGoogleAuth() {
             email,
             name,
             loginMethod: 'google',
-            role: 'user',
+            role: 'parent', // Google OAuth users are parents/teachers
             lastSignedIn: new Date(),
           });
 
