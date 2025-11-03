@@ -107,11 +107,16 @@ export async function upsertUser(user: InsertUser): Promise<number | undefined> 
     values.lastSignedIn = new Date();
     updateSet.lastSignedIn = new Date();
 
-    const result = await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
+    // PostgreSQL upsert using onConflictDoUpdate
+    const result = await db.insert(users)
+      .values(values)
+      .onConflictDoUpdate({
+        target: user.openId ? users.openId : users.username,
+        set: updateSet,
+      })
+      .returning({ id: users.id });
 
-    return Number(result[0].insertId);
+    return result[0]?.id;
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
