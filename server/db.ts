@@ -38,11 +38,15 @@ export async function getDb() {
       const client = postgres(process.env.DATABASE_URL, {
         prepare: false,
         onnotice: () => {}, // Suppress notices
-        connection: {
-          search_path: 'public'
+        transform: {
+          undefined: null
+        },
+        // Execute SET search_path on every new connection
+        onconnect: async (connection) => {
+          await connection.unsafe('SET search_path TO public');
         }
       });
-      _db = drizzle(client, { schema: { users } });
+      _db = drizzle(client);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
