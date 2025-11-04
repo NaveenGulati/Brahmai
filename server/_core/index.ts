@@ -36,6 +36,9 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
   
+  // Trust proxy - required for Render.com and other reverse proxies
+  app.set('trust proxy', 1);
+  
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -50,6 +53,7 @@ async function startServer() {
         secure: ENV.isProduction,
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: ENV.isProduction ? 'none' : 'lax', // 'none' required for OAuth redirects in production
       },
     })
   );

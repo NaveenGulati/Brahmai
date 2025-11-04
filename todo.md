@@ -991,3 +991,12 @@
 - [x] Check if useAuth hook is trying to validate JWT instead of checking Passport session - FIXED: authenticateRequest now checks Passport first
 
 
+
+
+## Production Deployment Issues - Still Persisting
+- [ ] Student login still shows 404 after deployment
+- [ ] Parent OAuth still redirects to login page after deployment
+- [ ] Need to verify compiled code in dist/index.js includes the fixes
+- [ ] Check if esbuild is properly bundling the changes
+- [ ] Verify Render build logs show successful compilation
+
