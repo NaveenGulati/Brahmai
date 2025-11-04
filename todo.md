@@ -976,9 +976,18 @@
 
 ## Critical Production Bugs
 - [x] Student login 404 error - /child-dashboard route not found after successful login
-- [ ] Parent OAuth login redirect loop - redirects back to login page, requires manual refresh
+- [x] Parent OAuth login redirect loop - redirects back to login page, requires manual refresh - CAUSE: Missing Google OAuth env vars in Render
 - [x] Check if child-dashboard route exists in App.tsx
-- [ ] Verify OAuth callback redirect and cookie handling
-- [ ] Test both fixes on production Render deployment
+- [x] Verify OAuth callback redirect and cookie handling - OAuth works but needs GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL in Render
+- [ ] Test both fixes on production Render deployment - PENDING: User needs to add env vars and deploy
+
+
+
+
+## Critical Authentication Issues Found in Production
+- [x] Parent OAuth JWT validation error - "invalid JWT token: failed to parse JWT: token signature is invalid"
+- [x] Root cause: Code is using old Manus OAuth JWT validation instead of Passport session-based auth
+- [x] Need to verify authentication middleware is using Passport sessions, not JWT tokens - FIXED: Added Passport check first
+- [x] Check if useAuth hook is trying to validate JWT instead of checking Passport session - FIXED: authenticateRequest now checks Passport first
 
 
