@@ -38,7 +38,7 @@ export const authRouter = router({
 
       return {
         success: true,
-        redirectTo: user.role === 'qb_admin' ? '/qb-admin' : '/child-dashboard',
+        redirectTo: user.role === 'qb_admin' ? '/qb-admin' : '/child',
         user: {
           id: user.id,
           name: user.name,

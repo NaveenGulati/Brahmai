@@ -29,8 +29,19 @@ export const appRouter = router({
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
+      // Clear JWT session cookie
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      
+      // Destroy Passport session (for Google OAuth users)
+      if (ctx.req.logout) {
+        ctx.req.logout(() => {
+          if (ctx.req.session) {
+            ctx.req.session.destroy(() => {});
+          }
+        });
+      }
+      
       return { success: true } as const;
     }),
   }),

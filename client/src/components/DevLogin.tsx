@@ -22,8 +22,8 @@ export function DevLogin() {
       setIsLoading(false);
       if (data.success) {
         toast.success('Login successful!');
-        // Use redirectTo from server response, or default to child-dashboard
-        setLocation(data.redirectTo || '/child-dashboard');
+        // Use redirectTo from server response, or default to /child
+        setLocation(data.redirectTo || '/child');
       } else {
         toast.error('Login failed');
       }
