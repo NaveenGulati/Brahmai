@@ -35,14 +35,14 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const client = postgres(process.env.DATABASE_URL, {
+      // Add search_path to connection options
+      const connectionString = process.env.DATABASE_URL.includes('?') 
+        ? `${process.env.DATABASE_URL}&options=-csearch_path%3Dpublic`
+        : `${process.env.DATABASE_URL}?options=-csearch_path%3Dpublic`;
+      
+      const client = postgres(connectionString, {
         prepare: false,
-        transform: {
-          undefined: null,
-        },
       });
-      // Execute SET search_path immediately after connection
-      await client`SET search_path TO public`;
       _db = drizzle(client);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
