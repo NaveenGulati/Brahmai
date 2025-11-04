@@ -16,7 +16,7 @@ export default function Home() {
       if (user.role === 'parent') {
         setLocation('/parent');
       } else if (user.role === 'child') {
-        setLocation('/child-dashboard');
+        setLocation('/child');
       } else if (user.role === 'qb_admin') {
         setLocation('/qb-admin');
       } else if (user.role === 'teacher') {

@@ -971,3 +971,14 @@
 - [ ] Test complete challenge creation and quiz flow
 - [ ] Create extraction package with full documentation
 
+
+
+
+## Critical Production Bugs
+- [ ] Student login 404 error - /child-dashboard route not found after successful login
+- [ ] Parent OAuth login redirect loop - redirects back to login page, requires manual refresh
+- [ ] Check if child-dashboard route exists in App.tsx
+- [ ] Verify OAuth callback redirect and cookie handling
+- [ ] Test both fixes on production Render deployment
+
+
