@@ -37,16 +37,12 @@ export async function getDb() {
     try {
       const client = postgres(process.env.DATABASE_URL, {
         prepare: false,
-        onnotice: () => {}, // Suppress notices
-        transform: {
-          undefined: null
-        },
-        // Execute SET search_path on every new connection
-        onconnect: async (connection) => {
-          await connection.unsafe('SET search_path TO public');
-        }
+        onnotice: () => {}
       });
       _db = drizzle(client);
+      // Set search_path immediately after creating connection
+      await _db.execute(sql`SET search_path TO public`);
+      console.log('[Database] search_path set to public');
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;

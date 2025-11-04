@@ -1,7 +1,4 @@
-import { pgTable, pgEnum, serial, integer, varchar, text, timestamp, boolean, jsonb, numeric, uniqueIndex, pgSchema } from "drizzle-orm/pg-core";
-
-// Define public schema
-export const publicSchema = pgSchema("public");
+import { pgTable, pgEnum, serial, integer, varchar, text, timestamp, boolean, jsonb, numeric, uniqueIndex } from "drizzle-orm/pg-core";
 
 /**
  * ============================================
@@ -24,7 +21,7 @@ export const challengeStatusEnum = pgEnum("challenge_status", ["pending", "in_pr
  * Main users table - supports all user types in the platform
  * Roles: parent, child, teacher, superadmin, qb_admin
  */
-export const users = publicSchema.table("users", {
+export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   openId: varchar("openId", { length: 64 }).unique(), // OAuth ID (nullable for local accounts)
   email: varchar("email", { length: 320 }).unique(), // Email (unique for teachers, parents with OAuth)
