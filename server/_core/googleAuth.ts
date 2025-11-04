@@ -3,7 +3,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { ENV } from './env';
 import { upsertUser } from '../db';
 
-// Force rebuild - Nov 4, 2025
+// Auto-deploy test - webhook configured Nov 4, 2025
 export function initializeGoogleAuth() {
   passport.use(
     new GoogleStrategy(
