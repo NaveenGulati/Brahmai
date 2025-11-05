@@ -1585,7 +1585,27 @@ Provide a detailed, conversational explanation that:
 3. Uses simple examples or analogies
 4. Keeps a warm, encouraging tone
 
-Write in a natural, spoken style as if you're talking to the student. Use short paragraphs. Avoid using backticks, asterisks, or other markdown formatting for emphasis - just write naturally.`;
+IMPORTANT FORMATTING RULES:
+- Use markdown formatting: **bold** for emphasis, *italics* for subtle emphasis
+- Use ### for section headings to break up content
+- Add relevant emojis (✨, 🎯, 💡, 🤔, ✅, 📚, 🔬, etc.) to make it visually delightful for children
+- Use bullet points (- or *) for lists
+- Keep paragraphs short (2-3 sentences max)
+- Use friendly, conversational language
+- Start with an encouraging emoji and message
+
+Example format:
+✨ **Great question!** Let me help you understand this...
+
+### 🎯 Why the Answer is [Correct Answer]
+
+The correct answer is **[answer]** because...
+
+### 💡 Common Misconception
+
+Many students think... but actually...
+
+Write in a natural, spoken style as if you're talking to the student.`;
 
   if (q.questionType === 'mcq' && q.options) {
     prompt += `\n\nOptions:\n${q.options.join('\n')}`;

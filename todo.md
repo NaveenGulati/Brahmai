@@ -1040,3 +1040,35 @@
 - [ ] Test auto-creation with Geography/Industries questions
 
 
+
+
+
+## Upload Error Investigation
+- [x] Debug "Upload failed: Failed to fetch" error when uploading Geography questions
+- [ ] Check if Render deployment completed successfully
+- [x] Fixed SQL syntax error - used wrong column name 'gradeNumber' instead of 'level'
+- [ ] Test question upload with proper error handling
+
+
+
+
+
+## Get Detailed Explanation Bug
+- [x] "Get Detailed Explanation" button shows "Generating..." but nothing happens
+- [x] Investigate frontend code for the button click handler
+- [x] Check backend API endpoint for detailed explanations
+- [x] Fixed function signature mismatch - function now accepts all 5 parameters
+- [x] Fixed SQL column name mismatch - used 'timesUsed' instead of 'times_used'
+
+
+
+
+
+## Detailed Explanation Formatting
+- [x] Explanation displays as plain text without formatting
+- [x] Updated AI prompt to generate markdown with bold, italics, headings, bullets
+- [x] Added emojis to AI prompt for visual appeal
+- [x] Updated prompt to be child-friendly and visually delightful
+- [x] ReactMarkdown already in use - no additional library needed
+
+
