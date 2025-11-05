@@ -112,9 +112,9 @@ export async function createChildWithPassword(
     email: email || null,
     role: 'child',
     isActive: true,
-  });
+  }).returning({ id: users.id });
 
-  const userId = Number(userResult[0].insertId);
+  const userId = userResult[0].id;
 
   // Create child profile
   await db.insert(childProfiles).values({
