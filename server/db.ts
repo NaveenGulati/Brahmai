@@ -1531,7 +1531,13 @@ import { generateSpeech } from './_core/googleTTS';
  * Shared function to generate detailed AI explanation for a question
  * Used by both parent and child routers to avoid code duplication
  */
-export async function generateDetailedExplanationForQuestion(questionId: number): Promise<{ detailedExplanation: string }> {
+export async function generateDetailedExplanationForQuestion(
+  questionId: number,
+  questionText?: string,
+  correctAnswer?: string,
+  userAnswer?: string,
+  grade?: string
+): Promise<{ detailedExplanation: string; fromCache?: boolean }> {
   const db = await getDb();
   if (!db) {
     throw new Error('Database not available');
@@ -1550,7 +1556,7 @@ export async function generateDetailedExplanationForQuestion(questionId: number)
     // Update usage stats
     await updateCachedExplanationUsage(questionId);
     
-    return { detailedExplanation: cached[0].detailedExplanation };
+    return { detailedExplanation: cached[0].detailedExplanation, fromCache: true };
   }
 
   // Generate new explanation
@@ -1614,7 +1620,7 @@ Write in a natural, spoken style as if you're talking to the student. Use short 
 
   console.log(`[AI] Generated and cached new explanation for question ${questionId}`);
 
-  return { detailedExplanation };
+  return { detailedExplanation, fromCache: false };
 }
 
 /**
