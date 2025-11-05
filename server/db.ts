@@ -1588,15 +1588,14 @@ Provide a detailed, conversational explanation that:
 IMPORTANT FORMATTING RULES:
 - Use markdown formatting: **bold** for emphasis, *italics* for subtle emphasis
 - Use ### for section headings to break up content
-- Add relevant emojis (✨, 🎯, 💡, 🤔, ✅, 📚, 🔬, etc.) to make it visually delightful for children
+- Add relevant emojis (🎯, 💡, 🤔, ✅, 📚, 🔬, etc.) to make it visually delightful for children
 - Use bullet points (- or *) for lists
 - Keep paragraphs short (2-3 sentences max)
 - Use friendly, conversational language
-- Start with an encouraging emoji and message
+- NO long introductions or encouragement - dive straight into the explanation
+- Start directly with the topic
 
 Example format:
-✨ **Great question!** Let me help you understand this...
-
 ### 🎯 Why the Answer is [Correct Answer]
 
 The correct answer is **[answer]** because...
@@ -1605,7 +1604,11 @@ The correct answer is **[answer]** because...
 
 Many students think... but actually...
 
-Write in a natural, spoken style as if you're talking to the student.`;
+### 📚 Key Takeaway
+
+Remember: [main point]
+
+Write in a natural, spoken style as if you're talking to the student. Be direct and to the point.`;
 
   if (q.questionType === 'mcq' && q.options) {
     prompt += `\n\nOptions:\n${q.options.join('\n')}`;
