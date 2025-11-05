@@ -125,15 +125,15 @@ async function getBoardId(db: any, boardName: string): Promise<number> {
 /**
  * Get grade ID by number
  */
-async function getGradeId(db: any, gradeNumber: number): Promise<number> {
+async function getGradeId(db: any, gradeLevel: number): Promise<number> {
   const result = await db
     .select()
     .from(grades)
-    .where(eq(grades.gradeNumber, gradeNumber))
+    .where(eq(grades.level, gradeLevel))
     .limit(1);
 
   if (result.length === 0) {
-    throw new Error(`Grade ${gradeNumber} not found. Please create it first.`);
+    throw new Error(`Grade ${gradeLevel} not found. Please create it first.`);
   }
 
   return result[0].id;
