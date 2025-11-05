@@ -27,5 +27,7 @@ export const getLoginUrl = (provider?: string) => {
   return url.toString();
 };
 
-// Convenience function for Google Sign-In
-export const getGoogleLoginUrl = () => getLoginUrl('google');
+// Direct Google OAuth (no longer using Manus OAuth)
+export const getGoogleLoginUrl = () => {
+  return `${window.location.origin}/api/auth/google`;
+};

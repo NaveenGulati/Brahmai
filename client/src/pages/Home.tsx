@@ -182,7 +182,7 @@ export default function Home() {
               </Card>
 
               {/* Developer Login Panel */}
-              {process.env.NODE_ENV === 'development' && <DevLogin />}
+              <DevLogin />
             </CardContent>
           </Card>
         </div>

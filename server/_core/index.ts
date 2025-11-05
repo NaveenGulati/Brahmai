@@ -2,11 +2,16 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import session from "express-session";
+import passport from "passport";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { initializeGoogleAuth } from "./googleAuth";
+import googleAuthRoutes from "./googleAuthRoutes";
+import { ENV } from "./env";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -30,9 +35,36 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  
+  // Trust proxy - required for Render.com and other reverse proxies
+  app.set('trust proxy', 1);
+  
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  
+  // Session middleware for Passport
+  app.use(
+    session({
+      secret: ENV.cookieSecret || 'fallback-secret-key',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: ENV.isProduction,
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: ENV.isProduction ? 'none' : 'lax', // 'none' required for OAuth redirects in production
+      },
+    })
+  );
+  
+  // Initialize Passport
+  initializeGoogleAuth();
+  app.use(passport.initialize());
+  app.use(passport.session());
+  
+  // Google OAuth routes
+  app.use('/api', googleAuthRoutes);
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // tRPC API
