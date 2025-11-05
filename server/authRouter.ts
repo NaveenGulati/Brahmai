@@ -25,20 +25,22 @@ export const authRouter = router({
         });
       }
 
-      // Create session token using SDK
-      const openId = user.openId || `local_${user.id}`;
-      const sessionToken = await sdk.createSessionToken(openId, {
-        name: user.name || '',
-        expiresInMs: ONE_YEAR_MS,
+      // Create simple session token (JWT will be added later)
+      const sessionData = JSON.stringify({
+        userId: user.id,
+        username: user.username,
+        role: user.role,
+        timestamp: Date.now(),
       });
 
       // Set session cookie
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      ctx.res.cookie(COOKIE_NAME, sessionData, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      return {
+      console.log('[Auth] Returning success response...');
+      const response = {
         success: true,
-        redirectTo: user.role === 'qb_admin' ? '/qb-admin' : '/child-dashboard',
+        redirectTo: user.role === 'qb_admin' ? '/qb-admin' : '/child',
         user: {
           id: user.id,
           name: user.name,
@@ -47,6 +49,8 @@ export const authRouter = router({
           role: user.role,
         },
       };
+      console.log('[Auth] Response:', response);
+      return response;
     }),
 
   // Create child account (called by parent)

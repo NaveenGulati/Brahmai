@@ -27,11 +27,11 @@ export default function ChildDashboard() {
         setIsReady(true);
       } catch (e) {
         // Invalid stored data, redirect to login
-        setLocation('/child-login');
+        setLocation('/');
       }
     } else if (!loading && !user) {
       // No local user and no OAuth user, redirect to login
-      setLocation('/child-login');
+      setLocation('/');
     } else if (!loading && user?.role === 'child') {
       // OAuth child user
       setIsReady(true);
@@ -90,7 +90,7 @@ export default function ChildDashboard() {
       await logout();
     }
     // Force navigation to child login after logout completes
-    window.location.href = '/child-login';
+    window.location.href = '/';
   };
 
   const earnedAchievementIds = new Set(achievements?.map(a => a.achievementId));

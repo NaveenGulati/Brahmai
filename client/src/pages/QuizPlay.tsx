@@ -129,10 +129,10 @@ export default function QuizPlay() {
         setChildUser(parsed);
         setIsReady(true);
       } catch (e) {
-        setLocation('/child-login');
+        setLocation('/');
       }
     } else if (!loading && !user) {
-      setLocation('/child-login');
+      setLocation('/');
     } else if (!loading && user?.role === 'child') {
       setIsReady(true);
     }

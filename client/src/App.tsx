@@ -10,7 +10,7 @@ import ParentDashboard from "./pages/ParentDashboard";
 import ChildDashboard from "./pages/ChildDashboard";
 import QuizPlay from "./pages/QuizPlay";
 import SubjectModules from "./pages/SubjectModules";
-import ChildLogin from "./pages/ChildLogin";
+
 import QBAdminDashboard from "./pages/QBAdminDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
@@ -24,7 +24,7 @@ function Router() {
       <Route path={"/teacher"} component={TeacherDashboard} />
       <Route path={"/superadmin"} component={SuperAdminDashboard} />
       <Route path={"/quiz-review/:sessionId"} component={QuizReview} />
-      <Route path="/child-login" component={ChildLogin} />
+
       <Route path={"/child"} component={ChildDashboard} />
       <Route path={"/subject/:subjectId"} component={SubjectModules} />
       <Route path={"/quiz/:moduleId"} component={QuizPlay} />
