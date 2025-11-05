@@ -1600,25 +1600,29 @@ Write in a natural, spoken style as if you're talking to the student. Use short 
 
   const detailedExplanation = response.choices[0].message.content || 'Unable to generate explanation';
 
-  // Cache the explanation
-  await db
-    .insert(aiExplanationCache)
-    .values({
-      questionId,
-      detailedExplanation,
-      timesUsed: 1,
-      lastUsedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: aiExplanationCache.questionId,
-      set: {
+  // Cache the explanation (non-blocking - if it fails, still return the explanation)
+  try {
+    await db
+      .insert(aiExplanationCache)
+      .values({
+        questionId,
         detailedExplanation,
-        timesUsed: sql`COALESCE("timesUsed", 0) + 1`,
+        timesUsed: 1,
         lastUsedAt: new Date(),
-      },
-    });
-
-  console.log(`[AI] Generated and cached new explanation for question ${questionId}`);
+      })
+      .onConflictDoUpdate({
+        target: aiExplanationCache.questionId,
+        set: {
+          detailedExplanation,
+          timesUsed: sql`COALESCE("timesUsed", 0) + 1`,
+          lastUsedAt: new Date(),
+        },
+      });
+    console.log(`[AI] Generated and cached new explanation for question ${questionId}`);
+  } catch (cacheError) {
+    console.error(`[AI] Failed to cache explanation for question ${questionId}:`, cacheError);
+    // Continue anyway - caching is optional
+  }
 
   return { detailedExplanation, fromCache: false };
 }
