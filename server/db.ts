@@ -1701,11 +1701,16 @@ async function updateCachedExplanationUsage(questionId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
 
-  await db.execute(sql`
-    UPDATE aiExplanationCache 
-    SET timesUsed = COALESCE(timesUsed, 0) + 1,
-        lastUsedAt = NOW()
-    WHERE questionId = ${questionId}
-  `);
+  try {
+    await db.execute(sql`
+      UPDATE aiExplanationCache 
+      SET timesUsed = COALESCE(timesUsed, 0) + 1,
+          lastUsedAt = NOW()
+      WHERE questionId = ${questionId}
+    `);
+  } catch (error) {
+    console.error(`[AI] Failed to update cache usage for question ${questionId}:`, error);
+    // Non-blocking - continue even if update fails
+  }
 }
 
