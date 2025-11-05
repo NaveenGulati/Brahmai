@@ -1019,3 +1019,24 @@
 - [x] Google OAuth environment variables configured in Render
 - [x] Session cookie settings optimized for production
 
+
+
+
+## New Issues to Fix
+- [x] Geography module not appearing in challenge creation dropdown
+- [ ] URL changes from brahmai.ai to brahmai-quiz.onrender.com after Google OAuth login
+- [x] Investigate module loading for Geography subject
+- [ ] Fix domain redirect issue after OAuth callback
+
+
+
+
+
+## Auto-Creation Feature
+- [x] Implement automatic subject creation when uploading questions with new subjects
+- [x] Implement automatic module creation when uploading questions with new topics
+- [x] Ensure modules are created with correct subject IDs
+- [x] Update bulkUploadQuestionsUserFriendly to include auto-creation logic
+- [ ] Test auto-creation with Geography/Industries questions
+
+
