@@ -1613,7 +1613,7 @@ Write in a natural, spoken style as if you're talking to the student. Use short 
       target: aiExplanationCache.questionId,
       set: {
         detailedExplanation,
-        timesUsed: sql`COALESCE(times_used, 0) + 1`,
+        timesUsed: sql`COALESCE("timesUsed", 0) + 1`,
         lastUsedAt: new Date(),
       },
     });
