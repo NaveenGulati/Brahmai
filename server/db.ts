@@ -1634,7 +1634,7 @@ Write in a natural, spoken style as if you're talking to the student.`;
         target: aiExplanationCache.questionId,
         set: {
           detailedExplanation,
-          timesUsed: sql`COALESCE("timesUsed", 0) + 1`,
+          timesUsed: sql`COALESCE(${aiExplanationCache.timesUsed}, 0) + 1`,
           lastUsedAt: new Date(),
         },
       });
