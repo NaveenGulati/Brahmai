@@ -47,13 +47,8 @@ export function DevLogin() {
 
     const cred = credentials[role];
     
-    if (role === 'student' || role === 'qbadmin') {
-      childLoginMutation.mutate(cred);
-    } else {
-      // For parent/teacher, redirect to OAuth
-      toast.info('Use Google OAuth for Parent/Teacher login');
-      setIsLoading(false);
-    }
+    // All roles now use local authentication
+    childLoginMutation.mutate(cred);
   };
 
   const handleManualLogin = (e: React.FormEvent) => {
@@ -165,8 +160,9 @@ export function DevLogin() {
         <div className="text-xs text-yellow-700 bg-yellow-100 p-2 rounded">
           <strong>Demo Accounts:</strong><br />
           Student: demo_student / demo123<br />
-          QB Admin: qbadmin / admin123<br />
-          (Parent/Teacher use Google OAuth)
+          Parent: demo_parent / demo123<br />
+          Teacher: demo_teacher / demo123<br />
+          QB Admin: qbadmin / admin123
         </div>
       </CardContent>
     </Card>

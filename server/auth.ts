@@ -45,11 +45,8 @@ export async function authenticateChild(username: string, password: string) {
   const user = result[0];
   console.log('[Auth] User found:', { id: user.id, username: user.username, role: user.role, hasPasswordHash: !!user.passwordHash });
 
-  // Check if user is a child or qb_admin (both use local auth)
-  if (user.role !== 'child' && user.role !== 'qb_admin') {
-    console.log('[Auth] User is not a child or qb_admin, role:', user.role);
-    return null;
-  }
+  // All roles can now use local auth
+  console.log('[Auth] User role:', user.role);
 
   // Verify password
   if (!user.passwordHash) {

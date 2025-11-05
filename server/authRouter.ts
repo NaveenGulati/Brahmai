@@ -38,9 +38,16 @@ export const authRouter = router({
       ctx.res.cookie(COOKIE_NAME, sessionData, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
       console.log('[Auth] Returning success response...');
+      // Determine redirect based on role
+      let redirectTo = '/';
+      if (user.role === 'child') redirectTo = '/child';
+      else if (user.role === 'parent') redirectTo = '/parent';
+      else if (user.role === 'teacher') redirectTo = '/teacher';
+      else if (user.role === 'qb_admin') redirectTo = '/qb-admin';
+      
       const response = {
         success: true,
-        redirectTo: user.role === 'qb_admin' ? '/qb-admin' : '/child',
+        redirectTo,
         user: {
           id: user.id,
           name: user.name,
