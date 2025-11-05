@@ -1,5 +1,6 @@
 import { getDb } from './db';
-import { questions } from '../drizzle/schema';
+import { questions, modules, subjects } from '../drizzle/schema';
+import { eq, and } from 'drizzle-orm';
 
 interface UserFriendlyQuestion {
   board: string;
@@ -32,6 +33,58 @@ export async function bulkUploadQuestionsUserFriendly(
 
   const errors: string[] = [];
   let created = 0;
+  const createdModules = new Set<string>();
+
+  // Track unique subject-topic combinations
+  const subjectTopicMap = new Map<string, Set<string>>();
+  
+  for (const q of questionsData) {
+    const key = `${q.subject}`;
+    if (!subjectTopicMap.has(key)) {
+      subjectTopicMap.set(key, new Set());
+    }
+    subjectTopicMap.get(key)!.add(q.topic);
+  }
+
+  // Create modules for each unique subject-topic combination
+  for (const [subject, topics] of subjectTopicMap) {
+    try {
+      // Find subject ID
+      const subjectRecord = await db.select().from(subjects).where(eq(subjects.name, subject)).limit(1);
+      
+      if (subjectRecord.length === 0) {
+        console.warn(`[Upload] Subject not found: ${subject}, skipping module creation`);
+        continue;
+      }
+      
+      const subjectId = subjectRecord[0].id;
+      
+      // Create module for each topic
+      for (const topic of topics) {
+        // Check if module already exists
+        const existing = await db.select()
+          .from(modules)
+          .where(and(
+            eq(modules.subjectId, subjectId),
+            eq(modules.name, topic)
+          ))
+          .limit(1);
+        
+        if (existing.length === 0) {
+          await db.insert(modules).values({
+            subjectId,
+            name: topic,
+            description: `${topic} module`,
+            orderIndex: 0,
+          });
+          createdModules.add(`${subject} - ${topic}`);
+          console.log(`[Upload] Created module: ${subject} - ${topic}`);
+        }
+      }
+    } catch (error: any) {
+      console.error(`[Upload] Error creating modules for ${subject}:`, error);
+    }
+  }
 
   for (const q of questionsData) {
     try {
@@ -67,10 +120,10 @@ export async function bulkUploadQuestionsUserFriendly(
   return {
     success: true,
     created,
-    boardsCreated: 0, // No longer creating boards
-    gradesCreated: 0, // No longer creating grades
-    subjectsCreated: 0, // No longer creating subjects
-    modulesCreated: 0, // No longer creating modules
+    boardsCreated: 0,
+    gradesCreated: 0,
+    subjectsCreated: 0,
+    modulesCreated: createdModules.size,
     errors: errors.length > 0 ? errors : undefined,
   };
 }
