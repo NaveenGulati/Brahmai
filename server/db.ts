@@ -4,7 +4,8 @@
  */
 
 import { eq, and, desc, sql, gte, lte, isNotNull, inArray, or } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { 
   users, InsertUser,
   parentProfiles, InsertParentProfile,
@@ -34,7 +35,13 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const client = postgres(process.env.DATABASE_URL, {
+        prepare: false,
+        onnotice: () => {},
+        // Set search_path for all queries
+        options: 'search_path=public'
+      });
+      _db = drizzle(client);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -105,11 +112,16 @@ export async function upsertUser(user: InsertUser): Promise<number | undefined> 
     values.lastSignedIn = new Date();
     updateSet.lastSignedIn = new Date();
 
-    const result = await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
+    // PostgreSQL upsert using onConflictDoUpdate
+    const result = await db.insert(users)
+      .values(values)
+      .onConflictDoUpdate({
+        target: user.openId ? users.openId : users.username,
+        set: updateSet,
+      })
+      .returning({ id: users.id });
 
-    return Number(result[0].insertId);
+    return result[0]?.id;
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -423,8 +435,8 @@ export async function bulkCreateQuestions(questionsData: InsertQuestion[]) {
 export async function createQuizSession(data: InsertQuizSession) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(quizSessions).values(data);
-  return Number(result[0].insertId);
+  const result = await db.insert(quizSessions).values(data).returning({ id: quizSessions.id });
+  return result[0].id;
 }
 
 export async function getQuizSessionById(id: number) {
@@ -1202,8 +1214,8 @@ export async function createClass(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.insert(studentGroups).values(data);
-  return { id: Number((result as any).insertId), ...data };
+  const result = await db.insert(studentGroups).values(data).returning({ id: studentGroups.id });
+  return { id: result[0].id, ...data };
 }
 
 export async function updateClass(
@@ -1519,7 +1531,13 @@ import { generateSpeech } from './_core/googleTTS';
  * Shared function to generate detailed AI explanation for a question
  * Used by both parent and child routers to avoid code duplication
  */
-export async function generateDetailedExplanationForQuestion(questionId: number): Promise<{ detailedExplanation: string }> {
+export async function generateDetailedExplanationForQuestion(
+  questionId: number,
+  questionText?: string,
+  correctAnswer?: string,
+  userAnswer?: string,
+  grade?: string
+): Promise<{ detailedExplanation: string; fromCache?: boolean }> {
   const db = await getDb();
   if (!db) {
     throw new Error('Database not available');
@@ -1538,7 +1556,7 @@ export async function generateDetailedExplanationForQuestion(questionId: number)
     // Update usage stats
     await updateCachedExplanationUsage(questionId);
     
-    return { detailedExplanation: cached[0].detailedExplanation };
+    return { detailedExplanation: cached[0].detailedExplanation, fromCache: true };
   }
 
   // Generate new explanation
@@ -1567,7 +1585,30 @@ Provide a detailed, conversational explanation that:
 3. Uses simple examples or analogies
 4. Keeps a warm, encouraging tone
 
-Write in a natural, spoken style as if you're talking to the student. Use short paragraphs. Avoid using backticks, asterisks, or other markdown formatting for emphasis - just write naturally.`;
+IMPORTANT FORMATTING RULES:
+- Use markdown formatting: **bold** for emphasis, *italics* for subtle emphasis
+- Use ### for section headings to break up content
+- Add relevant emojis (🎯, 💡, 🤔, ✅, 📚, 🔬, etc.) to make it visually delightful for children
+- Use bullet points (- or *) for lists
+- Keep paragraphs short (2-3 sentences max)
+- Use friendly, conversational language
+- NO long introductions or encouragement - dive straight into the explanation
+- Start directly with the topic
+
+Example format:
+### 🎯 Why the Answer is [Correct Answer]
+
+The correct answer is **[answer]** because...
+
+### 💡 Common Misconception
+
+Many students think... but actually...
+
+### 📚 Key Takeaway
+
+Remember: [main point]
+
+Write in a natural, spoken style as if you're talking to the student. Be direct and to the point.`;
 
   if (q.questionType === 'mcq' && q.options) {
     prompt += `\n\nOptions:\n${q.options.join('\n')}`;
@@ -1582,26 +1623,31 @@ Write in a natural, spoken style as if you're talking to the student. Use short 
 
   const detailedExplanation = response.choices[0].message.content || 'Unable to generate explanation';
 
-  // Cache the explanation
-  await db
-    .insert(aiExplanationCache)
-    .values({
-      questionId,
-      detailedExplanation,
-      timesUsed: 1,
-      lastUsedAt: new Date(),
-    })
-    .onDuplicateKeyUpdate({
-      set: {
+  // Cache the explanation (non-blocking - if it fails, still return the explanation)
+  try {
+    await db
+      .insert(aiExplanationCache)
+      .values({
+        questionId,
         detailedExplanation,
-        timesUsed: sql`COALESCE(timesUsed, 0) + 1`,
+        timesUsed: 1,
         lastUsedAt: new Date(),
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: aiExplanationCache.questionId,
+        set: {
+          detailedExplanation,
+          timesUsed: sql`COALESCE(${aiExplanationCache.timesUsed}, 0) + 1`,
+          lastUsedAt: new Date(),
+        },
+      });
+    console.log(`[AI] Generated and cached new explanation for question ${questionId}`);
+  } catch (cacheError) {
+    console.error(`[AI] Failed to cache explanation for question ${questionId}:`, cacheError);
+    // Continue anyway - caching is optional
+  }
 
-  console.log(`[AI] Generated and cached new explanation for question ${questionId}`);
-
-  return { detailedExplanation };
+  return { detailedExplanation, fromCache: false };
 }
 
 /**
@@ -1655,11 +1701,16 @@ async function updateCachedExplanationUsage(questionId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
 
-  await db.execute(sql`
-    UPDATE aiExplanationCache 
-    SET timesUsed = COALESCE(timesUsed, 0) + 1,
-        lastUsedAt = NOW()
-    WHERE questionId = ${questionId}
-  `);
+  try {
+    await db.execute(sql`
+      UPDATE aiExplanationCache 
+      SET timesUsed = COALESCE(timesUsed, 0) + 1,
+          lastUsedAt = NOW()
+      WHERE questionId = ${questionId}
+    `);
+  } catch (error) {
+    console.error(`[AI] Failed to update cache usage for question ${questionId}:`, error);
+    // Non-blocking - continue even if update fails
+  }
 }
 
