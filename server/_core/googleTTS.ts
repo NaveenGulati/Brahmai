@@ -34,8 +34,33 @@ function markdownToPlainText(markdown: string): string {
   // Remove horizontal rules (---, ***, ___)
   text = text.replace(/^[\s]*[-*_]{3,}[\s]*$/gm, '');
   
+  // Remove ALL emojis (comprehensive Unicode ranges)
+  // This removes all emoji characters including:
+  // - Emoticons (😀😃😄)
+  // - Symbols (🎯💡🔬)
+  // - Flags (🇮🇳🇺🇸)
+  // - Objects (📚✨🎨)
+  // - And all other emoji Unicode blocks
+  text = text.replace(/[\u{1F600}-\u{1F64F}]/gu, ''); // Emoticons
+  text = text.replace(/[\u{1F300}-\u{1F5FF}]/gu, ''); // Symbols & Pictographs
+  text = text.replace(/[\u{1F680}-\u{1F6FF}]/gu, ''); // Transport & Map
+  text = text.replace(/[\u{1F1E0}-\u{1F1FF}]/gu, ''); // Flags
+  text = text.replace(/[\u{2600}-\u{26FF}]/gu, '');   // Miscellaneous Symbols
+  text = text.replace(/[\u{2700}-\u{27BF}]/gu, '');   // Dingbats
+  text = text.replace(/[\u{1F900}-\u{1F9FF}]/gu, ''); // Supplemental Symbols
+  text = text.replace(/[\u{1FA00}-\u{1FA6F}]/gu, ''); // Extended Symbols
+  text = text.replace(/[\u{1FA70}-\u{1FAFF}]/gu, ''); // Extended Symbols 2
+  text = text.replace(/[\u{FE00}-\u{FE0F}]/gu, '');   // Variation Selectors
+  text = text.replace(/[\u{1F000}-\u{1F02F}]/gu, ''); // Mahjong Tiles
+  text = text.replace(/[\u{1F0A0}-\u{1F0FF}]/gu, ''); // Playing Cards
+  
+  // Remove any remaining special characters that might be read aloud
+  text = text.replace(/[★☆✓✔✗✘]/g, '');
+  text = text.replace(/[←→↑↓]/g, '');
+  
   // Clean up extra whitespace
   text = text.replace(/\n{3,}/g, '\n\n');
+  text = text.replace(/\s{2,}/g, ' ');
   text = text.trim();
   
   return text;
@@ -57,7 +82,10 @@ export async function generateSpeech(text: string): Promise<string> {
   const cleanedText = markdownToPlainText(text);
   
   console.log('[Google TTS] Original text length:', text.length);
+  console.log('[Google TTS] Original text preview:', text.substring(0, 200));
   console.log('[Google TTS] Cleaned text length:', cleanedText.length);
+  console.log('[Google TTS] Cleaned text preview:', cleanedText.substring(0, 200));
+  console.log('[Google TTS] Emojis removed:', text.length - cleanedText.length, 'characters');
 
   // Parse the service account JSON
   let serviceAccount: any;

@@ -1681,6 +1681,7 @@ export async function generateAudioForQuestion(questionId: number): Promise<{ au
 
   // Generate audio using Google TTS
   console.log(`[TTS] Generating audio for question ${questionId}`);
+  console.log(`[TTS] Explanation text preview:`, explanationText.substring(0, 300));
   const audioUrl = await generateSpeech(explanationText);
 
   // Update cache with audio URL
