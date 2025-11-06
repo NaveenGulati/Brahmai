@@ -299,7 +299,7 @@ export default function QuizPlay() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* MCQ */}
-            {currentQuestion.questionType === 'mcq' && currentQuestion.options && (
+            {(currentQuestion.questionType === 'multiple_choice' || currentQuestion.questionType === 'mcq') && currentQuestion.options && (
               <RadioGroup value={userAnswer} onValueChange={setUserAnswer}>
                 {currentQuestion.options.map((option: string, idx: number) => (
                   <div key={idx} className="flex items-center space-x-2 p-3 border rounded hover:bg-gray-50">
