@@ -476,8 +476,11 @@ export async function getUserQuizHistory(userId: number, limit: number = 20) {
     .from(quizSessions)
     .leftJoin(modules, eq(quizSessions.moduleId, modules.id))
     .leftJoin(subjects, eq(modules.subjectId, subjects.id))
-    .where(eq(quizSessions.childId, userId))
-    .orderBy(desc(quizSessions.startedAt))
+    .where(and(
+      eq(quizSessions.childId, userId),
+      eq(quizSessions.isCompleted, true)
+    ))
+    .orderBy(desc(quizSessions.completedAt))
     .limit(limit);
 }
 
@@ -487,9 +490,10 @@ export async function getModuleQuizHistory(userId: number, moduleId: number) {
   return db.select().from(quizSessions)
     .where(and(
       eq(quizSessions.childId, userId),
-      eq(quizSessions.moduleId, moduleId)
+      eq(quizSessions.moduleId, moduleId),
+      eq(quizSessions.isCompleted, true)
     ))
-    .orderBy(desc(quizSessions.startedAt));
+    .orderBy(desc(quizSessions.completedAt));
 }
 
 // ============= QUIZ RESPONSE OPERATIONS =============
@@ -912,16 +916,19 @@ export async function getUserStats(userId: number) {
   const childProfile = await getChildProfile(userId);
   if (!childProfile) return null;
   
-  // Get quiz stats
+  // Get quiz stats (only count completed quizzes)
   const quizStats = await db.select({
     totalQuizzes: sql<number>`COUNT(*)`,
-    completedQuizzes: sql<number>`SUM(CASE WHEN ${quizSessions.isCompleted} = 1 THEN 1 ELSE 0 END)`,
+    completedQuizzes: sql<number>`COUNT(*)`,
     avgScore: sql<number>`COALESCE(AVG(${quizSessions.scorePercentage}), 0)`,
     totalCorrect: sql<number>`COALESCE(SUM(${quizSessions.correctAnswers}), 0)`,
     totalWrong: sql<number>`COALESCE(SUM(${quizSessions.wrongAnswers}), 0)`,
   })
     .from(quizSessions)
-    .where(eq(quizSessions.childId, userId));
+    .where(and(
+      eq(quizSessions.childId, userId),
+      eq(quizSessions.isCompleted, true)
+    ));
   
   return {
     ...childProfile,
