@@ -154,8 +154,14 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
   const answeredIds = responses.map(r => r.questionId);
   candidateQuestions = candidateQuestions.filter(q => !answeredIds.includes(q.id));
 
+  // FINAL FALLBACK: If still no questions after removing answered ones,
+  // use ANY unanswered question from the module
   if (candidateQuestions.length === 0) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: 'No more questions available' });
+    candidateQuestions = allQuestions.filter(q => !answeredIds.includes(q.id));
+    
+    if (candidateQuestions.length === 0) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'No more questions available' });
+    }
   }
 
   // Select best question using quality scoring
