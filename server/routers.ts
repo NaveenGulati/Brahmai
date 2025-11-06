@@ -522,7 +522,11 @@ Format your response in clean markdown with:
 
         const isCorrect = input.userAnswer.trim().toLowerCase() === 
                          question.correctAnswer.trim().toLowerCase();
-        const pointsEarned = isCorrect ? question.points : 0;
+        
+        // Calculate points based on difficulty (same as startQuiz and getNextQuestion)
+        const pointsByDifficulty = { easy: 5, medium: 10, hard: 15 };
+        const questionPoints = pointsByDifficulty[question.difficulty as keyof typeof pointsByDifficulty] || 10;
+        const pointsEarned = isCorrect ? questionPoints : 0;
 
         await db.createQuizResponse({
           sessionId: input.sessionId,

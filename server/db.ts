@@ -780,7 +780,7 @@ export async function getChildAnalytics(childId: number) {
   const stats = await db.select({
     totalQuizzes: sql<number>`COUNT(*)`,
     completedQuizzes: sql<number>`SUM(CASE WHEN ${quizSessions.isCompleted} = 1 THEN 1 ELSE 0 END)`,
-    avgScore: sql<number>`AVG(${quizSessions.scorePercentage})`,
+    avgScore: sql<number>`ROUND(AVG(${quizSessions.scorePercentage}), 2)`,
     totalTimeSpent: sql<number>`SUM(${quizSessions.timeTaken})`,
   })
     .from(quizSessions)
@@ -805,7 +805,7 @@ export async function getParentDashboardStats(parentId: number) {
   
   const stats = await db.select({
     totalQuizzes: sql<number>`COUNT(*)`,
-    avgScore: sql<number>`AVG(${quizSessions.scorePercentage})`,
+    avgScore: sql<number>`ROUND(AVG(${quizSessions.scorePercentage}), 2)`,
   })
     .from(quizSessions)
     .where(inArray(quizSessions.childId, childIds));
@@ -920,7 +920,7 @@ export async function getUserStats(userId: number) {
   const quizStats = await db.select({
     totalQuizzes: sql<number>`COUNT(*)`,
     completedQuizzes: sql<number>`COUNT(*)`,
-    avgScore: sql<number>`COALESCE(AVG(${quizSessions.scorePercentage}), 0)`,
+    avgScore: sql<number>`ROUND(COALESCE(AVG(${quizSessions.scorePercentage}), 0), 2)`,
     totalCorrect: sql<number>`COALESCE(SUM(${quizSessions.correctAnswers}), 0)`,
     totalWrong: sql<number>`COALESCE(SUM(${quizSessions.wrongAnswers}), 0)`,
   })
@@ -974,7 +974,7 @@ export async function getSubjectProgress(userId: number) {
     subjectIcon: subjects.icon,
     subjectColor: subjects.color,
     totalQuizzes: sql<number>`COUNT(DISTINCT ${quizSessions.id})`,
-    avgScore: sql<number>`COALESCE(AVG(${quizSessions.scorePercentage}), 0)`,
+    avgScore: sql<number>`ROUND(COALESCE(AVG(${quizSessions.scorePercentage}), 0), 2)`,
     totalPoints: sql<number>`COALESCE(SUM(${quizSessions.totalPoints}), 0)`,
   })
     .from(quizSessions)
