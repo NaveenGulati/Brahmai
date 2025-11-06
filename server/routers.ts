@@ -10,6 +10,7 @@ import { quizSessions, aiExplanationCache, challenges } from "../drizzle/schema"
 import { eq, and, lt, desc } from "drizzle-orm";
 import { authRouter } from "./authRouter";
 import { adaptiveChallengeRouter } from "./adaptive-challenge-router";
+import { adaptiveQuizRouter } from "./adaptive-quiz";
 
 // Custom procedure for child access
 const childProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -25,6 +26,7 @@ const childProcedure = protectedProcedure.use(({ ctx, next }) => {
 export const appRouter = router({
   system: systemRouter,
   localAuth: authRouter,
+  adaptiveQuiz: adaptiveQuizRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -404,104 +406,9 @@ Format your response in clean markdown with:
         return db.getModulesBySubject(input.subjectId);
       }),
 
-    // Start AI-powered adaptive quiz (public for local auth)
-    startQuiz: publicProcedure
-      .input(z.object({ 
-        moduleId: z.number(),
-        childId: z.number().optional(),
-        challengeId: z.number().optional()
-      }))
-      .mutation(async ({ input, ctx }) => {
-        const userId = input.childId || ctx.user?.id;
-        if (!userId) {
-          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User ID required' });
-        }
-
-        let allQuestions;
-        let quizSize;
-
-        // Check if this is from a challenge with pre-selected questions
-        if (input.challengeId) {
-          const database = await getDb();
-          if (database) {
-            const challengeData = await database
-              .select()
-              .from(challenges)
-              .where(eq(challenges.id, input.challengeId))
-              .limit(1);
-
-            if (challengeData.length > 0) {
-              const challenge = challengeData[0];
-              
-              // If challenge has pre-selected questions (bounded mode), use them
-              if (challenge.useComplexityBoundaries && challenge.selectedQuestionIds) {
-                const questionIds = JSON.parse(challenge.selectedQuestionIds as string) as number[];
-                allQuestions = await db.getQuestionsByIds(questionIds);
-                quizSize = challenge.questionCount || allQuestions.length;
-              }
-            }
-          }
-        }
-
-        // Fallback to module-based selection (fully adaptive or no challenge)
-        if (!allQuestions) {
-          allQuestions = await db.getQuestionsByModule(input.moduleId);
-          quizSize = Math.min(allQuestions.length, Math.floor(Math.random() * 6) + 10);
-        }
-        if (allQuestions.length === 0) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'No questions found for this module' });
-        }
-
-        // Ensure quizSize is set (fallback if not set by challenge)
-        if (!quizSize) {
-          quizSize = Math.min(allQuestions.length, Math.floor(Math.random() * 6) + 10);
-        }
-
-        // Create quiz session
-        const sessionId = await db.createQuizSession({
-          childId: userId,
-          moduleId: input.moduleId,
-          totalQuestions: quizSize,
-          isCompleted: false,
-        });
-
-        // Store available questions in session metadata (for adaptive selection)
-        // In production, this could be stored in Redis or database
-        const questionPool = {
-          easy: allQuestions.filter(q => q.difficulty === 'easy').map(q => q.id),
-          medium: allQuestions.filter(q => q.difficulty === 'medium').map(q => q.id),
-          hard: allQuestions.filter(q => q.difficulty === 'hard').map(q => q.id),
-        };
-
-        // Start with medium difficulty (AI will adapt from here)
-        const startingDifficulty = 'medium';
-        const firstQuestionPool = questionPool.medium.length > 0 ? questionPool.medium : 
-                                  questionPool.easy.length > 0 ? questionPool.easy : 
-                                  questionPool.hard;
-        
-        const firstQuestionId = firstQuestionPool[Math.floor(Math.random() * firstQuestionPool.length)];
-        const firstQuestion = allQuestions.find(q => q.id === firstQuestionId);
-
-        if (!firstQuestion) {
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to select first question' });
-        }
-
-        return {
-          sessionId,
-          totalQuestions: quizSize,
-          currentQuestionNumber: 1,
-          question: {
-            id: firstQuestion.id,
-            questionType: firstQuestion.questionType,
-            questionText: firstQuestion.questionText,
-            questionImage: firstQuestion.questionImage,
-            options: typeof firstQuestion.options === 'string' ? JSON.parse(firstQuestion.options) : firstQuestion.options,
-            points: firstQuestion.points,
-            timeLimit: firstQuestion.timeLimit,
-            difficulty: firstQuestion.difficulty,
-          },
-        };
-      }),
+    // DEPRECATED: Use adaptiveQuiz.start instead
+    // Kept for backward compatibility
+    startQuiz: adaptiveQuizRouter._def.procedures.start,
 
     // Submit answer (public for local auth)
     submitAnswer: publicProcedure
@@ -538,8 +445,12 @@ Format your response in clean markdown with:
         };
       }),
 
-    // Get next adaptive question based on AI analysis (public for local auth)
-    getNextQuestion: publicProcedure
+    // DEPRECATED: Use adaptiveQuiz.next instead
+    // Kept for backward compatibility  
+    getNextQuestion: adaptiveQuizRouter._def.procedures.next,
+
+    // OLD VERSION - KEPT FOR REFERENCE, WILL BE REMOVED
+    _oldGetNextQuestion: publicProcedure
       .input(z.object({ sessionId: z.number() }))
       .mutation(async ({ input }) => {
         const session = await db.getQuizSessionById(input.sessionId);
@@ -547,12 +458,53 @@ Format your response in clean markdown with:
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Session not found' });
         }
 
+        // Complexity level to allowed difficulties mapping
+        const COMPLEXITY_BOUNDARIES: Record<number, string[]> = {
+          1: ['easy'],
+          2: ['easy'],
+          3: ['easy'],
+          4: ['easy'],
+          5: ['easy', 'medium'],
+          6: ['easy', 'medium'],
+          7: ['easy', 'medium'],
+          8: ['medium', 'hard'],
+          9: ['medium', 'hard'],
+          10: ['hard'],
+        };
+
+        // Get allowed difficulties based on complexity boundaries
+        const allowedDifficulties = session.useComplexityBoundaries && session.complexity
+          ? COMPLEXITY_BOUNDARIES[session.complexity] || ['easy', 'medium', 'hard']
+          : ['easy', 'medium', 'hard']; // No boundaries = all difficulties allowed
+
         // Get all responses so far
         const responses = await db.getSessionResponses(input.sessionId);
         const answeredQuestionIds = responses.map(r => r.questionId);
 
-        // Get all available questions for this module
-        const allQuestions = await db.getQuestionsByModule(session.moduleId);
+        // Get available questions - use pre-selected challenge questions if available
+        let allQuestions;
+        if (session.challengeId && session.useComplexityBoundaries) {
+          // Fetch the challenge to get pre-selected questions
+          const database = await getDb();
+          if (database) {
+            const challengeData = await database
+              .select()
+              .from(challenges)
+              .where(eq(challenges.id, session.challengeId))
+              .limit(1);
+            
+            if (challengeData.length > 0 && challengeData[0].selectedQuestionIds) {
+              const questionIds = JSON.parse(challengeData[0].selectedQuestionIds as string) as number[];
+              allQuestions = await db.getQuestionsByIds(questionIds);
+            }
+          }
+        }
+        
+        // Fallback to module questions if no challenge or challenge questions not found
+        if (!allQuestions) {
+          allQuestions = await db.getQuestionsByModule(session.moduleId);
+        }
+        
         const availableQuestions = allQuestions.filter(q => !answeredQuestionIds.includes(q.id));
 
         if (availableQuestions.length === 0) {
@@ -569,42 +521,64 @@ Format your response in clean markdown with:
         const recentCorrect = recentResponses.filter(r => r.isCorrect).length;
         const recentAccuracy = recentResponses.length > 0 ? recentCorrect / recentResponses.length : 0.5;
 
-        // Fast rule-based adaptive algorithm (instant, no AI delay)
-        let difficulty: string;
+        // Fast rule-based adaptive algorithm WITH complexity boundaries
+        let targetDifficulty: string;
         let reasoning: string;
 
+        // Step 1: Determine ideal difficulty based on performance (unconstrained)
         if (questionsAnswered === 0) {
-          // Start with medium
-          difficulty = 'medium';
+          // Start with medium if allowed, otherwise pick from allowed
+          targetDifficulty = allowedDifficulties.includes('medium') ? 'medium' : allowedDifficulties[Math.floor(allowedDifficulties.length / 2)];
           reasoning = 'Starting difficulty';
         } else if (recentAccuracy >= 0.8) {
           // Doing great recently - increase difficulty
-          difficulty = 'hard';
+          targetDifficulty = 'hard';
           reasoning = `High recent accuracy (${Math.round(recentAccuracy * 100)}%) - challenging with harder question`;
         } else if (recentAccuracy <= 0.3) {
           // Struggling recently - decrease difficulty
-          difficulty = 'easy';
+          targetDifficulty = 'easy';
           reasoning = `Low recent accuracy (${Math.round(recentAccuracy * 100)}%) - building confidence with easier question`;
         } else if (accuracyRate >= 0.7) {
           // Overall doing well - medium to hard
-          difficulty = Math.random() > 0.5 ? 'medium' : 'hard';
+          targetDifficulty = Math.random() > 0.5 ? 'medium' : 'hard';
           reasoning = `Good overall accuracy (${Math.round(accuracyRate * 100)}%) - maintaining challenge`;
         } else {
           // Average performance - medium
-          difficulty = 'medium';
+          targetDifficulty = 'medium';
           reasoning = `Average accuracy (${Math.round(accuracyRate * 100)}%) - keeping steady difficulty`;
         }
 
-        console.log(`Adaptive difficulty: ${difficulty} - ${reasoning}`);
+        // Step 2: Constrain to allowed difficulties (ENFORCE BOUNDARIES)
+        let difficulty: string;
+        if (allowedDifficulties.includes(targetDifficulty)) {
+          difficulty = targetDifficulty;
+        } else {
+          // Target not allowed - pick closest allowed difficulty
+          const difficultyOrder = ['easy', 'medium', 'hard'];
+          const targetIndex = difficultyOrder.indexOf(targetDifficulty);
+          const allowedIndices = allowedDifficulties.map(d => difficultyOrder.indexOf(d));
+          const closestIndex = allowedIndices.reduce((prev, curr) => 
+            Math.abs(curr - targetIndex) < Math.abs(prev - targetIndex) ? curr : prev
+          );
+          difficulty = difficultyOrder[closestIndex];
+          reasoning += ` (constrained to ${difficulty} by complexity boundaries)`;
+        }
 
-        // Select a random question from the chosen difficulty pool
-        const questionsOfDifficulty = availableQuestions.filter(q => q.difficulty === difficulty);
+        console.log(`Adaptive difficulty: ${difficulty} - ${reasoning}`);
+        console.log(`Allowed difficulties: ${allowedDifficulties.join(', ')}`);
+
+        // Step 3: Filter available questions by allowed difficulties AND chosen difficulty
+        const allowedQuestions = availableQuestions.filter(q => allowedDifficulties.includes(q.difficulty));
+        const questionsOfDifficulty = allowedQuestions.filter(q => q.difficulty === difficulty);
         let selectedQuestion;
 
         if (questionsOfDifficulty.length > 0) {
           selectedQuestion = questionsOfDifficulty[Math.floor(Math.random() * questionsOfDifficulty.length)];
+        } else if (allowedQuestions.length > 0) {
+          // Fallback: pick any question from allowed difficulties
+          selectedQuestion = allowedQuestions[Math.floor(Math.random() * allowedQuestions.length)];
         } else {
-          // Fallback: pick any available question
+          // Last resort: pick any available question (shouldn't happen if challenge setup is correct)
           selectedQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
         }
 

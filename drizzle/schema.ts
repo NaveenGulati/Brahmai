@@ -405,6 +405,10 @@ export const quizSessions = pgTable("quizSessions", {
   assignedBy: integer("assignedBy"), // FK to users (teacher or parent)
   assignmentType: varchar("assignmentType", { length: 50 }),
   
+  // Adaptive quiz configuration
+  challengeId: integer("challengeId"), // FK to challenges
+  focusArea: varchar("focusArea", { length: 20 }).default("balanced"), // 'strengthen', 'improve', 'balanced'
+  
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -440,12 +444,8 @@ export const challenges = pgTable("challenges", {
   
   // Adaptive challenge configuration
   questionCount: integer("questionCount").default(10).notNull(), // Number of questions (10-100)
-  complexity: integer("complexity").default(5).notNull(), // Complexity level (1-10)
-  focusArea: varchar("focusArea", { length: 20 }).default("neutral").notNull(),
+  focusArea: varchar("focusArea", { length: 20 }).default("balanced").notNull(), // 'strengthen', 'improve', 'balanced'
   estimatedDuration: integer("estimatedDuration"), // Estimated duration in minutes
-  difficultyDistribution: jsonb("difficultyDistribution"), // Actual difficulty mix used {easy: 30, medium: 50, hard: 20}
-  selectedQuestionIds: text("selectedQuestionIds"), // JSON array of pre-selected question IDs
-  useComplexityBoundaries: boolean("useComplexityBoundaries").default(true).notNull(), // If false, fully adaptive
   
   // Scheduling
   startDate: timestamp("startDate"),
