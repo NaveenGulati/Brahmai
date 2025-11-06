@@ -104,6 +104,8 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
 
   // Get all responses so far
   const responses = await dbAdapter.getSessionResponses(input.sessionId);
+  console.log(`[Adaptive Quiz] Session ${input.sessionId}: ${responses.length} responses so far`);
+  console.log(`[Adaptive Quiz] Answered question IDs:`, responses.map(r => r.questionId));
   
   // Check if quiz is complete
   if (responses.length >= session.totalQuestions) {
@@ -170,6 +172,7 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
     recentQuestionIds: answeredIds.slice(-5),
     studentAvgTime: metrics.avgTimePerQuestion,
   });
+  console.log(`[Adaptive Quiz] Selected question ${selectedQuestion.id} from ${candidateQuestions.length} candidates`);
 
   return {
     currentQuestionNumber: responses.length + 1,
