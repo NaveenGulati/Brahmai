@@ -144,10 +144,8 @@ export default function QuizPlay() {
       const challengeIdStr = localStorage.getItem('currentChallengeId');
       const challengeId = challengeIdStr ? parseInt(challengeIdStr, 10) : undefined;
       
-      // Clear the challenge ID from localStorage after reading
-      if (challengeId) {
-        localStorage.removeItem('currentChallengeId');
-      }
+      // Note: Don't remove challengeId here - it's needed when quiz completes
+      // It will be removed after the quiz is completed (see completeQuizM.onSuccess)
       
       startQuizMutation.mutate({ 
         moduleId,
