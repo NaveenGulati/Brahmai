@@ -124,10 +124,18 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
 
   // Get unique topics from available questions
   const availableTopics = [...new Set(allQuestions.map(q => q.topic))];
+  
+  // Find the primary topic (most common in available questions)
+  const topicCounts = allQuestions.reduce((acc, q) => {
+    acc[q.topic] = (acc[q.topic] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const primaryTopic = Object.entries(topicCounts)
+    .sort((a, b) => b[1] - a[1])[0]?.[0] || availableTopics[0];
 
   // Select topic based on focus area
   const focusArea = (session.focusArea as FocusArea) || 'balanced';
-  const targetTopic = selectTopic(focusArea, metrics, availableTopics);
+  const targetTopic = selectTopic(focusArea, metrics, availableTopics, primaryTopic);
 
   // Determine optimal difficulty
   const targetDifficulty = determineOptimalDifficulty(metrics, targetTopic);

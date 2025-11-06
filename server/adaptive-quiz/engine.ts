@@ -173,7 +173,8 @@ function calculateMasteryScore(data: {
 export function selectTopic(
   focusArea: FocusArea,
   metrics: PerformanceMetrics,
-  availableTopics: string[]
+  availableTopics: string[],
+  primaryTopic?: string
 ): string {
   
   if (focusArea === 'strengthen') {
@@ -184,8 +185,8 @@ export function selectTopic(
     return selectWeakTopic(metrics, availableTopics);
   }
   
-  // Balanced: Random with diversity
-  return selectBalancedTopic(metrics, availableTopics);
+  // Balanced: Prefer primary topic with some diversity
+  return selectBalancedTopic(metrics, availableTopics, primaryTopic);
 }
 
 /**
@@ -249,20 +250,32 @@ function selectWeakTopic(
 
 /**
  * Select random topic with diversity
+ * Strongly prefers the primary topic (module's main topic) with 80% probability
  */
 function selectBalancedTopic(
   metrics: PerformanceMetrics,
-  availableTopics: string[]
+  availableTopics: string[],
+  primaryTopic?: string
 ): string {
-  // Avoid recent topics
+  // 80% chance to stick with primary topic (for consistency and proper difficulty progression)
+  if (primaryTopic && availableTopics.includes(primaryTopic) && Math.random() < 0.8) {
+    console.log(`[Topic Selection] Sticking with primary topic: ${primaryTopic}`);
+    return primaryTopic;
+  }
+  
+  // 20% chance for diversity - avoid recent topics
   const nonRecentTopics = availableTopics.filter(t => !metrics.recentTopics.includes(t));
   
   if (nonRecentTopics.length > 0) {
-    return nonRecentTopics[Math.floor(Math.random() * nonRecentTopics.length)];
+    const selected = nonRecentTopics[Math.floor(Math.random() * nonRecentTopics.length)];
+    console.log(`[Topic Selection] Diversity pick: ${selected}`);
+    return selected;
   }
   
   // All topics are recent - pick any
-  return availableTopics[Math.floor(Math.random() * availableTopics.length)];
+  const selected = availableTopics[Math.floor(Math.random() * availableTopics.length)];
+  console.log(`[Topic Selection] Random pick: ${selected}`);
+  return selected;
 }
 
 /**
