@@ -79,9 +79,8 @@ export default function QuizReview() {
   const [highlightedQuestionId, setHighlightedQuestionId] = useState<number | null>(null);
   const [highlightIndex, setHighlightIndex] = useState<number>(-1);
   
-  // Check if child is logged in via localStorage
-  const childUser = localStorage.getItem('childUser') ? JSON.parse(localStorage.getItem('childUser')!) : null;
-  const isChild = !!childUser;
+  // Determine if the current user is a child based on their role
+  const isChild = user?.role === 'child';
 
   // Query hooks - must be called unconditionally
   const { data: reviewData, isLoading } = trpc.parent.getQuizReview.useQuery(
