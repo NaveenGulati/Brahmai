@@ -122,42 +122,38 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
   // Calculate performance metrics
   const metrics = calculatePerformanceMetrics(responses, allQuestions);
 
-  // Get unique topics from available questions
-  const availableTopics = [...new Set(allQuestions.map(q => q.topic))];
-  
-  // Find the primary topic (most common in available questions)
+  // Find the primary topic (most common in available questions = module's topic)
   const topicCounts = allQuestions.reduce((acc, q) => {
     acc[q.topic] = (acc[q.topic] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
-  const primaryTopic = Object.entries(topicCounts)
-    .sort((a, b) => b[1] - a[1])[0]?.[0] || availableTopics[0];
+  const moduleTopic = Object.entries(topicCounts)
+    .sort((a, b) => b[1] - a[1])[0]?.[0];
+  
+  if (!moduleTopic) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'No questions found for this module' });
+  }
+  
+  console.log(`[Adaptive Quiz] Module topic: ${moduleTopic}`);
 
-  // Select topic based on focus area
-  const focusArea = (session.focusArea as FocusArea) || 'balanced';
-  const targetTopic = selectTopic(focusArea, metrics, availableTopics, primaryTopic);
-
-  // Determine optimal difficulty
-  const targetDifficulty = determineOptimalDifficulty(metrics, targetTopic);
-
-  // Filter questions by topic and difficulty
-  let candidateQuestions = allQuestions.filter(
-    q => q.topic === targetTopic && q.difficulty === targetDifficulty
-  );
-
-  // Fallback: If no questions match, relax difficulty constraint
-  if (candidateQuestions.length === 0) {
-    candidateQuestions = allQuestions.filter(q => q.topic === targetTopic);
+  // Filter questions to ONLY the module's topic
+  const moduleQuestions = allQuestions.filter(q => q.topic === moduleTopic);
+  
+  if (moduleQuestions.length === 0) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: `No questions found for topic: ${moduleTopic}` });
   }
 
-  // Fallback: If still no questions, use any from target difficulty
-  if (candidateQuestions.length === 0) {
-    candidateQuestions = allQuestions.filter(q => q.difficulty === targetDifficulty);
-  }
+  // Determine optimal difficulty based on performance in THIS topic
+  const targetDifficulty = determineOptimalDifficulty(metrics, moduleTopic);
+  console.log(`[Adaptive Quiz] Target difficulty: ${targetDifficulty}`);
 
-  // Fallback: Use any available question
+  // Filter questions by difficulty within the module topic
+  let candidateQuestions = moduleQuestions.filter(q => q.difficulty === targetDifficulty);
+
+  // Fallback: If no questions match target difficulty, use any difficulty from module topic
   if (candidateQuestions.length === 0) {
-    candidateQuestions = allQuestions;
+    console.log(`[Adaptive Quiz] No ${targetDifficulty} questions available, using any difficulty from ${moduleTopic}`);
+    candidateQuestions = moduleQuestions;
   }
 
   // Remove already answered questions
@@ -165,12 +161,12 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
   candidateQuestions = candidateQuestions.filter(q => !answeredIds.includes(q.id));
 
   // FINAL FALLBACK: If still no questions after removing answered ones,
-  // use ANY unanswered question from the module
+  // use ANY unanswered question from the MODULE TOPIC (never cross topic boundary)
   if (candidateQuestions.length === 0) {
-    candidateQuestions = allQuestions.filter(q => !answeredIds.includes(q.id));
+    candidateQuestions = moduleQuestions.filter(q => !answeredIds.includes(q.id));
     
     if (candidateQuestions.length === 0) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'No more questions available' });
+      throw new TRPCError({ code: 'NOT_FOUND', message: `No more unanswered questions available in topic: ${moduleTopic}` });
     }
   }
 
