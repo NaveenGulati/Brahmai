@@ -9,7 +9,7 @@
 import { z } from 'zod';
 import { router, parentProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
-import { selectQuestionsForChallenge, getComplexityPreview } from './question-selector';
+import { selectQuestionsForChallenge } from './question-selector';
 import { getStudentPerformanceSummary, analyzeQuizPerformance } from './performance-analyzer';
 import * as db from './db';
 import { getDb } from './db';
@@ -21,17 +21,6 @@ import { eq, and } from 'drizzle-orm';
  * Add these procedures to your parent router
  */
 export const adaptiveChallengeRouter = router({
-  /**
-   * Get complexity preview for UI
-   */
-  getComplexityPreview: parentProcedure
-    .input(z.object({
-      complexity: z.number().min(1).max(10),
-    }))
-    .query(({ input }) => {
-      return getComplexityPreview(input.complexity);
-    }),
-
   /**
    * Get student performance summary for a subject
    */
@@ -137,9 +126,7 @@ export const adaptiveChallengeRouter = router({
       childId: z.number(),
       moduleId: z.number(),
       questionCount: z.number().min(10).max(100),
-      complexity: z.number().min(1).max(10),
-      focusArea: z.enum(['strengthen', 'improve', 'neutral']),
-      useComplexityBoundaries: z.boolean().default(true),
+      focusArea: z.enum(['strengthen', 'improve', 'balanced']),
     }))
     .mutation(async ({ input, ctx }) => {
       const database = await getDb();
@@ -178,7 +165,6 @@ export const adaptiveChallengeRouter = router({
           topic: module.moduleName || '',
           childId: input.childId,
           questionCount: input.questionCount,
-          complexity: input.complexity,
           focusArea: input.focusArea,
         });
 
@@ -191,7 +177,7 @@ export const adaptiveChallengeRouter = router({
 
         // 3. Create challenge record with pre-selected questions
         const challengeTitle = `${module.subjectName} - ${module.moduleName}`;
-        const challengeMessage = `Complete ${input.questionCount} questions${input.useComplexityBoundaries ? ` at complexity level ${input.complexity}` : ' (fully adaptive)'}`;
+        const challengeMessage = `Complete ${input.questionCount} questions with ${input.focusArea} focus`;
 
         const result = await database.insert(challenges).values({
           assignedBy: ctx.user.id,
@@ -201,16 +187,12 @@ export const adaptiveChallengeRouter = router({
           title: challengeTitle,
           message: challengeMessage,
           questionCount: input.questionCount,
-          complexity: input.complexity,
           focusArea: input.focusArea,
           estimatedDuration,
-          difficultyDistribution: JSON.stringify(distribution),
-          selectedQuestionIds: input.useComplexityBoundaries ? JSON.stringify(questionIds) : null,
-          useComplexityBoundaries: input.useComplexityBoundaries,
           status: 'pending',
-        });
+        }).returning({ id: challenges.id });
 
-        const challengeId = Number(result.insertId);
+        const challengeId = result[0].id;
 
         return {
           challengeId,

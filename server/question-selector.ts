@@ -21,8 +21,7 @@ export interface QuestionSelectionConfig {
   topic: string;
   childId: number;
   questionCount: number; // 10-100
-  complexity: number; // 1-10
-  focusArea: 'strengthen' | 'improve' | 'neutral';
+  focusArea: 'strengthen' | 'improve' | 'balanced';
 }
 
 export interface DifficultyDistribution {
@@ -48,8 +47,8 @@ export async function selectQuestionsForChallenge(
   }
 
   try {
-    // 1. Calculate difficulty distribution based on complexity
-    const distribution = calculateDifficultyDistribution(config.complexity);
+    // 1. Calculate difficulty distribution based on focus area
+    const distribution = calculateDifficultyDistribution(config.focusArea);
 
     // 2. Get topic filter based on focus area
     const topicFilter = await getTopicFilter(config.childId, config.subject, config.focusArea);
@@ -87,50 +86,42 @@ export async function selectQuestionsForChallenge(
 }
 
 /**
- * Calculate difficulty distribution based on complexity level (1-10)
- * Progressive mixing within boundaries
+ * Calculate difficulty distribution based on focus area
+ * - strengthen: More easy questions (60% easy, 30% medium, 10% hard)
+ * - balanced: Even mix (33% easy, 34% medium, 33% hard)
+ * - improve: More hard questions (10% easy, 30% medium, 60% hard)
  */
-function calculateDifficultyDistribution(complexity: number): DifficultyDistribution {
-  // Boundary 1-4: Easy to Medium transition
-  if (complexity >= 1 && complexity <= 4) {
-    const mediumPercent = ((complexity - 1) / 3) * 40; // 0% at 1, 40% at 4
-    const easyPercent = 100 - mediumPercent;
-    return {
-      easy: Math.round(easyPercent),
-      medium: Math.round(mediumPercent),
-      hard: 0,
-    };
-  }
-
-  // Boundary 5-8: Medium to Hard transition
-  if (complexity >= 5 && complexity <= 8) {
-    const progress = (complexity - 5) / 3; // 0 at 5, 1 at 8
-    const easyPercent = 50 - (progress * 50); // 50% at 5, 0% at 8
-    const hardPercent = progress * 25; // 0% at 5, 25% at 8
-    const mediumPercent = 100 - easyPercent - hardPercent;
+function calculateDifficultyDistribution(focusArea: 'strengthen' | 'improve' | 'balanced'): DifficultyDistribution {
+  switch (focusArea) {
+    case 'strengthen':
+      return {
+        easy: 60,
+        medium: 30,
+        hard: 10,
+      };
     
-    return {
-      easy: Math.round(easyPercent),
-      medium: Math.round(mediumPercent),
-      hard: Math.round(hardPercent),
-    };
+    case 'balanced':
+      return {
+        easy: 33,
+        medium: 34,
+        hard: 33,
+      };
+    
+    case 'improve':
+      return {
+        easy: 10,
+        medium: 30,
+        hard: 60,
+      };
+    
+    default:
+      // Default to balanced
+      return {
+        easy: 33,
+        medium: 34,
+        hard: 33,
+      };
   }
-
-  // Complexity 9: 85% hard, 15% medium
-  if (complexity === 9) {
-    return {
-      easy: 0,
-      medium: 15,
-      hard: 85,
-    };
-  }
-
-  // Complexity 10: 100% hard
-  return {
-    easy: 0,
-    medium: 0,
-    hard: 100,
-  };
 }
 
 /**
@@ -139,9 +130,9 @@ function calculateDifficultyDistribution(complexity: number): DifficultyDistribu
 async function getTopicFilter(
   childId: number,
   subject: string,
-  focusArea: 'strengthen' | 'improve' | 'neutral'
+  focusArea: 'strengthen' | 'improve' | 'balanced'
 ): Promise<string[] | null> {
-  if (focusArea === 'neutral') {
+  if (focusArea === 'balanced') {
     return null; // No filtering
   }
 
@@ -313,35 +304,5 @@ function calculateEstimatedDuration(
 ): number {
   const totalSeconds = questions.reduce((sum, q) => sum + (q.timeLimit || 60), 0);
   return Math.ceil(totalSeconds / 60); // Convert to minutes
-}
-
-/**
- * Get complexity distribution preview (for UI display)
- */
-export function getComplexityPreview(complexity: number): {
-  level: string;
-  distribution: DifficultyDistribution;
-  description: string;
-} {
-  const distribution = calculateDifficultyDistribution(complexity);
-  
-  let level = 'Easy';
-  let description = 'Mostly easy questions';
-  
-  if (complexity >= 1 && complexity <= 4) {
-    level = 'Easy';
-    description = `${distribution.easy}% Easy, ${distribution.medium}% Medium`;
-  } else if (complexity >= 5 && complexity <= 8) {
-    level = 'Medium';
-    description = `${distribution.easy}% Easy, ${distribution.medium}% Medium, ${distribution.hard}% Hard`;
-  } else if (complexity === 9) {
-    level = 'Hard';
-    description = '85% Hard, 15% Medium';
-  } else {
-    level = 'Very Hard';
-    description = '100% Hard questions';
-  }
-  
-  return { level, distribution, description };
 }
 
