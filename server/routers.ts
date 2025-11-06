@@ -340,6 +340,32 @@ Format your response in clean markdown with:
         });
       }),
 
+    // Create adaptive challenge with Focus Area
+    createAdaptiveChallenge: parentProcedure
+      .input(z.object({
+        childId: z.number(),
+        moduleId: z.number(),
+        questionCount: z.number().min(10).max(100),
+        focusArea: z.enum(['strengthen', 'improve', 'balanced']),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        // Get module info for title
+        const module = await db.getModuleById(input.moduleId);
+        const title = `${module?.name || 'Quiz'} - ${input.questionCount} questions`;
+        
+        // Create challenge with focusArea
+        const challenge = await db.createChallenge({
+          assignedBy: ctx.user.id,
+          assignedTo: input.childId,
+          assignedToType: 'individual',
+          moduleId: input.moduleId,
+          title,
+          focusArea: input.focusArea,
+        });
+        
+        return { challengeId: challenge.id };
+      }),
+
     // Dismiss completed challenge
     dismissChallenge: parentProcedure
       .input(z.object({

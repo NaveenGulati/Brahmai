@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import ChallengeCreator from '@/components/ChallengeCreator';
+import ChallengeCreator from '@/components/ChallengeCreatorV2';
 // QuestionBankManager removed - now managed by QB Admin role
 
 // Format date as "29th Oct 2025, 11:22 AM"
