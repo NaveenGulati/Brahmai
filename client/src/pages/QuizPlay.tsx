@@ -249,6 +249,11 @@ export default function QuizPlay() {
   const progress = (currentQuestionNumber / totalQuestions) * 100;
 
   const handleSubmitAnswer = () => {
+    // Prevent duplicate submissions
+    if (submitAnswerMutation.isLoading || getNextQuestionMutation.isLoading) {
+      return;
+    }
+    
     if (!userAnswer.trim() && currentQuestion.questionType !== 'true_false') {
       toast.error("Please select an answer!");
       return;
