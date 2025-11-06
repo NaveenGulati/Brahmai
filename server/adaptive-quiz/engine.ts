@@ -279,8 +279,12 @@ export function determineOptimalDifficulty(
   targetTopic: string
 ): 'easy' | 'medium' | 'hard' {
   
+  console.log(`[Difficulty] Target topic: ${targetTopic}`);
+  console.log(`[Difficulty] Recent accuracy: ${metrics.recentAccuracy.toFixed(2)}, Overall: ${metrics.overallAccuracy.toFixed(2)}`);
+  
   // First question - start with medium
   if (metrics.questionsAnswered === 0) {
+    console.log(`[Difficulty] First question -> medium`);
     return 'medium';
   }
   
@@ -288,32 +292,36 @@ export function determineOptimalDifficulty(
   const recentAccuracy = metrics.recentAccuracy;
   const overallAccuracy = metrics.overallAccuracy;
   
+  console.log(`[Difficulty] Topic performance:`, topicPerf);
+  
   // RULE 1: First question in this topic - start medium
   if (!topicPerf || topicPerf.totalQuestions === 0) {
+    console.log(`[Difficulty] RULE 1: First question in topic -> medium`);
     return 'medium';
   }
   
   // RULE 2: Recent performance (last 5 questions across all topics)
   if (recentAccuracy < 0.4) {
-    // Struggling badly - drop to easy
+    console.log(`[Difficulty] RULE 2: Recent accuracy < 0.4 -> easy`);
     return 'easy';
   }
   
   if (recentAccuracy > 0.9) {
-    // Crushing it - jump to hard
+    console.log(`[Difficulty] RULE 2: Recent accuracy > 0.9 -> hard`);
     return 'hard';
   }
   
   // RULE 3: Topic-specific performance
   const topicAccuracy = topicPerf.accuracy;
+  console.log(`[Difficulty] Topic accuracy: ${topicAccuracy.toFixed(2)}`);
   
   if (topicAccuracy < 0.5) {
-    // Weak in this topic - easy
+    console.log(`[Difficulty] RULE 3: Topic accuracy < 0.5 -> easy`);
     return 'easy';
   }
   
   if (topicAccuracy > 0.8) {
-    // Strong in this topic - hard
+    console.log(`[Difficulty] RULE 3: Topic accuracy > 0.8 -> hard`);
     return 'hard';
   }
   
@@ -338,6 +346,7 @@ export function determineOptimalDifficulty(
   }
   
   // Default: medium
+  console.log(`[Difficulty] DEFAULT: No rule matched -> medium`);
   return 'medium';
 }
 
