@@ -486,9 +486,6 @@ Format your response in clean markdown with:
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to select first question' });
         }
 
-        // Points based on difficulty
-        const pointsByDifficulty = { easy: 5, medium: 10, hard: 15 };
-
         return {
           sessionId,
           totalQuestions: quizSize,
@@ -499,7 +496,7 @@ Format your response in clean markdown with:
             questionText: firstQuestion.questionText,
             questionImage: firstQuestion.questionImage,
             options: typeof firstQuestion.options === 'string' ? JSON.parse(firstQuestion.options) : firstQuestion.options,
-            points: pointsByDifficulty[firstQuestion.difficulty as keyof typeof pointsByDifficulty] || 10,
+            points: firstQuestion.points,
             timeLimit: firstQuestion.timeLimit,
             difficulty: firstQuestion.difficulty,
           },
@@ -522,11 +519,7 @@ Format your response in clean markdown with:
 
         const isCorrect = input.userAnswer.trim().toLowerCase() === 
                          question.correctAnswer.trim().toLowerCase();
-        
-        // Calculate points based on difficulty (same as startQuiz and getNextQuestion)
-        const pointsByDifficulty = { easy: 5, medium: 10, hard: 15 };
-        const questionPoints = pointsByDifficulty[question.difficulty as keyof typeof pointsByDifficulty] || 10;
-        const pointsEarned = isCorrect ? questionPoints : 0;
+        const pointsEarned = isCorrect ? question.points : 0;
 
         await db.createQuizResponse({
           sessionId: input.sessionId,
@@ -615,9 +608,6 @@ Format your response in clean markdown with:
           selectedQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
         }
 
-        // Points based on difficulty
-        const pointsByDifficulty = { easy: 5, medium: 10, hard: 15 };
-
         return {
           currentQuestionNumber: questionsAnswered + 2, // Next question number
           question: {
@@ -628,7 +618,7 @@ Format your response in clean markdown with:
             options: typeof selectedQuestion.options === 'string' 
               ? JSON.parse(selectedQuestion.options) 
               : selectedQuestion.options,
-            points: pointsByDifficulty[selectedQuestion.difficulty as keyof typeof pointsByDifficulty] || 10,
+            points: selectedQuestion.points,
             timeLimit: selectedQuestion.timeLimit,
             difficulty: selectedQuestion.difficulty,
           },
