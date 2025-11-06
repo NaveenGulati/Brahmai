@@ -445,9 +445,7 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
                 childId={childId}
                 childName={childName}
                 onSuccess={(challengeId) => {
-                  toast.success('Challenge created successfully!');
                   setIsChallengeOpen(false);
-                  refetch(); // Refresh challenges list
                 }}
                 onCancel={() => setIsChallengeOpen(false)}
                 mode="parent"

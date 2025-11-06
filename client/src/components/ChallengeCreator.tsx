@@ -47,6 +47,9 @@ export default function ChallengeCreator({
   onCancel,
   mode = 'parent',
 }: ChallengeCreatorProps) {
+  // tRPC utils for query invalidation
+  const utils = trpc.useUtils();
+  
   // Step management
   const [step, setStep] = useState(1);
 
@@ -98,6 +101,9 @@ export default function ChallengeCreator({
   const createChallenge = trpc.parent.createAdaptiveChallenge.useMutation({
     onSuccess: (data) => {
       toast.success('Challenge created successfully!');
+      // Invalidate challenges query to refresh the list
+      utils.parent.getPendingChallenges.invalidate();
+      utils.parent.getCompletedChallenges.invalidate();
       onSuccess?.(data.challengeId);
     },
     onError: (error) => {
