@@ -1610,7 +1610,7 @@ Remember: [main point]
 
 Write in a natural, spoken style as if you're talking to the student. Be direct and to the point.`;
 
-  if (q.questionType === 'mcq' && q.options) {
+  if (q.questionType === 'multiple_choice' && q.options) {
     prompt += `\n\nOptions:\n${q.options.join('\n')}`;
   }
 

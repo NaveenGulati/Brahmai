@@ -9,7 +9,7 @@ interface UserFriendlyQuestion {
   topic: string;
   subTopic?: string;
   scope: 'School' | 'Olympiad' | 'Competitive' | 'Advanced';
-  questionType: 'mcq' | 'true_false' | 'fill_blank' | 'match' | 'image_based';
+  questionType: 'multiple_choice' | 'true_false' | 'fill_blank' | 'short_answer';
   questionText: string;
   questionImage?: string;
   options: any;

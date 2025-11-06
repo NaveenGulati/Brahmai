@@ -437,7 +437,7 @@ export default function QuizReview() {
                       </div>
                       <p className="text-gray-700 mb-3">{response.questionText}</p>
 
-                      {response.questionType === 'mcq' && (
+                      {response.questionType === 'multiple_choice' && (
                         <div className="space-y-2 mb-3">
                           {response.options?.map((option: string, optIndex: number) => {
                             const isUserAnswer = option === response.userAnswer;
@@ -463,7 +463,7 @@ export default function QuizReview() {
                         </div>
                       )}
 
-                      {response.questionType !== 'mcq' && (
+                      {response.questionType !== 'multiple_choice' && (
                         <div className="grid grid-cols-2 gap-3 mb-3">
                           <div>
                             <p className="text-xs text-gray-600 mb-1">Your Answer:</p>
