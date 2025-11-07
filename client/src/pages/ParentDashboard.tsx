@@ -509,39 +509,54 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
           <div className="mt-4">
             <h4 className="font-semibold mb-2 text-green-700">✅ Completed Challenges</h4>
             <div className="space-y-3">
-              {completedChallenges.map((challenge) => (
-                <Card key={challenge.id} className="p-3 bg-green-50 border-green-200 relative">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      dismissChallengeMutation.mutate({ challengeId: challenge.id });
-                    }}
-                    className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors"
-                    title="Dismiss challenge"
-                  >
-                    ✕
-                  </button>
-                  <Link href={challenge.sessionId ? encryptedRoutes.quizReview(challenge.sessionId) : '#'}>
-                    <div className="hover:bg-green-100 cursor-pointer transition-colors p-1 -m-1 rounded">
-                      <div className="flex justify-between items-start mb-2 pr-6">
-                        <div className="flex-1">
-                          <p className="font-semibold text-sm text-gray-900">{challenge.subject?.name} - {challenge.module?.name}</p>
-                          <p className="text-xs text-gray-600 mt-1">Completed: {formatCompletedDate(challenge.completedAt!)}</p>
+              {completedChallenges.map((challenge) => {
+                const isSelfPractice = challenge.assignedBy === challenge.assignedTo;
+                const bgColor = isSelfPractice ? 'bg-blue-50' : 'bg-green-50';
+                const borderColor = isSelfPractice ? 'border-blue-200' : 'border-green-200';
+                const hoverColor = isSelfPractice ? 'hover:bg-blue-100' : 'hover:bg-green-100';
+                const scoreColor = isSelfPractice ? 'text-blue-600' : 'text-green-600';
+                
+                return (
+                  <Card key={challenge.id} className={`p-3 ${bgColor} ${borderColor} relative`}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        dismissChallengeMutation.mutate({ challengeId: challenge.id });
+                      }}
+                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors"
+                      title="Dismiss challenge"
+                    >
+                      ✕
+                    </button>
+                    <Link href={challenge.sessionId ? encryptedRoutes.quizReview(challenge.sessionId) : '#'}>
+                      <div className={`${hoverColor} cursor-pointer transition-colors p-1 -m-1 rounded`}>
+                        <div className="flex justify-between items-start mb-2 pr-6">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-sm text-gray-900">{challenge.subject?.name} - {challenge.module?.name}</p>
+                              {isSelfPractice && (
+                                <span className="px-2 py-0.5 text-xs font-medium bg-blue-200 text-blue-800 rounded-full">
+                                  🎯 Self-Practice
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-600 mt-1">Completed: {formatCompletedDate(challenge.completedAt!)}</p>
+                          </div>
+                          <span className={`text-lg font-bold ${scoreColor}`}>{challenge.session?.scorePercentage}%</span>
                         </div>
-                        <span className="text-lg font-bold text-green-600">{challenge.session?.scorePercentage}%</span>
+                        {challenge.session && (
+                          <div className="flex gap-4 text-xs text-gray-600">
+                            <span>✓ {challenge.session.correctAnswers}/{challenge.session.totalQuestions} correct</span>
+                            {challenge.session.timeTaken && (
+                              <span>⏱️ {Math.floor(challenge.session.timeTaken / 60)}m {challenge.session.timeTaken % 60}s</span>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      {challenge.session && (
-                        <div className="flex gap-4 text-xs text-gray-600">
-                          <span>✓ {challenge.session.correctAnswers}/{challenge.session.totalQuestions} correct</span>
-                          {challenge.session.timeTaken && (
-                            <span>⏱️ {Math.floor(challenge.session.timeTaken / 60)}m {challenge.session.timeTaken % 60}s</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                </Card>
-              ))}
+                    </Link>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         )}

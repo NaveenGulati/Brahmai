@@ -78,7 +78,10 @@ export default function ChildDashboard() {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
   
-  const pendingChallenges = challenges?.filter(c => c.status === 'pending') || [];
+  // Filter pending challenges, excluding self-assigned ones (reattempts)
+  const pendingChallenges = challenges?.filter(c => 
+    c.status === 'pending' && c.assignedBy !== c.assignedTo
+  ) || [];
   
   // Debug: Log challenge data
   console.log('All challenges:', challenges);
