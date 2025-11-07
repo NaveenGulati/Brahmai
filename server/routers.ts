@@ -319,6 +319,33 @@ Format your response in clean markdown with:
         return generateAudioForQuestion(input.questionId);
       }),
 
+    // Get word meaning using AI
+    getWordMeaning: parentProcedure
+      .input(z.object({ word: z.string() }))
+      .query(async ({ input }) => {
+        const OpenAI = (await import('openai')).default;
+        const openai = new OpenAI();
+        
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4.1-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful dictionary assistant. Provide clear, concise definitions suitable for students. Include part of speech, definition, and a simple example sentence.'
+            },
+            {
+              role: 'user',
+              content: `Define the word or phrase: "${input.word}"`
+            }
+          ],
+          max_tokens: 200,
+        });
+        
+        return {
+          meaning: response.choices[0]?.message?.content || 'Could not find meaning'
+        };
+      }),
+
     // Create challenge for child
     createChallenge: parentProcedure
       .input(z.object({
@@ -910,6 +937,33 @@ Format your response in clean markdown with:
       .input(z.object({ questionId: z.number() }))
       .mutation(async ({ input }) => {
         return generateAudioForQuestion(input.questionId);
+      }),
+
+    // Get word meaning using AI
+    getWordMeaning: publicProcedure
+      .input(z.object({ word: z.string() }))
+      .query(async ({ input }) => {
+        const OpenAI = (await import('openai')).default;
+        const openai = new OpenAI();
+        
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4.1-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful dictionary assistant. Provide clear, concise definitions suitable for students. Include part of speech, definition, and a simple example sentence.'
+            },
+            {
+              role: 'user',
+              content: `Define the word or phrase: "${input.word}"`
+            }
+          ],
+          max_tokens: 200,
+        });
+        
+        return {
+          meaning: response.choices[0]?.message?.content || 'Could not find meaning'
+        };
       }),
 
     // Get achievements (public for local auth)

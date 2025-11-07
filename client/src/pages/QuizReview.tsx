@@ -518,8 +518,8 @@ export default function QuizReview() {
                         </div>
                       )}
 
-                      {/* Detailed AI Explanation for wrong answers */}
-                      {!response.isCorrect && (
+                      {/* Detailed AI Explanation for all questions */}
+                      {(
                         <div className="mt-3">
                           {!expandedExplanations[response.questionId] ? (
                             <Button
