@@ -199,7 +199,7 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
       overallAccuracy: Math.round(metrics.overallAccuracy * 100),
       recentAccuracy: Math.round(metrics.recentAccuracy * 100),
       masteryScore: metrics.masteryScore,
-      currentFocus: targetTopic,
+      currentFocus: moduleTopic,
     },
   };
 }
