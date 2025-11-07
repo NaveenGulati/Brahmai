@@ -132,19 +132,24 @@ export default function QuizPlay() {
     };
 
     // Block browser back button
+    let isNavigatingAway = false;
+    
     const handlePopState = (e: PopStateEvent) => {
+      if (isNavigatingAway) return; // Already confirmed, allow navigation
+      
       const confirmExit = window.confirm(
         'You have a quiz in progress. If you leave, all progress will be lost and the session will be terminated. Are you sure you want to exit?'
       );
       
       if (!confirmExit) {
-        // Push the current state back to prevent navigation
+        // User cancelled - push state back to prevent navigation
         window.history.pushState(null, '', window.location.href);
       } else {
-        // User confirmed exit - allow navigation
-        // Note: Session will remain in database but won't be completed
+        // User confirmed exit - remove listeners and navigate back
+        isNavigatingAway = true;
         window.removeEventListener('beforeunload', handleBeforeUnload);
         window.removeEventListener('popstate', handlePopState);
+        window.history.back();
       }
     };
 
