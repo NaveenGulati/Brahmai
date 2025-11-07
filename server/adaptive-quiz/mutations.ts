@@ -147,18 +147,46 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
   const targetDifficulty = determineOptimalDifficulty(metrics, moduleTopic);
   console.log(`[Adaptive Quiz] Target difficulty: ${targetDifficulty}`);
 
-  // Filter questions by difficulty within the module topic
-  let candidateQuestions = moduleQuestions.filter(q => q.difficulty === targetDifficulty);
-
-  // Fallback: If no questions match target difficulty, use any difficulty from module topic
-  if (candidateQuestions.length === 0) {
-    console.log(`[Adaptive Quiz] No ${targetDifficulty} questions available, using any difficulty from ${moduleTopic}`);
-    candidateQuestions = moduleQuestions;
-  }
-
-  // Remove already answered questions
+  // Remove already answered questions first
   const answeredIds = responses.map(r => r.questionId);
-  candidateQuestions = candidateQuestions.filter(q => !answeredIds.includes(q.id));
+  const unansweredQuestions = moduleQuestions.filter(q => !answeredIds.includes(q.id));
+  
+  // Filter by target difficulty
+  let candidateQuestions = unansweredQuestions.filter(q => q.difficulty === targetDifficulty);
+  
+  // Progressive fallback: Try adjacent difficulties before giving up
+  if (candidateQuestions.length === 0) {
+    console.log(`[Adaptive Quiz] No unanswered ${targetDifficulty} questions, trying fallback...`);
+    
+    if (targetDifficulty === 'hard') {
+      // Try medium first, then easy
+      candidateQuestions = unansweredQuestions.filter(q => q.difficulty === 'medium');
+      if (candidateQuestions.length === 0) {
+        console.log(`[Adaptive Quiz] No medium questions, falling back to easy`);
+        candidateQuestions = unansweredQuestions.filter(q => q.difficulty === 'easy');
+      } else {
+        console.log(`[Adaptive Quiz] Using medium questions as fallback`);
+      }
+    } else if (targetDifficulty === 'easy') {
+      // Try medium first, then hard
+      candidateQuestions = unansweredQuestions.filter(q => q.difficulty === 'medium');
+      if (candidateQuestions.length === 0) {
+        console.log(`[Adaptive Quiz] No medium questions, falling back to hard`);
+        candidateQuestions = unansweredQuestions.filter(q => q.difficulty === 'hard');
+      } else {
+        console.log(`[Adaptive Quiz] Using medium questions as fallback`);
+      }
+    } else {
+      // Medium: try easy first (closer to current level), then hard
+      candidateQuestions = unansweredQuestions.filter(q => q.difficulty === 'easy');
+      if (candidateQuestions.length === 0) {
+        console.log(`[Adaptive Quiz] No easy questions, falling back to hard`);
+        candidateQuestions = unansweredQuestions.filter(q => q.difficulty === 'hard');
+      } else {
+        console.log(`[Adaptive Quiz] Using easy questions as fallback`);
+      }
+    }
+  }
 
   // FINAL FALLBACK: If still no questions after removing answered ones,
   // use ANY unanswered question from the MODULE TOPIC (never cross topic boundary)
