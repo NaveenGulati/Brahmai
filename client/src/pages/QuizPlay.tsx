@@ -2,6 +2,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { encryptedRoutes, decryptId } from "@shared/urlEncryption";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -32,6 +34,7 @@ export default function QuizPlay() {
   const [currentQuestion, setCurrentQuestion] = useState<any>(null);
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
+  const [focusArea, setFocusArea] = useState<'strengthen' | 'improve' | 'balanced'>('balanced');
   const [userAnswer, setUserAnswer] = useState("");
   const [timeLeft, setTimeLeft] = useState(0);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
@@ -46,9 +49,28 @@ export default function QuizPlay() {
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTimeoutSubmission, setIsTimeoutSubmission] = useState(false);
+  const [showReattemptDialog, setShowReattemptDialog] = useState(false);
+  const [reattemptParams, setReattemptParams] = useState<{
+    questionCount: number;
+    focusArea: 'strengthen' | 'improve' | 'balanced';
+  }>({ questionCount: 20, focusArea: 'balanced' });
   const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const utils = trpc.useUtils();
+
+  const createSelfChallengeMutation = trpc.child.createSelfChallenge.useMutation({
+    onSuccess: (data) => {
+      // Store challenge ID and navigate to quiz
+      localStorage.setItem('currentChallengeId', data.challengeId.toString());
+      setShowReattemptDialog(false);
+      // Reload to start new quiz
+      window.location.reload();
+    },
+    onError: (error) => {
+      console.error('Failed to create challenge:', error);
+      toast.error('Failed to create quiz. Please try again.');
+    },
+  });
 
   const startQuizMutation = trpc.child.startQuiz.useMutation({
     onSuccess: (data) => {
@@ -57,6 +79,7 @@ export default function QuizPlay() {
       setCurrentQuestion(data.question);
       setCurrentQuestionNumber(data.currentQuestionNumber);
       setTotalQuestions(data.totalQuestions);
+      setFocusArea(data.focusArea || 'balanced');
       setTimeLeft(data.question?.timeLimit || 60);
       setQuestionStartTime(Date.now());
     },
@@ -336,7 +359,17 @@ export default function QuizPlay() {
                 <Button className="flex-1" variant="outline" onClick={() => setLocation('/child')}>
                   Back to Dashboard
                 </Button>
-                <Button className="flex-1" variant="outline" onClick={() => window.location.reload()}>
+                <Button 
+                  className="flex-1" 
+                  variant="outline" 
+                  onClick={() => {
+                    setReattemptParams({
+                      questionCount: totalQuestions,
+                      focusArea: focusArea
+                    });
+                    setShowReattemptDialog(true);
+                  }}
+                >
                   Retry Quiz
                 </Button>
               </div>
@@ -568,6 +601,90 @@ export default function QuizPlay() {
           </div>
         </div>
       )}
+
+      {/* Reattempt Quiz Dialog */}
+      <Dialog open={showReattemptDialog} onOpenChange={setShowReattemptDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reattempt Quiz</DialogTitle>
+            <DialogDescription>
+              Customize your quiz parameters or keep the same settings from your previous attempt.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Question Count */}
+            <div className="space-y-2">
+              <Label htmlFor="questionCount">Number of Questions</Label>
+              <Input
+                id="questionCount"
+                type="number"
+                min="5"
+                max="50"
+                value={reattemptParams.questionCount}
+                onChange={(e) => setReattemptParams(prev => ({
+                  ...prev,
+                  questionCount: parseInt(e.target.value) || 20
+                }))}
+              />
+            </div>
+
+            {/* Focus Area */}
+            <div className="space-y-2">
+              <Label htmlFor="focusArea">Focus Area</Label>
+              <Select
+                value={reattemptParams.focusArea}
+                onValueChange={(value: 'strengthen' | 'improve' | 'balanced') => 
+                  setReattemptParams(prev => ({ ...prev, focusArea: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="strengthen">
+                    <div className="flex flex-col">
+                      <span className="font-medium">🛡️ Strengthen</span>
+                      <span className="text-xs text-gray-500">Build confidence with easier questions</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="balanced">
+                    <div className="flex flex-col">
+                      <span className="font-medium">⚖️ Balanced</span>
+                      <span className="text-xs text-gray-500">Even mix of all difficulty levels</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="improve">
+                    <div className="flex flex-col">
+                      <span className="font-medium">🚀 Improve</span>
+                      <span className="text-xs text-gray-500">Challenge yourself with harder questions</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReattemptDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                createSelfChallengeMutation.mutate({
+                  childId: childUser?.id,
+                  moduleId,
+                  questionCount: reattemptParams.questionCount,
+                  focusArea: reattemptParams.focusArea
+                });
+              }}
+              disabled={createSelfChallengeMutation.isLoading}
+            >
+              {createSelfChallengeMutation.isLoading ? 'Creating...' : 'Start Quiz'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

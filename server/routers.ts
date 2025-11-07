@@ -963,6 +963,37 @@ Format your response in clean markdown with:
         await db.updateChallenge(input.challengeId, { status: 'completed', sessionId: input.sessionId, completedAt: new Date() });
         return { success: true };
       }),
+
+    // Create self-challenge for reattempt (public for local auth)
+    createSelfChallenge: publicProcedure
+      .input(z.object({
+        childId: z.number().optional(),
+        moduleId: z.number(),
+        questionCount: z.number().min(5).max(50),
+        focusArea: z.enum(['strengthen', 'improve', 'balanced']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const userId = input.childId || ctx.user?.id;
+        if (!userId) {
+          throw new TRPCError({ code: 'UNAUTHORIZED' });
+        }
+        
+        // Get module info for title
+        const module = await db.getModuleById(input.moduleId);
+        const title = `${module?.name || 'Quiz'} - ${input.questionCount} questions`;
+        
+        // Create self-assigned challenge with focusArea
+        const result = await db.createChallenge({
+          assignedBy: userId, // Self-assigned
+          assignedTo: userId,
+          assignedToType: 'individual',
+          moduleId: input.moduleId,
+          title,
+          focusArea: input.focusArea,
+        });
+        
+        return { challengeId: result.id };
+      }),
   }),
 
   // ============= QB ADMIN MODULE =============
