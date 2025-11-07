@@ -120,6 +120,46 @@ export default function QuizPlay() {
     },
   });
 
+  // Block navigation when quiz is in progress
+  useEffect(() => {
+    if (!sessionId || isQuizComplete) return;
+
+    // Block page refresh/close
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'You have a quiz in progress. If you leave, all progress will be lost and the session will be terminated. Are you sure?';
+      return e.returnValue;
+    };
+
+    // Block browser back button
+    const handlePopState = (e: PopStateEvent) => {
+      const confirmExit = window.confirm(
+        'You have a quiz in progress. If you leave, all progress will be lost and the session will be terminated. Are you sure you want to exit?'
+      );
+      
+      if (!confirmExit) {
+        // Push the current state back to prevent navigation
+        window.history.pushState(null, '', window.location.href);
+      } else {
+        // User confirmed exit - allow navigation
+        // Note: Session will remain in database but won't be completed
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        window.removeEventListener('popstate', handlePopState);
+      }
+    };
+
+    // Push initial state to enable back button detection
+    window.history.pushState(null, '', window.location.href);
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [sessionId, isQuizComplete]);
+
   useEffect(() => {
     // Check for local child login first
     const storedUser = localStorage.getItem('childUser');
