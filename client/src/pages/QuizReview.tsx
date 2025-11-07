@@ -432,7 +432,7 @@ export default function QuizReview() {
                           response.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-red-100 text-red-800'
                         }`}>
-                          {response.difficulty?.toUpperCase()} • {response.points} pts
+                          {response.difficulty?.toUpperCase()} • {response.maxPoints} pts
                         </span>
                       </div>
                       <p className="text-gray-700 mb-3">{response.questionText}</p>
