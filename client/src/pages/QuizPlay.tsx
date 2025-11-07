@@ -37,6 +37,12 @@ export default function QuizPlay() {
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const [isQuizComplete, setIsQuizComplete] = useState(false);
   const [quizResults, setQuizResults] = useState<any>(null);
+  const [feedbackState, setFeedbackState] = useState<{
+    show: boolean;
+    isCorrect: boolean;
+    correctAnswer?: string;
+    pointsEarned?: number;
+  } | null>(null);
 
   const utils = trpc.useUtils();
 
@@ -59,23 +65,30 @@ export default function QuizPlay() {
 
   const submitAnswerMutation = trpc.child.submitAnswer.useMutation({
     onSuccess: (result) => {
-      if (result.isCorrect) {
-        toast.success(`Correct! +${result.pointsEarned} points`);
-      } else {
-        toast.error(`Wrong! Correct answer: ${result.correctAnswer}`);
-      }
+      // Show prominent feedback
+      setFeedbackState({
+        show: true,
+        isCorrect: result.isCorrect,
+        correctAnswer: result.correctAnswer,
+        pointsEarned: result.pointsEarned,
+      });
       
-      // Check if quiz is complete
-      if (currentQuestionNumber >= totalQuestions) {
-        // Quiz complete
-        completeQuizMutation.mutate({ 
-          sessionId: sessionId!,
-          childId: childUser?.id
-        });
-      } else {
-        // Fetch next adaptive question
-        getNextQuestionMutation.mutate({ sessionId: sessionId! });
-      }
+      // Auto-advance after 2 seconds
+      setTimeout(() => {
+        setFeedbackState(null);
+        
+        // Check if quiz is complete
+        if (currentQuestionNumber >= totalQuestions) {
+          // Quiz complete
+          completeQuizMutation.mutate({ 
+            sessionId: sessionId!,
+            childId: childUser?.id
+          });
+        } else {
+          // Fetch next adaptive question
+          getNextQuestionMutation.mutate({ sessionId: sessionId! });
+        }
+      }, 2000);
     },
   });
 
@@ -202,14 +215,19 @@ export default function QuizPlay() {
 
   // Timer countdown
   useEffect(() => {
-    if (timeLeft > 0 && !isQuizComplete) {
+    if (timeLeft > 0 && !isQuizComplete && !feedbackState) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && sessionId && !isQuizComplete) {
-      // Auto-submit on timeout
-      handleSubmitAnswer();
+    } else if (timeLeft === 0 && sessionId && !isQuizComplete && !feedbackState) {
+      // Auto-submit on timeout with empty answer
+      submitAnswerMutation.mutate({
+        sessionId: sessionId!,
+        questionId: currentQuestion.id,
+        userAnswer: "", // Empty answer = unanswered
+        timeSpent: Math.floor((Date.now() - questionStartTime) / 1000),
+      });
     }
-  }, [timeLeft, isQuizComplete]);
+  }, [timeLeft, isQuizComplete, feedbackState]);
 
   if (loading || !sessionId || !currentQuestion) {
     return (
@@ -432,6 +450,58 @@ export default function QuizPlay() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Prominent Feedback Overlay */}
+      {feedbackState && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full transform transition-all ${
+            feedbackState.isCorrect ? 'border-4 border-green-500' : 'border-4 border-red-500'
+          }`}>
+            <div className="text-center">
+              {/* Icon */}
+              <div className={`w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center ${
+                feedbackState.isCorrect ? 'bg-green-100' : 'bg-red-100'
+              }`}>
+                {feedbackState.isCorrect ? (
+                  <svg className="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-16 h-16 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                )}
+              </div>
+
+              {/* Title */}
+              <h2 className={`text-4xl font-bold mb-4 ${
+                feedbackState.isCorrect ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {feedbackState.isCorrect ? '🎉 Correct!' : '❌ Incorrect'}
+              </h2>
+
+              {/* Points or Correct Answer */}
+              {feedbackState.isCorrect ? (
+                <p className="text-2xl text-gray-700 font-semibold">
+                  +{feedbackState.pointsEarned} points
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-lg text-gray-600">The correct answer is:</p>
+                  <p className="text-2xl font-bold text-gray-900 bg-gray-100 p-4 rounded-lg">
+                    {feedbackState.correctAnswer}
+                  </p>
+                </div>
+              )}
+
+              {/* Auto-advance indicator */}
+              <div className="mt-6 text-sm text-gray-500">
+                Moving to next question...
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
