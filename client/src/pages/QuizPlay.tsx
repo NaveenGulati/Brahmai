@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 
@@ -40,10 +40,13 @@ export default function QuizPlay() {
   const [feedbackState, setFeedbackState] = useState<{
     show: boolean;
     isCorrect: boolean;
+    isTimeout?: boolean;
     correctAnswer?: string;
     pointsEarned?: number;
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTimeoutSubmission, setIsTimeoutSubmission] = useState(false);
+  const autoAdvanceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const utils = trpc.useUtils();
 
@@ -67,21 +70,34 @@ export default function QuizPlay() {
   const submitAnswerMutation = trpc.child.submitAnswer.useMutation({
     onSuccess: (result) => {
       setIsSubmitting(false);
+      
+      // Clear any existing auto-advance timer
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+      
       // Show prominent feedback
       setFeedbackState({
         show: true,
         isCorrect: result.isCorrect,
+        isTimeout: isTimeoutSubmission,
         correctAnswer: result.correctAnswer,
         pointsEarned: result.pointsEarned,
       });
       
+      const wasTimeout = isTimeoutSubmission;
+      // Reset timeout flag
+      setIsTimeoutSubmission(false);
+      
       // For correct answers, auto-advance after 1.5 seconds
+      // For incorrect answers or timeouts, wait for user to click OK button
       if (result.isCorrect) {
-        setTimeout(() => {
+        autoAdvanceTimerRef.current = setTimeout(() => {
           handleAdvanceToNext();
+          autoAdvanceTimerRef.current = null;
         }, 1500);
       }
-      // For incorrect answers, wait for user to click OK button
     },
     onError: (error) => {
       setIsSubmitting(false);
@@ -91,6 +107,12 @@ export default function QuizPlay() {
   });
 
   const handleAdvanceToNext = () => {
+    // Clear any pending auto-advance timer
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    
     setFeedbackState(null);
     
     // Check if quiz is complete (we've answered all questions)
@@ -189,6 +211,11 @@ export default function QuizPlay() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('popstate', handlePopState);
+      // Clear any pending auto-advance timer on cleanup
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
     };
   }, [sessionId, isQuizComplete]);
 
@@ -232,8 +259,10 @@ export default function QuizPlay() {
     if (timeLeft > 0 && !isQuizComplete && !feedbackState) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && sessionId && !isQuizComplete && !feedbackState) {
+    } else if (timeLeft === 0 && sessionId && !isQuizComplete && !feedbackState && !isSubmitting) {
       // Auto-submit on timeout with empty answer
+      setIsTimeoutSubmission(true);
+      setIsSubmitting(true);
       submitAnswerMutation.mutate({
         sessionId: sessionId!,
         questionId: currentQuestion.id,
@@ -470,16 +499,20 @@ export default function QuizPlay() {
       {feedbackState && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className={`bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full transform transition-all ${
-            feedbackState.isCorrect ? 'border-4 border-green-500' : 'border-4 border-red-500'
+            feedbackState.isCorrect ? 'border-4 border-green-500' : feedbackState.isTimeout ? 'border-4 border-orange-500' : 'border-4 border-red-500'
           }`}>
             <div className="text-center">
               {/* Icon */}
               <div className={`w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center ${
-                feedbackState.isCorrect ? 'bg-green-100' : 'bg-red-100'
+                feedbackState.isCorrect ? 'bg-green-100' : feedbackState.isTimeout ? 'bg-orange-100' : 'bg-red-100'
               }`}>
                 {feedbackState.isCorrect ? (
                   <svg className="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : feedbackState.isTimeout ? (
+                  <svg className="w-16 h-16 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 ) : (
                   <svg className="w-16 h-16 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -490,9 +523,9 @@ export default function QuizPlay() {
 
               {/* Title */}
               <h2 className={`text-4xl font-bold mb-4 ${
-                feedbackState.isCorrect ? 'text-green-600' : 'text-red-600'
+                feedbackState.isCorrect ? 'text-green-600' : feedbackState.isTimeout ? 'text-orange-600' : 'text-red-600'
               }`}>
-                {feedbackState.isCorrect ? '🎉 Correct!' : '❌ Incorrect'}
+                {feedbackState.isCorrect ? '🎉 Correct!' : feedbackState.isTimeout ? '⏰ Time\'s Up!' : '❌ Incorrect'}
               </h2>
 
               {/* Points or Correct Answer */}
