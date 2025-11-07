@@ -397,6 +397,8 @@ export function selectBestQuestion(
     recentTopics: string[];
     recentQuestionIds: number[];
     studentAvgTime: number;
+    focusArea?: string;
+    questionHistory?: Record<number, { attempts: number; correct: number }>;
   }
 ): any {
   
@@ -424,6 +426,8 @@ function scoreQuestion(
     recentTopics: string[];
     recentQuestionIds: number[];
     studentAvgTime: number;
+    focusArea?: string;
+    questionHistory?: Record<number, { attempts: number; correct: number }>;
   }
 ): number {
   let score = 100;
@@ -450,6 +454,41 @@ function scoreQuestion(
   // 4. Freshness (25% weight)
   if (context.recentQuestionIds.includes(question.id)) {
     score = 0; // Already answered - exclude completely
+  }
+  
+  // 5. Focus Area Adjustment (40% weight)
+  if (context.focusArea && context.questionHistory) {
+    const history = context.questionHistory[question.id];
+    
+    if (context.focusArea === 'improve') {
+      // IMPROVE: Prioritize questions the student has answered incorrectly
+      if (history && history.attempts > 0) {
+        const accuracy = history.correct / history.attempts;
+        if (accuracy < 0.5) {
+          // Student struggles with this question - HIGH priority
+          score += 40;
+        } else if (accuracy >= 0.8) {
+          // Student has mastered this question - LOW priority
+          score -= 40;
+        }
+      }
+    } else if (context.focusArea === 'strengthen') {
+      // STRENGTHEN: Prioritize questions the student has answered correctly (build confidence)
+      if (history && history.attempts > 0) {
+        const accuracy = history.correct / history.attempts;
+        if (accuracy >= 0.8) {
+          // Student has mastered this question - HIGH priority (reinforce)
+          score += 40;
+        } else if (accuracy < 0.5) {
+          // Student struggles with this question - LOW priority
+          score -= 40;
+        }
+      } else {
+        // Never attempted - MEDIUM priority for strengthen
+        score += 20;
+      }
+    }
+    // BALANCED: No adjustment (default scoring)
   }
   
   return score;

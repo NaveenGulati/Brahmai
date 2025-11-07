@@ -520,6 +520,23 @@ export async function getSessionResponses(sessionId: number) {
     .orderBy(quizResponses.id);
 }
 
+export async function getChildResponses(childId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Get all responses for this child across all sessions
+  const sessions = await db.select({ id: quizSessions.id })
+    .from(quizSessions)
+    .where(eq(quizSessions.childId, childId));
+  
+  const sessionIds = sessions.map(s => s.id);
+  if (sessionIds.length === 0) return [];
+  
+  return db.select().from(quizResponses)
+    .where(inArray(quizResponses.sessionId, sessionIds))
+    .orderBy(quizResponses.id);
+}
+
 export async function getSessionResponsesWithQuestions(sessionId: number) {
   const db = await getDb();
   if (!db) return [];

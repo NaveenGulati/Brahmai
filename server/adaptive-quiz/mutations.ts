@@ -198,11 +198,24 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
     }
   }
 
+  // Get student's historical performance on all questions (across all sessions)
+  const allStudentResponses = await dbAdapter.getChildResponses(session.childId);
+  const questionHistory = allStudentResponses.reduce((acc, r) => {
+    if (!acc[r.questionId]) {
+      acc[r.questionId] = { attempts: 0, correct: 0 };
+    }
+    acc[r.questionId].attempts++;
+    if (r.isCorrect) acc[r.questionId].correct++;
+    return acc;
+  }, {} as Record<number, { attempts: number; correct: number }>);
+
   // Select best question using quality scoring
   const selectedQuestion = selectBestQuestion(candidateQuestions, {
     recentTopics: metrics.recentTopics,
     recentQuestionIds: answeredIds.slice(-5),
     studentAvgTime: metrics.avgTimePerQuestion,
+    focusArea: focusArea,
+    questionHistory: questionHistory,
   });
   console.log(`[Adaptive Quiz] Selected question ${selectedQuestion.id} from ${candidateQuestions.length} candidates`);
 

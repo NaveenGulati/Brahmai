@@ -54,6 +54,10 @@ export async function getSessionResponses(sessionId: number) {
   return db.getSessionResponses(sessionId);
 }
 
+export async function getChildResponses(childId: number) {
+  return db.getChildResponses(childId);
+}
+
 export async function saveResponse(data: {
   sessionId: number;
   questionId: number;
