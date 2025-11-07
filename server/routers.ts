@@ -982,13 +982,14 @@ Format your response in clean markdown with:
         const module = await db.getModuleById(input.moduleId);
         const title = `${module?.name || 'Quiz'} - ${input.questionCount} questions`;
         
-        // Create self-assigned challenge with focusArea
+        // Create self-assigned challenge with focusArea and questionCount
         const result = await db.createChallenge({
           assignedBy: userId, // Self-assigned
           assignedTo: userId,
           assignedToType: 'individual',
           moduleId: input.moduleId,
           title,
+          questionCount: input.questionCount,
           focusArea: input.focusArea,
         });
         
