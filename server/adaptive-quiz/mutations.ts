@@ -149,7 +149,10 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
 
   // Remove already answered questions first
   const answeredIds = responses.map(r => r.questionId);
+  console.log(`[Adaptive Quiz] Filtering out answered questions:`, answeredIds);
+  console.log(`[Adaptive Quiz] Total module questions: ${moduleQuestions.length}`);
   const unansweredQuestions = moduleQuestions.filter(q => !answeredIds.includes(q.id));
+  console.log(`[Adaptive Quiz] Unanswered questions remaining: ${unansweredQuestions.length}`);
   
   // Filter by target difficulty
   let candidateQuestions = unansweredQuestions.filter(q => q.difficulty === targetDifficulty);
@@ -214,10 +217,16 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
     recentTopics: metrics.recentTopics,
     recentQuestionIds: answeredIds.slice(-5),
     studentAvgTime: metrics.avgTimePerQuestion,
-    focusArea: focusArea,
+    focusArea: (session.focusArea as FocusArea) || 'balanced',
     questionHistory: questionHistory,
   });
-  console.log(`[Adaptive Quiz] Selected question ${selectedQuestion.id} from ${candidateQuestions.length} candidates`);
+  console.log(`[Adaptive Quiz] Selected question ${selectedQuestion.id} (difficulty: ${selectedQuestion.difficulty}) from ${candidateQuestions.length} candidates`);
+  
+  // Safety check: Ensure we're not repeating a question
+  if (answeredIds.includes(selectedQuestion.id)) {
+    console.error(`[Adaptive Quiz] ERROR: Selected question ${selectedQuestion.id} was already answered! This should never happen.`);
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Question selection error: duplicate question selected' });
+  }
 
   return {
     currentQuestionNumber: responses.length + 1,

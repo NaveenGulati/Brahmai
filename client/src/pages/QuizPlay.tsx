@@ -43,6 +43,7 @@ export default function QuizPlay() {
     correctAnswer?: string;
     pointsEarned?: number;
   } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const utils = trpc.useUtils();
 
@@ -65,6 +66,7 @@ export default function QuizPlay() {
 
   const submitAnswerMutation = trpc.child.submitAnswer.useMutation({
     onSuccess: (result) => {
+      setIsSubmitting(false);
       // Show prominent feedback
       setFeedbackState({
         show: true,
@@ -80,6 +82,11 @@ export default function QuizPlay() {
         }, 1500);
       }
       // For incorrect answers, wait for user to click OK button
+    },
+    onError: (error) => {
+      setIsSubmitting(false);
+      console.error('Failed to submit answer:', error);
+      toast.error('Failed to submit answer');
     },
   });
 
@@ -320,7 +327,7 @@ export default function QuizPlay() {
 
   const handleSubmitAnswer = () => {
     // Prevent duplicate submissions
-    if (submitAnswerMutation.isLoading || getNextQuestionMutation.isLoading) {
+    if (isSubmitting || submitAnswerMutation.isPending || getNextQuestionMutation.isPending) {
       return;
     }
     
@@ -330,6 +337,7 @@ export default function QuizPlay() {
     }
 
     const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
+    setIsSubmitting(true);
     
     submitAnswerMutation.mutate({
       sessionId: sessionId!,
