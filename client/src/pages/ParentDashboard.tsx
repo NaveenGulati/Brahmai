@@ -532,8 +532,11 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
                       <div className={`${hoverColor} cursor-pointer transition-colors p-1 -m-1 rounded`}>
                         <div className="flex justify-between items-start mb-2 pr-6">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="font-semibold text-sm text-gray-900">{challenge.subject?.name} - {challenge.module?.name}</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-sm text-gray-900">
+                                {challenge.sessionId && `Quiz #${challenge.sessionId} | `}
+                                {challenge.subject?.name} - {challenge.module?.name}
+                              </p>
                               {isSelfPractice && (
                                 <span className="px-2 py-0.5 text-xs font-medium bg-blue-200 text-blue-800 rounded-full">
                                   🎯 Self-Practice
