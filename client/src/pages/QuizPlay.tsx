@@ -130,6 +130,9 @@ export default function QuizPlay() {
 
   const getNextQuestionMutation = trpc.child.getNextQuestion.useMutation({
     onSuccess: (data) => {
+      // Ensure feedback is cleared (defensive programming)
+      setFeedbackState(null);
+      
       setCurrentQuestion(data.question);
       setCurrentQuestionNumber(data.currentQuestionNumber);
       setUserAnswer("");
