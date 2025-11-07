@@ -655,7 +655,8 @@ export async function awardAchievement(userId: number, achievementId: number) {
 export async function createChallenge(data: InsertChallenge) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.insert(challenges).values(data);
+  const result = await db.insert(challenges).values(data).returning();
+  return result[0];
 }
 
 export async function getChallengesForChild(childId: number) {
