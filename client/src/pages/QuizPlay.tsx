@@ -113,7 +113,10 @@ export default function QuizPlay() {
       autoAdvanceTimerRef.current = null;
     }
     
+    // Clear feedback and reset timer BEFORE fetching next question
+    // This prevents race condition where feedback shows on new question
     setFeedbackState(null);
+    setTimeLeft(60); // Reset to default, will be overwritten by actual question time
     
     // Check if quiz is complete (we've answered all questions)
     if (currentQuestionNumber >= totalQuestions) {
