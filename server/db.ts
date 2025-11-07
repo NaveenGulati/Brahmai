@@ -449,6 +449,15 @@ export async function getQuizSessionById(id: number) {
 export async function updateQuizSession(id: number, data: Partial<InsertQuizSession>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  
+  // Clear cache if quiz is being marked as completed
+  if (data.isCompleted === true) {
+    const session = await getQuizSessionById(id);
+    if (session) {
+      clearChildResponsesCache(session.childId);
+    }
+  }
+  
   return db.update(quizSessions).set(data).where(eq(quizSessions.id, id));
 }
 
@@ -520,21 +529,54 @@ export async function getSessionResponses(sessionId: number) {
     .orderBy(quizResponses.id);
 }
 
+// Cache for child responses (cleared on server restart)
+const childResponsesCache = new Map<number, { data: any[], timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export async function getChildResponses(childId: number) {
   const db = await getDb();
   if (!db) return [];
   
-  // Get all responses for this child across all sessions
-  const sessions = await db.select({ id: quizSessions.id })
+  // Check cache first
+  const cached = childResponsesCache.get(childId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+  
+  // Get responses from recent sessions only (last 100 sessions or 90 days)
+  const recentSessions = await db.select({ id: quizSessions.id })
     .from(quizSessions)
-    .where(eq(quizSessions.childId, childId));
+    .where(and(
+      eq(quizSessions.childId, childId),
+      gte(quizSessions.createdAt, new Date(Date.now() - 90 * 24 * 60 * 60 * 1000))
+    ))
+    .orderBy(desc(quizSessions.createdAt))
+    .limit(100);
   
-  const sessionIds = sessions.map(s => s.id);
-  if (sessionIds.length === 0) return [];
+  const sessionIds = recentSessions.map(s => s.id);
+  if (sessionIds.length === 0) {
+    childResponsesCache.set(childId, { data: [], timestamp: Date.now() });
+    return [];
+  }
   
-  return db.select().from(quizResponses)
+  // Fetch only necessary fields for performance
+  const responses = await db.select({
+    questionId: quizResponses.questionId,
+    isCorrect: quizResponses.isCorrect,
+    sessionId: quizResponses.sessionId,
+  }).from(quizResponses)
     .where(inArray(quizResponses.sessionId, sessionIds))
     .orderBy(quizResponses.id);
+  
+  // Cache the result
+  childResponsesCache.set(childId, { data: responses, timestamp: Date.now() });
+  
+  return responses;
+}
+
+// Clear cache for a specific child (call after quiz completion)
+export function clearChildResponsesCache(childId: number) {
+  childResponsesCache.delete(childId);
 }
 
 export async function getSessionResponsesWithQuestions(sessionId: number) {

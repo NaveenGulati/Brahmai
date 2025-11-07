@@ -1,14 +1,29 @@
 /**
  * ============================================
- * ADAPTIVE QUESTION SELECTOR
+ * LEGACY QUESTION SELECTOR (Pre-Selection)
  * ============================================
- * Selects questions for challenges based on:
- * - Complexity level (1-10)
- * - Focus area (strengthen/improve/neutral)
- * - Student performance data
- * - Progressive difficulty mixing
  * 
- * This is the core algorithm for adaptive challenge creation
+ * ⚠️ NOTE: This is the OLD challenge creation system.
+ * 
+ * This module is used ONLY for creating challenges via the
+ * adaptive-challenge-router (parent creates challenge for child).
+ * 
+ * It PRE-SELECTS questions based on a fixed difficulty distribution:
+ * - Strengthen: 60% easy, 30% medium, 10% hard
+ * - Balanced: 33% easy, 34% medium, 33% hard
+ * - Improve: 10% easy, 30% medium, 60% hard
+ * 
+ * However, these pre-selected questions are NOT actually used during
+ * quiz execution. The NEW adaptive quiz system (adaptive-quiz/mutations.ts)
+ * dynamically selects questions based on real-time performance.
+ * 
+ * This module is kept for backwards compatibility with the challenge
+ * creation flow, but the actual adaptive logic happens in:
+ * - adaptive-quiz/mutations.ts (question selection during quiz)
+ * - adaptive-quiz/engine.ts (difficulty determination)
+ * 
+ * TODO: Consider refactoring challenge creation to remove pre-selection
+ * and only store metadata (focusArea, questionCount).
  */
 
 import { eq, and, inArray, sql } from 'drizzle-orm';
