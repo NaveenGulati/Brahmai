@@ -73,24 +73,31 @@ export default function QuizPlay() {
         pointsEarned: result.pointsEarned,
       });
       
-      // Auto-advance after 2 seconds
-      setTimeout(() => {
-        setFeedbackState(null);
-        
-        // Check if quiz is complete
-        if (currentQuestionNumber >= totalQuestions) {
-          // Quiz complete
-          completeQuizMutation.mutate({ 
-            sessionId: sessionId!,
-            childId: childUser?.id
-          });
-        } else {
-          // Fetch next adaptive question
-          getNextQuestionMutation.mutate({ sessionId: sessionId! });
-        }
-      }, 2000);
+      // For correct answers, auto-advance after 1.5 seconds
+      if (result.isCorrect) {
+        setTimeout(() => {
+          handleAdvanceToNext();
+        }, 1500);
+      }
+      // For incorrect answers, wait for user to click OK button
     },
   });
+
+  const handleAdvanceToNext = () => {
+    setFeedbackState(null);
+    
+    // Check if quiz is complete (we've answered all questions)
+    if (currentQuestionNumber >= totalQuestions) {
+      // Quiz complete
+      completeQuizMutation.mutate({ 
+        sessionId: sessionId!,
+        childId: childUser?.id
+      });
+    } else {
+      // Fetch next adaptive question
+      getNextQuestionMutation.mutate({ sessionId: sessionId! });
+    }
+  };
 
   const getNextQuestionMutation = trpc.child.getNextQuestion.useMutation({
     onSuccess: (data) => {
@@ -494,10 +501,22 @@ export default function QuizPlay() {
                 </div>
               )}
 
-              {/* Auto-advance indicator */}
-              <div className="mt-6 text-sm text-gray-500">
-                Moving to next question...
-              </div>
+              {/* Action button for incorrect answers */}
+              {!feedbackState.isCorrect && (
+                <button
+                  onClick={handleAdvanceToNext}
+                  className="mt-6 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+                >
+                  OK, Got it!
+                </button>
+              )}
+              
+              {/* Auto-advance indicator for correct answers */}
+              {feedbackState.isCorrect && (
+                <div className="mt-6 text-sm text-gray-500">
+                  Moving to next question...
+                </div>
+              )}
             </div>
           </div>
         </div>
