@@ -260,7 +260,9 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     const wasPlaying = !audioRef.current.paused;
     audioRef.current.currentTime = targetTime;
+    // Update BOTH state and ref to keep them in sync
     setCurrentParagraphIndex(nextIndex);
+    currentParagraphIndexRef.current = nextIndex;
     if (onHighlightChange) {
       onHighlightChange(nextIndex);
     }
@@ -288,7 +290,9 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     const wasPlaying = !audioRef.current.paused;
     audioRef.current.currentTime = targetTime;
+    // Update BOTH state and ref to keep them in sync
     setCurrentParagraphIndex(prevIndex);
+    currentParagraphIndexRef.current = prevIndex;
     if (onHighlightChange) {
       onHighlightChange(prevIndex);
     }
