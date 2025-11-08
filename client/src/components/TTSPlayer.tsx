@@ -41,7 +41,8 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const sentencesRef = useRef<string[]>([]);
   const sentenceTimingsRef = useRef<number[]>([]);
-  const highlightIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const highlightIntervalRef = useRef<((this: HTMLAudioElement, ev: Event) => any) | null>(null);
+  const handleEndedRef = useRef<((this: HTMLAudioElement, ev: Event) => any) | null>(null);
   const currentParagraphIndexRef = useRef<number>(0);
 
   // Audio generation mutations
@@ -188,13 +189,22 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     };
     
     audioRef.current.addEventListener('ended', handleEnded);
+    handleEndedRef.current = handleEnded; // Store for cleanup
   };
 
   const stopHighlighting = () => {
-    if (highlightIntervalRef.current && audioRef.current) {
-      // Remove the timeupdate event listener
-      audioRef.current.removeEventListener('timeupdate', highlightIntervalRef.current as any);
-      highlightIntervalRef.current = null;
+    console.log('[TTS stopHighlighting] Cleaning up event listeners');
+    if (audioRef.current) {
+      // Remove timeupdate listener if it exists
+      if (highlightIntervalRef.current) {
+        audioRef.current.removeEventListener('timeupdate', highlightIntervalRef.current);
+        highlightIntervalRef.current = null;
+      }
+      // Remove ended listener if it exists
+      if (handleEndedRef.current) {
+        audioRef.current.removeEventListener('ended', handleEndedRef.current);
+        handleEndedRef.current = null;
+      }
     }
     if (onHighlightChange) {
       onHighlightChange(-1); // Clear highlight
