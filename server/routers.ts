@@ -324,7 +324,9 @@ Format your response in clean markdown with:
       .input(z.object({ word: z.string() }))
       .query(async ({ input }) => {
         const OpenAI = (await import('openai')).default;
-        const openai = new OpenAI();
+        const openai = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY,
+        });
         
         const response = await openai.chat.completions.create({
           model: 'gpt-4.1-mini',
@@ -944,7 +946,9 @@ Format your response in clean markdown with:
       .input(z.object({ word: z.string() }))
       .query(async ({ input }) => {
         const OpenAI = (await import('openai')).default;
-        const openai = new OpenAI();
+        const openai = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY,
+        });
         
         const response = await openai.chat.completions.create({
           model: 'gpt-4.1-mini',
