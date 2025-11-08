@@ -219,10 +219,18 @@ export function TTSPlayer({ questionId, isChild, explanationText, onHighlightCha
     const targetProgress = nextIndex === 0 ? 0 : sentenceTimingsRef.current[nextIndex - 1];
     const targetTime = targetProgress * duration;
     
+    console.log(`[TTS Skip Forward] Current: ${currentParagraphIndex}, Next: ${nextIndex}, Progress: ${(targetProgress * 100).toFixed(1)}%, Time: ${targetTime.toFixed(2)}s / ${duration.toFixed(2)}s`);
+    
+    const wasPlaying = !audioRef.current.paused;
     audioRef.current.currentTime = targetTime;
     setCurrentParagraphIndex(nextIndex);
     if (onHighlightChange) {
       onHighlightChange(nextIndex);
+    }
+    
+    // Resume playing if it was playing
+    if (wasPlaying && audioRef.current.paused) {
+      audioRef.current.play();
     }
   };
 
@@ -237,10 +245,18 @@ export function TTSPlayer({ questionId, isChild, explanationText, onHighlightCha
     const targetProgress = prevIndex === 0 ? 0 : sentenceTimingsRef.current[prevIndex - 1];
     const targetTime = targetProgress * duration;
     
+    console.log(`[TTS Skip Backward] Current: ${currentParagraphIndex}, Prev: ${prevIndex}, Progress: ${(targetProgress * 100).toFixed(1)}%, Time: ${targetTime.toFixed(2)}s / ${duration.toFixed(2)}s`);
+    
+    const wasPlaying = !audioRef.current.paused;
     audioRef.current.currentTime = targetTime;
     setCurrentParagraphIndex(prevIndex);
     if (onHighlightChange) {
       onHighlightChange(prevIndex);
+    }
+    
+    // Resume playing if it was playing
+    if (wasPlaying && audioRef.current.paused) {
+      audioRef.current.play();
     }
   };
 

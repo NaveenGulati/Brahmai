@@ -542,43 +542,34 @@ export default function QuizReview() {
                               )}
                             </Button>
                           ) : (
-                            <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg">
-                              <div className="flex items-center gap-2 mb-3">
+                            <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg overflow-hidden">
+                              <div className="flex items-center gap-2 p-4 pb-3">
                                 <Brain className="w-5 h-5 text-purple-600" />
                                 <h4 className="font-semibold text-purple-900">AI Detailed Explanation</h4>
                               </div>
                               
-                              {/* Audio player at top */}
-                              <div className="mb-3">
-                                <TTSPlayer
-                                  questionId={response.questionId}
-                                  isChild={isChild}
-                                  explanationText={expandedExplanations[response.questionId]}
-                                  onHighlightChange={(index) => {
-                                    setHighlightedQuestionId(response.questionId);
-                                    setHighlightIndex(index);
-                                  }}
-                                />
-                              </div>
-                              
-                              <div className="text-gray-800 mb-3">
-                                <HighlightedText
-                                  text={expandedExplanations[response.questionId]}
-                                  highlightIndex={highlightedQuestionId === response.questionId ? highlightIndex : -1}
-                                />
-                              </div>
-                              
-                              {/* Audio player at bottom */}
-                              <div className="mt-3">
-                                <TTSPlayer
-                                  questionId={response.questionId}
-                                  isChild={isChild}
-                                  explanationText={expandedExplanations[response.questionId]}
-                                  onHighlightChange={(index) => {
-                                    setHighlightedQuestionId(response.questionId);
-                                    setHighlightIndex(index);
-                                  }}
-                                />
+                              {/* Scrollable container with sticky audio controls */}
+                              <div className="max-h-[600px] overflow-y-auto relative">
+                                {/* Audio player - sticky within scrollable container */}
+                                <div className="sticky top-0 z-10 bg-gradient-to-br from-purple-50 to-pink-50">
+                                  <TTSPlayer
+                                    questionId={response.questionId}
+                                    isChild={isChild}
+                                    explanationText={expandedExplanations[response.questionId]}
+                                    onHighlightChange={(index) => {
+                                      setHighlightedQuestionId(response.questionId);
+                                      setHighlightIndex(index);
+                                    }}
+                                  />
+                                </div>
+                                
+                                {/* Explanation text - scrollable */}
+                                <div className="text-gray-800 p-4 pt-2">
+                                  <HighlightedText
+                                    text={expandedExplanations[response.questionId]}
+                                    highlightIndex={highlightedQuestionId === response.questionId ? highlightIndex : -1}
+                                  />
+                                </div>
                               </div>
                             </div>
                           )}
