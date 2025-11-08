@@ -272,6 +272,13 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     // Calculate target time based on START of next paragraph
     // Timing array stores END positions, so we need the END of previous paragraph
     const duration = audioRef.current.duration;
+    
+    // Check if audio metadata is loaded
+    if (isNaN(duration) || duration === 0) {
+      console.log('[TTS Skip Forward] BLOCKED: Audio metadata not loaded yet (duration is NaN)');
+      return;
+    }
+    
     const targetProgress = nextIndex === 0 ? 0 : sentenceTimingsRef.current[nextIndex - 1];
     const targetTime = targetProgress * duration;
     
@@ -309,6 +316,13 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     // Calculate target time based on START of previous paragraph
     // Timing array stores END positions, so we need the END of the paragraph before prevIndex
     const duration = audioRef.current.duration;
+    
+    // Check if audio metadata is loaded
+    if (isNaN(duration) || duration === 0) {
+      console.log('[TTS Skip Backward] BLOCKED: Audio metadata not loaded yet (duration is NaN)');
+      return;
+    }
+    
     const targetProgress = prevIndex === 0 ? 0 : sentenceTimingsRef.current[prevIndex - 1];
     const targetTime = targetProgress * duration;
     
