@@ -329,7 +329,15 @@ Format your response in clean markdown with:
           messages: [
             {
               role: 'system',
-              content: 'You are a helpful dictionary assistant. Provide clear, concise definitions suitable for students. Include part of speech, definition, and a simple example sentence.'
+              content: `You are a helpful dictionary assistant for students. Provide definitions in this EXACT format:
+
+**Part of Speech:** [noun/verb/adjective/etc.]
+
+**Definition:** [Clear, simple definition in one sentence]
+
+**Example:** "[A natural example sentence using the word/phrase]"
+
+DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs with bold labels as shown above.`
             },
             {
               role: 'user',
@@ -947,7 +955,15 @@ Format your response in clean markdown with:
           messages: [
             {
               role: 'system',
-              content: 'You are a helpful dictionary assistant. Provide clear, concise definitions suitable for students. Include part of speech, definition, and a simple example sentence.'
+              content: `You are a helpful dictionary assistant for students. Provide definitions in this EXACT format:
+
+**Part of Speech:** [noun/verb/adjective/etc.]
+
+**Definition:** [Clear, simple definition in one sentence]
+
+**Example:** "[A natural example sentence using the word/phrase]"
+
+DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs with bold labels as shown above.`
             },
             {
               role: 'user',
