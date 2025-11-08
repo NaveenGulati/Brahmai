@@ -1658,7 +1658,8 @@ Provide a detailed, conversational explanation that:
 
 **CRITICAL RULES:**
 - NO introductions like "Hello!", "You are doing great!", "Let's learn together!"
-- NO conclusions like "You got this!", "Keep up the amazing work!", "Great job!"
+- NO conclusions like "You got this!", "Keep up the amazing work!", "Great job!", "Keep studying!"
+- NO tables or complex formatting (use simple paragraphs and bullet lists only)
 - Start DIRECTLY with the concept explanation
 - End with the key takeaway, NO motivational fluff
 

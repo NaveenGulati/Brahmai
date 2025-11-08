@@ -60,6 +60,8 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   useEffect(() => {
     setAudioUrl(null);
     setIsPlaying(false);
+    setCurrentParagraphIndex(0); // Reset to first paragraph
+    stopHighlighting(); // Clear any active highlighting
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = '';
@@ -85,6 +87,9 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       });
       
       sentenceTimingsRef.current = timings;
+      
+      // Reset paragraph index when text changes
+      setCurrentParagraphIndex(0);
       
       console.log('[TTS] Paragraphs:', paragraphs.length);
       console.log('[TTS] Character-based timings:', timings.map(t => (t * 100).toFixed(1) + '%'));
@@ -253,10 +258,10 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     const nextIndex = Math.min(currentParagraphIndex + 1, sentencesRef.current.length - 1);
     if (nextIndex === currentParagraphIndex) return; // Already at last paragraph
     
-    // Calculate target time based on next paragraph's timing
+    // Calculate target time based on START of next paragraph
+    // Timing array stores END positions, so we need the END of previous paragraph
     const duration = audioRef.current.duration;
-    // Use nextIndex directly for timing (not nextIndex - 1)
-    const targetProgress = sentenceTimingsRef.current[nextIndex] || 0;
+    const targetProgress = nextIndex === 0 ? 0 : sentenceTimingsRef.current[nextIndex - 1];
     const targetTime = targetProgress * duration;
     
     console.log(`[TTS Skip Forward] Current: ${currentParagraphIndex}, Next: ${nextIndex}, Progress: ${(targetProgress * 100).toFixed(1)}%, Time: ${targetTime.toFixed(2)}s / ${duration.toFixed(2)}s`);
@@ -280,10 +285,10 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     const prevIndex = Math.max(currentParagraphIndex - 1, 0);
     if (prevIndex === currentParagraphIndex) return; // Already at first paragraph
     
-    // Calculate target time based on previous paragraph's timing
+    // Calculate target time based on START of previous paragraph
+    // Timing array stores END positions, so we need the END of the paragraph before prevIndex
     const duration = audioRef.current.duration;
-    // Use prevIndex directly for timing
-    const targetProgress = sentenceTimingsRef.current[prevIndex] || 0;
+    const targetProgress = prevIndex === 0 ? 0 : sentenceTimingsRef.current[prevIndex - 1];
     const targetTime = targetProgress * duration;
     
     console.log(`[TTS Skip Backward] Current: ${currentParagraphIndex}, Prev: ${prevIndex}, Progress: ${(targetProgress * 100).toFixed(1)}%, Time: ${targetTime.toFixed(2)}s / ${duration.toFixed(2)}s`);
