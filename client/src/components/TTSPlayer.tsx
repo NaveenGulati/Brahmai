@@ -227,16 +227,50 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       
       console.log('[TTSPlayer] Audio generated:', result);
       if (result && result.audioUrl) {
-        setAudioUrl(result.audioUrl);
-        console.log('[TTSPlayer] Audio URL set:', result.audioUrl);
-        // Auto-play after generation
-        setTimeout(() => {
-          if (audioRef.current) {
-            audioRef.current.play();
-            startHighlighting();
-            setIsPlaying(true);
+        console.log('[TTSPlayer] Audio URL from generation:', result.audioUrl);
+        
+        // IMPORTANT: Instead of using the URL directly, reload from cache
+        // This makes fresh audio behave exactly like cached audio (which works perfectly)
+        // The audio is now in the DB, so we can fetch it as if it were cached
+        console.log('[TTSPlayer] Reloading audio from cache to ensure consistent behavior');
+        
+        // Clear current state
+        setAudioUrl(null);
+        
+        // Reload after a brief delay to ensure DB write is complete
+        setTimeout(async () => {
+          try {
+            // Fetch from cache (it's now in DB)
+            const cachedResult = simplificationLevel !== undefined && simplificationLevel > 0
+              ? await generateAudioVersionMutation.mutateAsync({ questionId, simplificationLevel })
+              : await generateAudioMutation.mutateAsync({ questionId });
+            
+            if (cachedResult && cachedResult.audioUrl) {
+              setAudioUrl(cachedResult.audioUrl);
+              console.log('[TTSPlayer] Audio reloaded from cache:', cachedResult.audioUrl);
+              
+              // Auto-play after reload
+              setTimeout(() => {
+                if (audioRef.current) {
+                  audioRef.current.play();
+                  startHighlighting();
+                  setIsPlaying(true);
+                }
+              }, 100);
+            }
+          } catch (error) {
+            console.error('[TTSPlayer] Failed to reload from cache:', error);
+            // Fallback to original URL if reload fails
+            setAudioUrl(result.audioUrl);
+            setTimeout(() => {
+              if (audioRef.current) {
+                audioRef.current.play();
+                startHighlighting();
+                setIsPlaying(true);
+              }
+            }, 100);
           }
-        }, 100);
+        }, 200);
       } else {
         console.error('[TTSPlayer] No audioUrl in result:', result);
         alert('Failed to generate audio: No URL returned');
