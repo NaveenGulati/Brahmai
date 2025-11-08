@@ -146,16 +146,23 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       const progress = currentTime / duration;
       
       // Find which paragraph based on character-weighted timings
-      let targetIndex = 0;
-      for (let i = 0; i < sentenceTimingsRef.current.length; i++) {
-        if (progress <= sentenceTimingsRef.current[i]) {
-          targetIndex = i;
-          break;
-        }
+      // Start from current position to avoid recalculating from 0
+      let targetIndex = currentParagraphIndexRef.current;
+      
+      // Check if we need to move forward
+      while (targetIndex < sentenceTimingsRef.current.length - 1 && 
+             progress > sentenceTimingsRef.current[targetIndex]) {
+        targetIndex++;
+      }
+      
+      // Check if we need to move backward (e.g., user manually seeked)
+      while (targetIndex > 0 && 
+             progress < (targetIndex === 0 ? 0 : sentenceTimingsRef.current[targetIndex - 1])) {
+        targetIndex--;
       }
       
       // Ensure we don't exceed paragraph count
-      targetIndex = Math.min(targetIndex, paragraphCount - 1);
+      targetIndex = Math.min(Math.max(0, targetIndex), paragraphCount - 1);
       
       // Use ref to track current index (not local variable)
       if (targetIndex !== currentParagraphIndexRef.current) {
