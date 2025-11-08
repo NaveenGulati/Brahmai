@@ -60,8 +60,11 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   useEffect(() => {
     if (audioRef.current && audioUrl) {
       console.log('[TTS] Setting audio src imperatively:', audioUrl);
-      audioRef.current.src = audioUrl;
-      audioRef.current.load(); // Load the new source
+      // Only set src if it's different (avoid unnecessary reloads)
+      if (audioRef.current.src !== audioUrl) {
+        audioRef.current.src = audioUrl;
+        // Don't call load() - browser loads automatically and load() resets currentTime
+      }
     }
   }, [audioUrl]);
 
