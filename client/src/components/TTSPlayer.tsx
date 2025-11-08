@@ -376,20 +376,29 @@ export function TTSPlayer({ questionId, isChild, explanationText, onHighlightCha
       {/* Word Meaning Dialog */}
       {showMeaningDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowMeaningDialog(false)}>
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Word Meaning</h3>
-              <button onClick={() => setShowMeaningDialog(false)} className="text-gray-400 hover:text-gray-600">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-purple-600" />
+                Word Meaning
+              </h3>
+              <button onClick={() => setShowMeaningDialog(false)} className="text-gray-400 hover:text-gray-600 text-xl">
                 ✕
               </button>
             </div>
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">Selected text:</p>
-              <p className="font-semibold text-purple-700 text-lg">{selectedText}</p>
+            <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+              <p className="text-xs text-gray-600 mb-1 uppercase tracking-wide">Selected text:</p>
+              <p className="font-semibold text-purple-700 text-xl">{selectedText}</p>
             </div>
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Meaning:</p>
-              <p className="text-gray-900">{wordMeaning}</p>
+            <div className="prose prose-sm max-w-none">
+              <div className="text-gray-900 leading-relaxed" dangerouslySetInnerHTML={{ 
+                __html: wordMeaning
+                  .replace(/\*\*(.+?)\*\*/g, '<strong class="text-gray-900">$1</strong>')
+                  .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                  .replace(/^- (.+)$/gm, '<li class="ml-4">$1</li>')
+                  .replace(/\n\n/g, '</p><p class="mt-2">')
+                  .replace(/^(.+)$/gm, (match) => match.startsWith('<') ? match : `<p>${match}</p>`)
+              }} />
             </div>
             <div className="mt-6 flex justify-end">
               <Button onClick={() => setShowMeaningDialog(false)} variant="outline" size="sm">
