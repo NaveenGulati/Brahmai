@@ -259,13 +259,17 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     console.log(`[TTS Skip Forward] Current: ${currentParagraphIndex}, Next: ${nextIndex}, Progress: ${(targetProgress * 100).toFixed(1)}%, Time: ${targetTime.toFixed(2)}s / ${duration.toFixed(2)}s`);
     
     const wasPlaying = !audioRef.current.paused;
-    audioRef.current.currentTime = targetTime;
-    // Update BOTH state and ref to keep them in sync
-    setCurrentParagraphIndex(nextIndex);
+    
+    // CRITICAL: Update ref BEFORE setting currentTime to prevent race condition
+    // Setting currentTime triggers timeupdate event immediately, which checks the ref
     currentParagraphIndexRef.current = nextIndex;
+    setCurrentParagraphIndex(nextIndex);
     if (onHighlightChange) {
       onHighlightChange(nextIndex);
     }
+    
+    // Now safe to set currentTime
+    audioRef.current.currentTime = targetTime;
     
     // Resume playing if it was playing
     if (wasPlaying && audioRef.current.paused) {
@@ -289,13 +293,17 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     console.log(`[TTS Skip Backward] Current: ${currentParagraphIndex}, Prev: ${prevIndex}, Progress: ${(targetProgress * 100).toFixed(1)}%, Time: ${targetTime.toFixed(2)}s / ${duration.toFixed(2)}s`);
     
     const wasPlaying = !audioRef.current.paused;
-    audioRef.current.currentTime = targetTime;
-    // Update BOTH state and ref to keep them in sync
-    setCurrentParagraphIndex(prevIndex);
+    
+    // CRITICAL: Update ref BEFORE setting currentTime to prevent race condition
+    // Setting currentTime triggers timeupdate event immediately, which checks the ref
     currentParagraphIndexRef.current = prevIndex;
+    setCurrentParagraphIndex(prevIndex);
     if (onHighlightChange) {
       onHighlightChange(prevIndex);
     }
+    
+    // Now safe to set currentTime
+    audioRef.current.currentTime = targetTime;
     
     // Resume playing if it was playing
     if (wasPlaying && audioRef.current.paused) {
