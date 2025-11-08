@@ -323,6 +323,13 @@ Format your response in clean markdown with:
     getWordMeaning: parentProcedure
       .input(z.object({ word: z.string() }))
       .query(async ({ input }) => {
+        console.log('[getWordMeaning] API key exists:', !!process.env.OPENAI_API_KEY);
+        console.log('[getWordMeaning] API key length:', process.env.OPENAI_API_KEY?.length);
+        
+        if (!process.env.OPENAI_API_KEY) {
+          throw new Error('OPENAI_API_KEY environment variable is not set');
+        }
+        
         const OpenAI = (await import('openai')).default;
         const openai = new OpenAI({
           apiKey: process.env.OPENAI_API_KEY,
@@ -945,6 +952,13 @@ Format your response in clean markdown with:
     getWordMeaning: publicProcedure
       .input(z.object({ word: z.string() }))
       .query(async ({ input }) => {
+        console.log('[getWordMeaning Child] API key exists:', !!process.env.OPENAI_API_KEY);
+        console.log('[getWordMeaning Child] API key length:', process.env.OPENAI_API_KEY?.length);
+        
+        if (!process.env.OPENAI_API_KEY) {
+          throw new Error('OPENAI_API_KEY environment variable is not set');
+        }
+        
         const OpenAI = (await import('openai')).default;
         const openai = new OpenAI({
           apiKey: process.env.OPENAI_API_KEY,
