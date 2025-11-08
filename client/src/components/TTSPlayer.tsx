@@ -255,7 +255,8 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     // Calculate target time based on next paragraph's timing
     const duration = audioRef.current.duration;
-    const targetProgress = nextIndex === 0 ? 0 : sentenceTimingsRef.current[nextIndex - 1];
+    // Use nextIndex directly for timing (not nextIndex - 1)
+    const targetProgress = sentenceTimingsRef.current[nextIndex] || 0;
     const targetTime = targetProgress * duration;
     
     console.log(`[TTS Skip Forward] Current: ${currentParagraphIndex}, Next: ${nextIndex}, Progress: ${(targetProgress * 100).toFixed(1)}%, Time: ${targetTime.toFixed(2)}s / ${duration.toFixed(2)}s`);
@@ -281,7 +282,8 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     // Calculate target time based on previous paragraph's timing
     const duration = audioRef.current.duration;
-    const targetProgress = prevIndex === 0 ? 0 : sentenceTimingsRef.current[prevIndex - 1];
+    // Use prevIndex directly for timing
+    const targetProgress = sentenceTimingsRef.current[prevIndex] || 0;
     const targetTime = targetProgress * duration;
     
     console.log(`[TTS Skip Backward] Current: ${currentParagraphIndex}, Prev: ${prevIndex}, Progress: ${(targetProgress * 100).toFixed(1)}%, Time: ${targetTime.toFixed(2)}s / ${duration.toFixed(2)}s`);

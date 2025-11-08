@@ -82,8 +82,10 @@ export default function QuizReview() {
   const [aiAnalysis, setAiAnalysis] = useState<{ fullAnalysis: string } | null>(null);
   const [expandedExplanations, setExpandedExplanations] = useState<Record<number, string>>({});
   const [simplificationLevels, setSimplificationLevels] = useState<Record<number, number>>({});
+  const [explanationHistory, setExplanationHistory] = useState<Record<number, string[]>>({});
   const [highlightedQuestionId, setHighlightedQuestionId] = useState<number | null>(null);
   const [highlightIndex, setHighlightIndex] = useState<number>(-1);
+  const explanationScrollRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const [showReattemptDialog, setShowReattemptDialog] = useState(false);
   const [reattemptParams, setReattemptParams] = useState<{
     questionCount: number;
@@ -555,7 +557,10 @@ export default function QuizReview() {
                               </div>
                               
                               {/* Scrollable container with sticky audio controls */}
-                              <div className="max-h-[600px] overflow-y-auto relative">
+                              <div 
+                                ref={(el) => { explanationScrollRefs.current[response.questionId] = el; }}
+                                className="max-h-[600px] overflow-y-auto relative"
+                              >
                                 {/* Audio player - sticky within scrollable container */}
                                 <div className="sticky top-0 z-10 bg-gradient-to-br from-purple-50 to-pink-50">
                                   <TTSPlayer
@@ -579,6 +584,44 @@ export default function QuizReview() {
                                   
                                   {/* Feedback buttons */}
                                   <div className="mt-6 pt-4 border-t border-purple-200 flex items-center justify-center gap-3">
+                                    {/* Go Back button - only show if level >= 2 */}
+                                    {(simplificationLevels[response.questionId] ?? 0) >= 2 && (
+                                      <Button
+                                        onClick={() => {
+                                          const currentLevel = simplificationLevels[response.questionId] ?? 0;
+                                          const history = explanationHistory[response.questionId] || [];
+                                          
+                                          if (history.length >= 2) {
+                                            // Get previous explanation (second to last in history)
+                                            const previousExplanation = history[history.length - 2];
+                                            
+                                            // Update to previous level
+                                            setExpandedExplanations(prev => ({
+                                              ...prev,
+                                              [response.questionId]: previousExplanation,
+                                            }));
+                                            setSimplificationLevels(prev => ({
+                                              ...prev,
+                                              [response.questionId]: currentLevel - 1,
+                                            }));
+                                            
+                                            // Remove last item from history
+                                            setExplanationHistory(prev => ({
+                                              ...prev,
+                                              [response.questionId]: history.slice(0, -1),
+                                            }));
+                                            
+                                            toast.success(`Returned to level ${currentLevel}/4`);
+                                          }
+                                        }}
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                                      >
+                                        ← Go back
+                                      </Button>
+                                    )}
+                                    
                                     <Button
                                       onClick={() => {
                                         toast.success('Great! Glad you understood! 🎉');
@@ -604,6 +647,13 @@ export default function QuizReview() {
                                               previousExplanation,
                                             });
                                             
+                                            // Save current explanation to history before updating
+                                            const currentExplanation = expandedExplanations[response.questionId];
+                                            setExplanationHistory(prev => ({
+                                              ...prev,
+                                              [response.questionId]: [...(prev[response.questionId] || []), currentExplanation],
+                                            }));
+                                            
                                             // Update explanation and level
                                             setExpandedExplanations(prev => ({
                                               ...prev,
@@ -615,6 +665,12 @@ export default function QuizReview() {
                                             }));
                                             
                                             toast.success(`Simplified to level ${result.simplificationLevel + 1}/4`);
+                                            
+                                            // Auto-scroll to top of explanation
+                                            const scrollContainer = explanationScrollRefs.current[response.questionId];
+                                            if (scrollContainer) {
+                                              scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+                                            }
                                           } catch (error) {
                                             console.error('Failed to simplify:', error);
                                             toast.error('Failed to simplify explanation. Please try again.');

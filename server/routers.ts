@@ -318,6 +318,7 @@ Format your response in clean markdown with:
         questionId: z.number(),
         currentLevel: z.number(),
         previousExplanation: z.string().optional(),
+        grade: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
         const { getSimplifiedExplanation, getNextSimplificationLevel } = await import('./adaptive-explanation');
@@ -333,7 +334,8 @@ Format your response in clean markdown with:
         const result = await getSimplifiedExplanation(
           input.questionId,
           nextLevel,
-          input.previousExplanation
+          input.previousExplanation,
+          input.grade
         );
         
         return {
@@ -986,6 +988,7 @@ Format your response in clean markdown with:
         questionId: z.number(),
         currentLevel: z.number(),
         previousExplanation: z.string().optional(),
+        grade: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
         const { getSimplifiedExplanation, getNextSimplificationLevel } = await import('./adaptive-explanation');
@@ -1001,7 +1004,8 @@ Format your response in clean markdown with:
         const result = await getSimplifiedExplanation(
           input.questionId,
           nextLevel,
-          input.previousExplanation
+          input.previousExplanation,
+          input.grade
         );
         
         return {

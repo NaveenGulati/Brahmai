@@ -1641,7 +1641,9 @@ export async function generateDetailedExplanationForQuestion(
   const q = question[0];
   
   // Build prompt for AI
-  let prompt = `You are a friendly, knowledgeable teacher explaining a concept to a Grade 7 ICSE student who got this question wrong.
+  const gradeLevel = grade || q.grade || 7; // Use provided grade, question grade, or fallback to 7
+  
+  let prompt = `You are a friendly, knowledgeable teacher explaining a concept to a Grade ${gradeLevel} student who got this question wrong.
 
 Question: ${q.questionText}
 Correct Answer: ${q.correctAnswer}
@@ -1653,6 +1655,12 @@ Provide a detailed, conversational explanation that:
 3. Includes 1-2 CONCRETE, RELATABLE EXAMPLES that kids can visualize and understand
 4. Uses simple examples or analogies from everyday life
 5. Keeps a warm, encouraging tone
+
+**CRITICAL RULES:**
+- NO introductions like "Hello!", "You are doing great!", "Let's learn together!"
+- NO conclusions like "You got this!", "Keep up the amazing work!", "Great job!"
+- Start DIRECTLY with the concept explanation
+- End with the key takeaway, NO motivational fluff
 
 IMPORTANT FORMATTING RULES:
 - Use markdown formatting: **bold** for emphasis, *italics* for subtle emphasis

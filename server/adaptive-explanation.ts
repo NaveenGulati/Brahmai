@@ -55,7 +55,8 @@ const LEVEL_DESCRIPTIONS = {
 export async function getSimplifiedExplanation(
   questionId: number,
   simplificationLevel: number,
-  previousExplanation?: string
+  previousExplanation?: string,
+  grade?: number
 ): Promise<{ explanationText: string; fromCache: boolean }> {
   const db = await getDb();
   if (!db) {
@@ -110,11 +111,13 @@ export async function getSimplifiedExplanation(
 
   const q = question[0];
   const levelInfo = LEVEL_DESCRIPTIONS[simplificationLevel as keyof typeof LEVEL_DESCRIPTIONS];
+  const gradeLevel = grade || q.grade || 7; // Use question grade or fallback to 7
 
   // Build prompt for AI
   let prompt = `You are a friendly, patient teacher. A student didn't fully understand the previous explanation, so you need to explain it in a SIMPLER way.
 
 **Target Audience:** ${levelInfo.audience}
+**Student's Grade Level:** Grade ${gradeLevel}
 **Complexity Level:** ${levelInfo.complexity}
 **Instruction:** ${levelInfo.instruction}
 
@@ -131,6 +134,12 @@ Create a ${levelInfo.name} explanation that:
 3. Breaks down complex ideas into smaller, digestible pieces
 4. Uses a warm, encouraging tone
 5. Makes the concept feel easy and approachable
+
+**CRITICAL RULES:**
+- NO introductions like "Hello!", "You are doing great!", "Let's learn together!"
+- NO conclusions like "You got this!", "Keep up the amazing work!", "Great job!"
+- Start DIRECTLY with the concept explanation
+- End with the key takeaway, NO motivational fluff
 
 **IMPORTANT FORMATTING RULES:**
 - Use markdown formatting: **bold** for key terms, *italics* for emphasis
