@@ -103,6 +103,15 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     }
   }, [explanationText, playbackSpeed]);
 
+  // Set audio source imperatively to prevent React from resetting currentTime on re-renders
+  useEffect(() => {
+    if (audioRef.current && audioUrl) {
+      console.log('[TTS] Setting audio src imperatively:', audioUrl);
+      audioRef.current.src = audioUrl;
+      audioRef.current.load();
+    }
+  }, [audioUrl]);
+
   // Update audio playback speed when it changes
   useEffect(() => {
     if (audioRef.current) {
@@ -379,7 +388,6 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
         {audioUrl && (
           <audio
             ref={audioRef}
-            src={audioUrl}
             onEnded={handleAudioEnded}
             onLoadedMetadata={() => {
               if (audioRef.current) {
