@@ -91,8 +91,13 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       // Reset paragraph index when text changes
       setCurrentParagraphIndex(0);
       
-      console.log('[TTS] Paragraphs:', paragraphs.length);
-      console.log('[TTS] Character-based timings:', timings.map(t => (t * 100).toFixed(1) + '%'));
+      console.log('[TTS DEBUG] ============ TIMING CALCULATION ============');
+      console.log('[TTS DEBUG] Total paragraphs:', paragraphs.length);
+      console.log('[TTS DEBUG] Total characters:', totalChars);
+      console.log('[TTS DEBUG] Paragraph lengths:', paragraphs.map(p => p.length));
+      console.log('[TTS DEBUG] Cumulative timings (%):', timings.map(t => (t * 100).toFixed(1) + '%'));
+      console.log('[TTS DEBUG] First paragraph preview:', paragraphs[0]?.substring(0, 100));
+      console.log('[TTS DEBUG] ==========================================');
     }
   }, [explanationText, playbackSpeed]);
 
@@ -253,10 +258,16 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   };
 
   const handleSkipForward = () => {
-    if (!audioRef.current || sentencesRef.current.length === 0) return;
+    if (!audioRef.current || sentencesRef.current.length === 0) {
+      console.log('[TTS Skip Forward] BLOCKED: No audio or no paragraphs');
+      return;
+    }
     
     const nextIndex = Math.min(currentParagraphIndex + 1, sentencesRef.current.length - 1);
-    if (nextIndex === currentParagraphIndex) return; // Already at last paragraph
+    if (nextIndex === currentParagraphIndex) {
+      console.log('[TTS Skip Forward] BLOCKED: Already at last paragraph');
+      return;
+    }
     
     // Calculate target time based on START of next paragraph
     // Timing array stores END positions, so we need the END of previous paragraph
@@ -264,7 +275,17 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     const targetProgress = nextIndex === 0 ? 0 : sentenceTimingsRef.current[nextIndex - 1];
     const targetTime = targetProgress * duration;
     
-    console.log(`[TTS Skip Forward] Current: ${currentParagraphIndex}, Next: ${nextIndex}, Progress: ${(targetProgress * 100).toFixed(1)}%, Time: ${targetTime.toFixed(2)}s / ${duration.toFixed(2)}s`);
+    console.log('[TTS Skip Forward] ============ SKIP DEBUG ============');
+    console.log('[TTS Skip Forward] Current index:', currentParagraphIndex);
+    console.log('[TTS Skip Forward] Next index:', nextIndex);
+    console.log('[TTS Skip Forward] Total paragraphs:', sentencesRef.current.length);
+    console.log('[TTS Skip Forward] Timing array length:', sentenceTimingsRef.current.length);
+    console.log('[TTS Skip Forward] All timings:', sentenceTimingsRef.current.map(t => (t * 100).toFixed(1) + '%'));
+    console.log('[TTS Skip Forward] Target progress:', (targetProgress * 100).toFixed(1) + '%');
+    console.log('[TTS Skip Forward] Target time:', targetTime.toFixed(2) + 's');
+    console.log('[TTS Skip Forward] Audio duration:', duration.toFixed(2) + 's');
+    console.log('[TTS Skip Forward] Current time before:', audioRef.current.currentTime.toFixed(2) + 's');
+    console.log('[TTS Skip Forward] ====================================');
     
     const wasPlaying = !audioRef.current.paused;
     audioRef.current.currentTime = targetTime;
