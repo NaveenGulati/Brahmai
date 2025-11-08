@@ -260,8 +260,9 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     const duration = audioRef.current.duration;
     const targetProgress = nextIndex === 0 ? 0 : sentenceTimingsRef.current[nextIndex - 1];
     let targetTime = targetProgress * duration;
-    // Subtract small buffer to land slightly before paragraph start (avoid missing first words)
-    targetTime = Math.max(0, targetTime - 0.2);
+    // Add small buffer to ensure we CROSS the threshold (not just reach it)
+    // This prevents the incremental logic from staying at the previous paragraph
+    targetTime = Math.min(duration, targetTime + 0.1);
     
     console.log(`[TTS Skip Forward] Current: ${currentParagraphIndex}, Next: ${nextIndex}, Progress: ${(targetProgress * 100).toFixed(1)}%, Time: ${targetTime.toFixed(2)}s / ${duration.toFixed(2)}s`);
     
@@ -294,8 +295,9 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     const duration = audioRef.current.duration;
     const targetProgress = prevIndex === 0 ? 0 : sentenceTimingsRef.current[prevIndex - 1];
     let targetTime = targetProgress * duration;
-    // Subtract small buffer to land slightly before paragraph start (avoid missing first words)
-    targetTime = Math.max(0, targetTime - 0.2);
+    // Add small buffer to ensure we CROSS the threshold (not just reach it)
+    // This prevents the incremental logic from staying at the wrong paragraph
+    targetTime = Math.min(duration, targetTime + 0.1);
     
     console.log(`[TTS Skip Backward] Current: ${currentParagraphIndex}, Prev: ${prevIndex}, Progress: ${(targetProgress * 100).toFixed(1)}%, Time: ${targetTime.toFixed(2)}s / ${duration.toFixed(2)}s`);
     
