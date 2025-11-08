@@ -323,20 +323,9 @@ Format your response in clean markdown with:
     getWordMeaning: parentProcedure
       .input(z.object({ word: z.string() }))
       .query(async ({ input }) => {
-        console.log('[getWordMeaning] API key exists:', !!process.env.OPENAI_API_KEY);
-        console.log('[getWordMeaning] API key length:', process.env.OPENAI_API_KEY?.length);
+        const { invokeLLM } = await import('./_core/llm');
         
-        if (!process.env.OPENAI_API_KEY) {
-          throw new Error('OPENAI_API_KEY environment variable is not set');
-        }
-        
-        const OpenAI = (await import('openai')).default;
-        const openai = new OpenAI({
-          apiKey: process.env.OPENAI_API_KEY,
-        });
-        
-        const response = await openai.chat.completions.create({
-          model: 'gpt-4.1-mini',
+        const response = await invokeLLM({
           messages: [
             {
               role: 'system',
@@ -347,7 +336,7 @@ Format your response in clean markdown with:
               content: `Define the word or phrase: "${input.word}"`
             }
           ],
-          max_tokens: 200,
+          maxTokens: 200,
         });
         
         return {
@@ -952,20 +941,9 @@ Format your response in clean markdown with:
     getWordMeaning: publicProcedure
       .input(z.object({ word: z.string() }))
       .query(async ({ input }) => {
-        console.log('[getWordMeaning Child] API key exists:', !!process.env.OPENAI_API_KEY);
-        console.log('[getWordMeaning Child] API key length:', process.env.OPENAI_API_KEY?.length);
+        const { invokeLLM } = await import('./_core/llm');
         
-        if (!process.env.OPENAI_API_KEY) {
-          throw new Error('OPENAI_API_KEY environment variable is not set');
-        }
-        
-        const OpenAI = (await import('openai')).default;
-        const openai = new OpenAI({
-          apiKey: process.env.OPENAI_API_KEY,
-        });
-        
-        const response = await openai.chat.completions.create({
-          model: 'gpt-4.1-mini',
+        const response = await invokeLLM({
           messages: [
             {
               role: 'system',
@@ -976,7 +954,7 @@ Format your response in clean markdown with:
               content: `Define the word or phrase: "${input.word}"`
             }
           ],
-          max_tokens: 200,
+          maxTokens: 200,
         });
         
         return {
