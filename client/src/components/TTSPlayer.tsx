@@ -177,6 +177,14 @@ export function TTSPlayer({ questionId, isChild, explanationText, onHighlightCha
       if (result && result.audioUrl) {
         setAudioUrl(result.audioUrl);
         console.log('[TTSPlayer] Audio URL set:', result.audioUrl);
+        // Auto-play after generation
+        setTimeout(() => {
+          if (audioRef.current) {
+            audioRef.current.play();
+            startHighlighting();
+            setIsPlaying(true);
+          }
+        }, 100);
       } else {
         console.error('[TTSPlayer] No audioUrl in result:', result);
         alert('Failed to generate audio: No URL returned');
@@ -187,7 +195,13 @@ export function TTSPlayer({ questionId, isChild, explanationText, onHighlightCha
     }
   };
 
-  const handlePlayPause = () => {
+  const handlePlayPause = async () => {
+    // If no audio URL yet, generate it first
+    if (!audioUrl) {
+      await handleGenerateAudio();
+      return;
+    }
+    
     if (!audioRef.current) return;
 
     if (isPlaying) {
@@ -286,91 +300,92 @@ export function TTSPlayer({ questionId, isChild, explanationText, onHighlightCha
 
   return (
     <>
-      <div className={`${audioUrl ? 'sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm' : ''} flex items-center gap-2 p-3 rounded-lg`}>
-        {!audioUrl ? (
+      {/* Sticky audio controls - always visible */}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm flex items-center gap-2 p-3 rounded-lg">
+        {audioUrl && (
+          <audio
+            ref={audioRef}
+            src={audioUrl}
+            onEnded={handleAudioEnded}
+            onLoadedMetadata={() => {
+              if (audioRef.current) {
+                audioRef.current.playbackRate = parseFloat(playbackSpeed);
+              }
+            }}
+          />
+        )}
+        
+        <Button
+          onClick={handleSkipBackward}
+          variant="outline"
+          size="sm"
+          className="border-blue-300 text-blue-700 hover:bg-blue-50"
+          title="Previous paragraph"
+          disabled={!audioUrl || generateAudioMutation.isPending}
+        >
+          <SkipBack className="w-3 h-3" />
+        </Button>
+        
+        <Button
+          onClick={handlePlayPause}
+          disabled={generateAudioMutation.isPending}
+          variant="outline"
+          size="sm"
+          className="border-blue-300 text-blue-700 hover:bg-blue-50"
+        >
+          {generateAudioMutation.isPending ? (
+            <>
+              <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              {isPlaying ? 'Pause' : (
+                <>
+                  <Volume2 className="w-3 h-3 mr-2" />
+                  Play
+                </>
+              )} Audio
+            </>
+          )}
+        </Button>
+        
+        <Button
+          onClick={handleSkipForward}
+          variant="outline"
+          size="sm"
+          className="border-blue-300 text-blue-700 hover:bg-blue-50"
+          title="Next paragraph"
+          disabled={!audioUrl || generateAudioMutation.isPending}
+        >
+          <SkipForward className="w-3 h-3" />
+        </Button>
+        
+        <Select value={playbackSpeed} onValueChange={setPlaybackSpeed}>
+          <SelectTrigger className="w-[120px] h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PLAYBACK_SPEEDS.map(speed => (
+              <SelectItem key={speed.value} value={speed.value}>
+                {speed.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        <div className="ml-auto flex items-center gap-2">
           <Button
-            onClick={handleGenerateAudio}
-            disabled={generateAudioMutation.isPending}
+            onClick={handleGetMeaning}
             variant="outline"
             size="sm"
-            className="border-blue-300 text-blue-700 hover:bg-blue-50"
+            className="border-purple-300 text-purple-700 hover:bg-purple-50"
+            title="Get meaning of selected word"
           >
-            {generateAudioMutation.isPending ? (
-              <>
-                <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                Generating Audio...
-              </>
-            ) : (
-              <>
-                <Volume2 className="w-3 h-3 mr-2" />
-                Play Audio
-              </>
-            )}
+            <BookOpen className="w-3 h-3 mr-1" />
+            Word Meaning
           </Button>
-        ) : (
-          <>
-            <audio
-              ref={audioRef}
-              src={audioUrl}
-              onEnded={handleAudioEnded}
-              onLoadedMetadata={() => {
-                if (audioRef.current) {
-                  audioRef.current.playbackRate = parseFloat(playbackSpeed);
-                }
-              }}
-            />
-            <Button
-              onClick={handleSkipBackward}
-              variant="outline"
-              size="sm"
-              className="border-blue-300 text-blue-700 hover:bg-blue-50"
-              title="Previous paragraph"
-            >
-              <SkipBack className="w-3 h-3" />
-            </Button>
-            <Button
-              onClick={handlePlayPause}
-              variant="outline"
-              size="sm"
-              className="border-blue-300 text-blue-700 hover:bg-blue-50"
-            >
-              {isPlaying ? 'Pause' : 'Play'} Audio
-            </Button>
-            <Button
-              onClick={handleSkipForward}
-              variant="outline"
-              size="sm"
-              className="border-blue-300 text-blue-700 hover:bg-blue-50"
-              title="Next paragraph"
-            >
-              <SkipForward className="w-3 h-3" />
-            </Button>
-            <Select value={playbackSpeed} onValueChange={setPlaybackSpeed}>
-              <SelectTrigger className="w-[120px] h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PLAYBACK_SPEEDS.map(speed => (
-                  <SelectItem key={speed.value} value={speed.value}>
-                    {speed.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="ml-auto flex items-center gap-2">
-              <Button
-                onClick={handleGetMeaning}
-                variant="outline"
-                size="sm"
-                className="border-purple-300 text-purple-700 hover:bg-purple-50"
-                title="Get meaning of selected word"
-              >
-                <BookOpen className="w-3 h-3 mr-1" />
-                Word Meaning
-              </Button>
-            </div>
-          </>
-        )}
+        </div>
       </div>
 
       {/* Word Meaning Dialog */}
