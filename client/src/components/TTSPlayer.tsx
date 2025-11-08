@@ -42,6 +42,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   const sentencesRef = useRef<string[]>([]);
   const sentenceTimingsRef = useRef<number[]>([]);
   const highlightIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const currentParagraphIndexRef = useRef<number>(0);
 
   // Audio generation mutations
   const parentAudioMutation = trpc.parent.generateAudio.useMutation();
