@@ -42,35 +42,19 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   const sentencesRef = useRef<string[]>([]);
   const sentenceTimingsRef = useRef<number[]>([]);
   const highlightIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const currentParagraphIndexRef = useRef<number>(0);
 
   // Audio generation mutations
   const parentAudioMutation = trpc.parent.generateAudio.useMutation();
   const childAudioMutation = trpc.child.generateAudio.useMutation();
   const generateAudioMutation = isChild ? childAudioMutation : parentAudioMutation;
   
-  // Audio generation for versions (simplified explanations)
+  // Version-specific audio generation for simplified explanations
   const parentAudioVersionMutation = trpc.parent.generateAudioForVersion.useMutation();
   const childAudioVersionMutation = trpc.child.generateAudioForVersion.useMutation();
   const generateAudioVersionMutation = isChild ? childAudioVersionMutation : parentAudioVersionMutation;
 
   // Get tRPC utils for manual queries
   const utils = trpc.useUtils();
-
-  // Clear audio URL when simplification level changes (force regeneration)
-  useEffect(() => {
-    // When simplification level changes, clear audio state
-    // Note: We don't clear audioRef.current.src here because it causes issues
-    // with skip buttons. The audio will be regenerated via setAudioUrl(null).
-    setAudioUrl(null);
-    setIsPlaying(false);
-    setCurrentParagraphIndex(0); // Reset to first paragraph
-    currentParagraphIndexRef.current = 0;
-    stopHighlighting(); // Clear any active highlighting
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-  }, [simplificationLevel]);
 
   // Split text into paragraphs for highlighting
   useEffect(() => {
@@ -92,28 +76,10 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       
       sentenceTimingsRef.current = timings;
       
-      // Reset paragraph index when text changes
-      currentParagraphIndexRef.current = 0;
-      setCurrentParagraphIndex(0);
-      
-      console.log('[TTS DEBUG] ============ TIMING CALCULATION ============');
-      console.log('[TTS DEBUG] Total paragraphs:', paragraphs.length);
-      console.log('[TTS DEBUG] Total characters:', totalChars);
-      console.log('[TTS DEBUG] Paragraph lengths:', paragraphs.map(p => p.length));
-      console.log('[TTS DEBUG] Cumulative timings (%):', timings.map(t => (t * 100).toFixed(1) + '%'));
-      console.log('[TTS DEBUG] First paragraph preview:', paragraphs[0]?.substring(0, 100));
-      console.log('[TTS DEBUG] ==========================================');
+      console.log('[TTS] Paragraphs:', paragraphs.length);
+      console.log('[TTS] Character-based timings:', timings.map(t => (t * 100).toFixed(1) + '%'));
     }
   }, [explanationText, playbackSpeed]);
-
-  // Set audio source imperatively to prevent React from resetting currentTime on re-renders
-  useEffect(() => {
-    if (audioRef.current && audioUrl) {
-      console.log('[TTS] Setting audio src imperatively:', audioUrl);
-      audioRef.current.src = audioUrl;
-      audioRef.current.load();
-    }
-  }, [audioUrl]);
 
   // Update audio playback speed when it changes
   useEffect(() => {
@@ -149,9 +115,10 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     console.log('[TTS] Starting highlighting with', paragraphCount, 'paragraphs');
     console.log('[TTS] Audio duration:', audioRef.current.duration, 'seconds');
     
+    let currentParagraphIndex = 0;
+    
     // Initial highlight
     console.log('[TTS] Highlighting paragraph 0');
-    setCurrentParagraphIndex(0);
     onHighlightChange(0);
     
     // Use audio's timeupdate event for accurate timing
@@ -176,9 +143,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       // Ensure we don't exceed paragraph count
       targetIndex = Math.min(targetIndex, paragraphCount - 1);
       
-      // Use a ref to track the last index to avoid reading stale state
-      if (targetIndex !== currentParagraphIndexRef.current) {
-        currentParagraphIndexRef.current = targetIndex;
+      if (targetIndex !== currentParagraphIndex) {
         setCurrentParagraphIndex(targetIndex);
         console.log('[TTS] Highlighting paragraph', targetIndex, 'at', currentTime.toFixed(2), 's (', (progress * 100).toFixed(1), '% audio, target:', (sentenceTimingsRef.current[targetIndex] * 100).toFixed(1), '% content)');
         onHighlightChange(targetIndex);
@@ -227,31 +192,16 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       
       console.log('[TTSPlayer] Audio generated:', result);
       if (result && result.audioUrl) {
-        console.log('[TTSPlayer] Audio URL from generation:', result.audioUrl);
-        
-        // IMPORTANT: Force a proper reload by clearing and resetting the URL
-        // This makes fresh audio behave like cached audio (which works perfectly)
-        console.log('[TTSPlayer] Forcing audio reload to ensure consistent behavior');
-        
-        // First, completely clear the audio
-        setAudioUrl(null);
-        
-        // Then set it again after a delay to force a clean reload
-        // This simulates what happens when audio is cached
+        setAudioUrl(result.audioUrl);
+        console.log('[TTSPlayer] Audio URL set:', result.audioUrl);
+        // Auto-play after generation
         setTimeout(() => {
-          console.log('[TTSPlayer] Setting audio URL after reload:', result.audioUrl);
-          setAudioUrl(result.audioUrl);
-          
-          // Auto-play after reload
-          setTimeout(() => {
-            if (audioRef.current) {
-              console.log('[TTSPlayer] Starting playback after reload');
-              audioRef.current.play();
-              startHighlighting();
-              setIsPlaying(true);
-            }
-          }, 300); // Longer delay to ensure audio element is ready
-        }, 300);
+          if (audioRef.current) {
+            audioRef.current.play();
+            startHighlighting();
+            setIsPlaying(true);
+          }
+        }, 100);
       } else {
         console.error('[TTSPlayer] No audioUrl in result:', result);
         alert('Failed to generate audio: No URL returned');
@@ -288,45 +238,20 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   };
 
   const handleSkipForward = () => {
-    if (!audioRef.current || sentencesRef.current.length === 0) {
-      console.log('[TTS Skip Forward] BLOCKED: No audio or no paragraphs');
-      return;
-    }
+    if (!audioRef.current || sentencesRef.current.length === 0) return;
     
     const nextIndex = Math.min(currentParagraphIndex + 1, sentencesRef.current.length - 1);
-    if (nextIndex === currentParagraphIndex) {
-      console.log('[TTS Skip Forward] BLOCKED: Already at last paragraph');
-      return;
-    }
+    if (nextIndex === currentParagraphIndex) return; // Already at last paragraph
     
-    // Calculate target time based on START of next paragraph
-    // Timing array stores END positions, so we need the END of previous paragraph
+    // Calculate target time based on next paragraph's timing
     const duration = audioRef.current.duration;
-    
-    // Check if audio metadata is loaded
-    if (isNaN(duration) || duration === 0) {
-      console.log('[TTS Skip Forward] BLOCKED: Audio metadata not loaded yet (duration is NaN)');
-      return;
-    }
-    
     const targetProgress = nextIndex === 0 ? 0 : sentenceTimingsRef.current[nextIndex - 1];
     const targetTime = targetProgress * duration;
     
-    console.log('[TTS Skip Forward] ============ SKIP DEBUG ============');
-    console.log('[TTS Skip Forward] Current index:', currentParagraphIndex);
-    console.log('[TTS Skip Forward] Next index:', nextIndex);
-    console.log('[TTS Skip Forward] Total paragraphs:', sentencesRef.current.length);
-    console.log('[TTS Skip Forward] Timing array length:', sentenceTimingsRef.current.length);
-    console.log('[TTS Skip Forward] All timings:', sentenceTimingsRef.current.map(t => (t * 100).toFixed(1) + '%'));
-    console.log('[TTS Skip Forward] Target progress:', (targetProgress * 100).toFixed(1) + '%');
-    console.log('[TTS Skip Forward] Target time:', targetTime.toFixed(2) + 's');
-    console.log('[TTS Skip Forward] Audio duration:', duration.toFixed(2) + 's');
-    console.log('[TTS Skip Forward] Current time before:', audioRef.current.currentTime.toFixed(2) + 's');
-    console.log('[TTS Skip Forward] ====================================');
+    console.log(`[TTS Skip Forward] Current: ${currentParagraphIndex}, Next: ${nextIndex}, Progress: ${(targetProgress * 100).toFixed(1)}%, Time: ${targetTime.toFixed(2)}s / ${duration.toFixed(2)}s`);
     
     const wasPlaying = !audioRef.current.paused;
     audioRef.current.currentTime = targetTime;
-    currentParagraphIndexRef.current = nextIndex;
     setCurrentParagraphIndex(nextIndex);
     if (onHighlightChange) {
       onHighlightChange(nextIndex);
@@ -344,16 +269,8 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     const prevIndex = Math.max(currentParagraphIndex - 1, 0);
     if (prevIndex === currentParagraphIndex) return; // Already at first paragraph
     
-    // Calculate target time based on START of previous paragraph
-    // Timing array stores END positions, so we need the END of the paragraph before prevIndex
+    // Calculate target time based on previous paragraph's timing
     const duration = audioRef.current.duration;
-    
-    // Check if audio metadata is loaded
-    if (isNaN(duration) || duration === 0) {
-      console.log('[TTS Skip Backward] BLOCKED: Audio metadata not loaded yet (duration is NaN)');
-      return;
-    }
-    
     const targetProgress = prevIndex === 0 ? 0 : sentenceTimingsRef.current[prevIndex - 1];
     const targetTime = targetProgress * duration;
     
@@ -361,7 +278,6 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     const wasPlaying = !audioRef.current.paused;
     audioRef.current.currentTime = targetTime;
-    currentParagraphIndexRef.current = prevIndex;
     setCurrentParagraphIndex(prevIndex);
     if (onHighlightChange) {
       onHighlightChange(prevIndex);
@@ -406,6 +322,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
         {audioUrl && (
           <audio
             ref={audioRef}
+            src={audioUrl}
             onEnded={handleAudioEnded}
             onLoadedMetadata={() => {
               if (audioRef.current) {
