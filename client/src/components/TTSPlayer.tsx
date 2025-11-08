@@ -84,14 +84,6 @@ export function TTSPlayer({ questionId, isChild, explanationText, onHighlightCha
     localStorage.setItem(STORAGE_KEY, playbackSpeed);
   }, [playbackSpeed]);
 
-   // Auto-generate audio when component mounts
-  useEffect(() => {
-    if (questionId && !audioUrl) {
-      console.log('[TTSPlayer] Auto-generating audio on mount for question', questionId);
-      handleGenerateAudio();
-    }
-  }, [questionId]); // Only run when questionId changes
-
   // Clean up audio on unmount
   useEffect(() => {
     return () => {
@@ -294,17 +286,27 @@ export function TTSPlayer({ questionId, isChild, explanationText, onHighlightCha
 
   return (
     <>
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm flex items-center gap-2 p-3 rounded-lg">
-        {generateAudioMutation.isPending ? (
-          <div className="flex items-center gap-2 text-blue-600">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm">Generating audio...</span>
-          </div>
-        ) : !audioUrl ? (
-          <div className="flex items-center gap-2 text-gray-500">
-            <Volume2 className="w-4 h-4" />
-            <span className="text-sm">Loading audio...</span>
-          </div>
+      <div className={`${audioUrl ? 'sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm' : ''} flex items-center gap-2 p-3 rounded-lg`}>
+        {!audioUrl ? (
+          <Button
+            onClick={handleGenerateAudio}
+            disabled={generateAudioMutation.isPending}
+            variant="outline"
+            size="sm"
+            className="border-blue-300 text-blue-700 hover:bg-blue-50"
+          >
+            {generateAudioMutation.isPending ? (
+              <>
+                <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                Generating Audio...
+              </>
+            ) : (
+              <>
+                <Volume2 className="w-3 h-3 mr-2" />
+                Play Audio
+              </>
+            )}
+          </Button>
         ) : (
           <>
             <audio
