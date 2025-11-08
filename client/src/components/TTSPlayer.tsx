@@ -55,6 +55,15 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
 
   // Get tRPC utils for manual queries
   const utils = trpc.useUtils();
+  
+  // Set audio src imperatively to prevent React from resetting it on re-renders
+  useEffect(() => {
+    if (audioRef.current && audioUrl) {
+      console.log('[TTS] Setting audio src imperatively:', audioUrl);
+      audioRef.current.src = audioUrl;
+      audioRef.current.load(); // Load the new source
+    }
+  }, [audioUrl]);
 
   // Split text into paragraphs for highlighting
   useEffect(() => {
@@ -322,7 +331,6 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
         {audioUrl && (
           <audio
             ref={audioRef}
-            src={audioUrl}
             onEnded={handleAudioEnded}
             onLoadedMetadata={() => {
               if (audioRef.current) {
