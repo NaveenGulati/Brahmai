@@ -206,14 +206,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       if (result && result.audioUrl) {
         setAudioUrl(result.audioUrl);
         console.log('[TTSPlayer] Audio URL set:', result.audioUrl);
-        // Auto-play after generation
-        setTimeout(() => {
-          if (audioRef.current) {
-            audioRef.current.play();
-            startHighlighting();
-            setIsPlaying(true);
-          }
-        }, 100);
+        // Don't auto-play - let user click Play button
       } else {
         console.error('[TTSPlayer] No audioUrl in result:', result);
         alert('Failed to generate audio: No URL returned');
@@ -224,14 +217,8 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     }
   };
 
-  const handlePlayPause = async () => {
-    // If no audio URL yet, generate it first
-    if (!audioUrl) {
-      await handleGenerateAudio();
-      return;
-    }
-    
-    if (!audioRef.current) return;
+  const handlePlayPause = () => {
+    if (!audioRef.current || !audioUrl) return;
 
     if (isPlaying) {
       audioRef.current.pause();
@@ -354,29 +341,38 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
           <SkipBack className="w-3 h-3" />
         </Button>
         
-        <Button
-          onClick={handlePlayPause}
-          disabled={generateAudioMutation.isPending}
-          variant="outline"
-          size="sm"
-          className="border-blue-300 text-blue-700 hover:bg-blue-50"
-        >
-          {generateAudioMutation.isPending ? (
-            <>
-              <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              {isPlaying ? 'Pause' : (
-                <>
-                  <Volume2 className="w-3 h-3 mr-2" />
-                  Play
-                </>
-              )} Audio
-            </>
-          )}
-        </Button>
+        {/* Show Generate button if no audio, otherwise show Play/Pause */}
+        {!audioUrl ? (
+          <Button
+            onClick={handleGenerateAudio}
+            disabled={generateAudioMutation.isPending}
+            variant="outline"
+            size="sm"
+            className="border-blue-300 text-blue-700 hover:bg-blue-50"
+          >
+            {generateAudioMutation.isPending ? (
+              <>
+                <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Volume2 className="w-3 h-3 mr-2" />
+                Generate Audio Explanation
+              </>
+            )}
+          </Button>
+        ) : (
+          <Button
+            onClick={handlePlayPause}
+            variant="outline"
+            size="sm"
+            className="border-blue-300 text-blue-700 hover:bg-blue-50"
+          >
+            <Volume2 className="w-3 h-3 mr-2" />
+            {isPlaying ? 'Pause' : 'Play'} Audio
+          </Button>
+        )}
         
         <Button
           onClick={handleSkipForward}
