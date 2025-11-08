@@ -312,11 +312,53 @@ Format your response in clean markdown with:
         };
       }),
 
+    // Simplify explanation (adaptive learning)
+    simplifyExplanation: parentProcedure
+      .input(z.object({ 
+        questionId: z.number(),
+        currentLevel: z.number(),
+        previousExplanation: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { getSimplifiedExplanation, getNextSimplificationLevel } = await import('./adaptive-explanation');
+        
+        const nextLevel = getNextSimplificationLevel(input.currentLevel);
+        if (nextLevel === null) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Already at maximum simplification level',
+          });
+        }
+        
+        const result = await getSimplifiedExplanation(
+          input.questionId,
+          nextLevel,
+          input.previousExplanation
+        );
+        
+        return {
+          explanationText: result.explanationText,
+          simplificationLevel: nextLevel,
+          fromCache: result.fromCache,
+        };
+      }),
+
     // Generate audio for explanation
     generateAudio: parentProcedure
       .input(z.object({ questionId: z.number() }))
       .mutation(async ({ input }) => {
         return generateAudioForQuestion(input.questionId);
+      }),
+
+    // Generate audio for simplified explanation version
+    generateAudioForVersion: parentProcedure
+      .input(z.object({ 
+        questionId: z.number(),
+        simplificationLevel: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const { generateAudioForExplanationVersion } = await import('./adaptive-audio');
+        return generateAudioForExplanationVersion(input.questionId, input.simplificationLevel);
       }),
 
     // Get word meaning using AI
@@ -938,11 +980,53 @@ Format your response in clean markdown with:
         };
       }),
 
+    // Simplify explanation (adaptive learning)
+    simplifyExplanation: publicProcedure
+      .input(z.object({ 
+        questionId: z.number(),
+        currentLevel: z.number(),
+        previousExplanation: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { getSimplifiedExplanation, getNextSimplificationLevel } = await import('./adaptive-explanation');
+        
+        const nextLevel = getNextSimplificationLevel(input.currentLevel);
+        if (nextLevel === null) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Already at maximum simplification level',
+          });
+        }
+        
+        const result = await getSimplifiedExplanation(
+          input.questionId,
+          nextLevel,
+          input.previousExplanation
+        );
+        
+        return {
+          explanationText: result.explanationText,
+          simplificationLevel: nextLevel,
+          fromCache: result.fromCache,
+        };
+      }),
+
     // Generate audio for explanation
     generateAudio: publicProcedure
       .input(z.object({ questionId: z.number() }))
       .mutation(async ({ input }) => {
         return generateAudioForQuestion(input.questionId);
+      }),
+
+    // Generate audio for simplified explanation version
+    generateAudioForVersion: publicProcedure
+      .input(z.object({ 
+        questionId: z.number(),
+        simplificationLevel: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const { generateAudioForExplanationVersion } = await import('./adaptive-audio');
+        return generateAudioForExplanationVersion(input.questionId, input.simplificationLevel);
       }),
 
     // Get word meaning using AI

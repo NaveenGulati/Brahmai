@@ -372,6 +372,24 @@ export const aiExplanationCache = pgTable("aiExplanationCache", {
 });
 
 /**
+ * Explanation Versions - stores simplified versions of explanations
+ * Supports progressive learning with multiple intelligence levels
+ */
+export const explanationVersions = pgTable("explanationVersions", {
+  id: serial("id").primaryKey(),
+  questionId: integer("questionId").notNull(),
+  simplificationLevel: integer("simplificationLevel").notNull(), // 0=standard, 1=simple, 2=very simple, 3=ELI5
+  explanationText: text("explanationText").notNull(),
+  audioUrl: text("audioUrl"),
+  generatedAt: timestamp("generatedAt").defaultNow().notNull(),
+  usageCount: integer("usageCount").default(1).notNull(),
+  lastUsedAt: timestamp("lastUsedAt").defaultNow().notNull(),
+}, (table) => ({
+  // Composite unique index for questionId + simplificationLevel
+  questionLevelIdx: uniqueIndex("explanation_versions_question_level_idx").on(table.questionId, table.simplificationLevel),
+}));
+
+/**
  * ============================================
  * QUIZ & ASSESSMENT TABLES
  * ============================================
@@ -700,6 +718,8 @@ export type AuditLog = typeof auditLog.$inferSelect;
 export type InsertAuditLog = typeof auditLog.$inferInsert;
 export type AiExplanationCache = typeof aiExplanationCache.$inferSelect;
 export type InsertAiExplanationCache = typeof aiExplanationCache.$inferInsert;
+export type ExplanationVersion = typeof explanationVersions.$inferSelect;
+export type InsertExplanationVersion = typeof explanationVersions.$inferInsert;
 export type QBAdminAssignment = typeof qbAdminAssignments.$inferSelect;
 export type InsertQBAdminAssignment = typeof qbAdminAssignments.$inferInsert;
 export type GradeHistory = typeof gradeHistory.$inferSelect;

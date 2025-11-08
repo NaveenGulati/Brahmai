@@ -25,6 +25,7 @@ import {
   challenges, InsertChallenge,
   qbAdminAssignments, InsertQBAdminAssignment,
   aiExplanationCache,
+  explanationVersions, InsertExplanationVersion,
   studentGroups,
   studentGroupMembers,
 } from "../drizzle/schema";
@@ -1649,8 +1650,9 @@ Brief Explanation: ${q.explanation || 'Not provided'}
 Provide a detailed, conversational explanation that:
 1. Explains WHY the correct answer is right
 2. Clarifies any misconceptions
-3. Uses simple examples or analogies
-4. Keeps a warm, encouraging tone
+3. Includes 1-2 CONCRETE, RELATABLE EXAMPLES that kids can visualize and understand
+4. Uses simple examples or analogies from everyday life
+5. Keeps a warm, encouraging tone
 
 IMPORTANT FORMATTING RULES:
 - Use markdown formatting: **bold** for emphasis, *italics* for subtle emphasis
@@ -1671,11 +1673,15 @@ The correct answer is **[answer]** because...
 
 Many students think... but actually...
 
+### 🌟 Real-Life Example
+
+[1-2 concrete examples that kids can relate to and visualize]
+
 ### 📚 Key Takeaway
 
 Remember: [main point]
 
-Write in a natural, spoken style as if you're talking to the student. Be direct and to the point.`;
+Write in a natural, spoken style as if you're talking to the student. Be direct and to the point. ALWAYS include relatable examples!`;
 
   if (q.questionType === 'multiple_choice' && q.options) {
     prompt += `\n\nOptions:\n${q.options.join('\n')}`;

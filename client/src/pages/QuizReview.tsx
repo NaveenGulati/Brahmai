@@ -81,6 +81,7 @@ export default function QuizReview() {
   const { user } = useAuth({ redirectOnUnauthenticated: false });
   const [aiAnalysis, setAiAnalysis] = useState<{ fullAnalysis: string } | null>(null);
   const [expandedExplanations, setExpandedExplanations] = useState<Record<number, string>>({});
+  const [simplificationLevels, setSimplificationLevels] = useState<Record<number, number>>({});
   const [highlightedQuestionId, setHighlightedQuestionId] = useState<number | null>(null);
   const [highlightIndex, setHighlightIndex] = useState<number>(-1);
   const [showReattemptDialog, setShowReattemptDialog] = useState(false);
@@ -138,6 +139,11 @@ export default function QuizReview() {
   const parentExplanationMutation = trpc.parent.generateDetailedExplanation.useMutation();
   const childExplanationMutation = trpc.child.generateDetailedExplanation.useMutation();
   const generateExplanationMutation = isChild ? childExplanationMutation : parentExplanationMutation;
+
+  // Simplify explanation mutations - call both unconditionally (React hooks rule)
+  const parentSimplifyMutation = trpc.parent.simplifyExplanation.useMutation();
+  const childSimplifyMutation = trpc.child.simplifyExplanation.useMutation();
+  const simplifyExplanationMutation = isChild ? childSimplifyMutation : parentSimplifyMutation;
 
   // NOW we can do conditional returns - all hooks have been called
   if (actualLoading) {
@@ -556,6 +562,7 @@ export default function QuizReview() {
                                     questionId={response.questionId}
                                     isChild={isChild}
                                     explanationText={expandedExplanations[response.questionId]}
+                                    simplificationLevel={simplificationLevels[response.questionId] ?? 0}
                                     onHighlightChange={(index) => {
                                       setHighlightedQuestionId(response.questionId);
                                       setHighlightIndex(index);
@@ -569,6 +576,81 @@ export default function QuizReview() {
                                     text={expandedExplanations[response.questionId]}
                                     highlightIndex={highlightedQuestionId === response.questionId ? highlightIndex : -1}
                                   />
+                                  
+                                  {/* Feedback buttons */}
+                                  <div className="mt-6 pt-4 border-t border-purple-200 flex items-center justify-center gap-3">
+                                    <Button
+                                      onClick={() => {
+                                        toast.success('Great! Glad you understood! 🎉');
+                                      }}
+                                      variant="outline"
+                                      size="sm"
+                                      className="border-green-300 text-green-700 hover:bg-green-50"
+                                    >
+                                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                                      I understand!
+                                    </Button>
+                                    
+                                    {(simplificationLevels[response.questionId] ?? 0) < 3 && (
+                                      <Button
+                                        onClick={async () => {
+                                          const currentLevel = simplificationLevels[response.questionId] ?? 0;
+                                          const previousExplanation = expandedExplanations[response.questionId];
+                                          
+                                          try {
+                                            const result = await simplifyExplanationMutation.mutateAsync({
+                                              questionId: response.questionId,
+                                              currentLevel,
+                                              previousExplanation,
+                                            });
+                                            
+                                            // Update explanation and level
+                                            setExpandedExplanations(prev => ({
+                                              ...prev,
+                                              [response.questionId]: result.explanationText,
+                                            }));
+                                            setSimplificationLevels(prev => ({
+                                              ...prev,
+                                              [response.questionId]: result.simplificationLevel,
+                                            }));
+                                            
+                                            toast.success(`Simplified to level ${result.simplificationLevel + 1}/4`);
+                                          } catch (error) {
+                                            console.error('Failed to simplify:', error);
+                                            toast.error('Failed to simplify explanation. Please try again.');
+                                          }
+                                        }}
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-orange-300 text-orange-700 hover:bg-orange-50"
+                                        disabled={simplifyExplanationMutation.isPending}
+                                      >
+                                        {simplifyExplanationMutation.isPending ? (
+                                          <>
+                                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-orange-600 mr-2"></div>
+                                            Simplifying...
+                                          </>
+                                        ) : (
+                                          <>
+                                            🤔 Make it simpler
+                                          </>
+                                        )}
+                                      </Button>
+                                    )}
+                                    
+                                    {(simplificationLevels[response.questionId] ?? 0) >= 3 && (
+                                      <p className="text-sm text-gray-500 italic">This is the simplest explanation available</p>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Show current simplification level if > 0 */}
+                                  {(simplificationLevels[response.questionId] ?? 0) > 0 && (
+                                    <div className="mt-3 text-center">
+                                      <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                        Simplification Level: {simplificationLevels[response.questionId] + 1}/4
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>

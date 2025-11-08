@@ -9,6 +9,7 @@ interface TTSPlayerProps {
   questionId: number;
   isChild: boolean;
   explanationText?: string;
+  simplificationLevel?: number;
   onHighlightChange?: (paragraphIndex: number) => void;
 }
 
@@ -25,7 +26,7 @@ const STORAGE_KEY = 'tts-playback-speed';
  * TTSPlayer component for playing audio explanations
  * Supports playback speed control and text highlighting sync
  */
-export function TTSPlayer({ questionId, isChild, explanationText, onHighlightChange }: TTSPlayerProps) {
+export function TTSPlayer({ questionId, isChild, explanationText, simplificationLevel, onHighlightChange }: TTSPlayerProps) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(() => {
@@ -46,9 +47,24 @@ export function TTSPlayer({ questionId, isChild, explanationText, onHighlightCha
   const parentAudioMutation = trpc.parent.generateAudio.useMutation();
   const childAudioMutation = trpc.child.generateAudio.useMutation();
   const generateAudioMutation = isChild ? childAudioMutation : parentAudioMutation;
+  
+  // Audio generation for versions (simplified explanations)
+  const parentAudioVersionMutation = trpc.parent.generateAudioForVersion.useMutation();
+  const childAudioVersionMutation = trpc.child.generateAudioForVersion.useMutation();
+  const generateAudioVersionMutation = isChild ? childAudioVersionMutation : parentAudioVersionMutation;
 
   // Get tRPC utils for manual queries
   const utils = trpc.useUtils();
+
+  // Clear audio URL when simplification level changes (force regeneration)
+  useEffect(() => {
+    setAudioUrl(null);
+    setIsPlaying(false);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+    }
+  }, [simplificationLevel]);
 
   // Split text into paragraphs for highlighting
   useEffect(() => {
@@ -171,8 +187,19 @@ export function TTSPlayer({ questionId, isChild, explanationText, onHighlightCha
 
   const handleGenerateAudio = async () => {
     try {
-      console.log('[TTSPlayer] Generating audio for question', questionId);
-      const result = await generateAudioMutation.mutateAsync({ questionId });
+      console.log('[TTSPlayer] Generating audio for question', questionId, 'level', simplificationLevel);
+      
+      let result;
+      // Use version-specific audio generation if simplification level is provided
+      if (simplificationLevel !== undefined && simplificationLevel > 0) {
+        result = await generateAudioVersionMutation.mutateAsync({ 
+          questionId, 
+          simplificationLevel 
+        });
+      } else {
+        result = await generateAudioMutation.mutateAsync({ questionId });
+      }
+      
       console.log('[TTSPlayer] Audio generated:', result);
       if (result && result.audioUrl) {
         setAudioUrl(result.audioUrl);
