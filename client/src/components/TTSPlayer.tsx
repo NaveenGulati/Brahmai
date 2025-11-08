@@ -123,11 +123,12 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       return;
     }
     
+    // Stop any existing highlighting first
+    stopHighlighting();
+    
     const paragraphCount = sentencesRef.current.length;
     console.log('[TTS] Starting highlighting with', paragraphCount, 'paragraphs');
     console.log('[TTS] Audio duration:', audioRef.current.duration, 'seconds');
-    
-    let currentParagraphIndex = 0;
     
     // Initial highlight
     console.log('[TTS] Highlighting paragraph 0');
@@ -155,7 +156,9 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       // Ensure we don't exceed paragraph count
       targetIndex = Math.min(targetIndex, paragraphCount - 1);
       
-      if (targetIndex !== currentParagraphIndex) {
+      // Use ref to track current index (not local variable)
+      if (targetIndex !== currentParagraphIndexRef.current) {
+        currentParagraphIndexRef.current = targetIndex;
         setCurrentParagraphIndex(targetIndex);
         console.log('[TTS] Highlighting paragraph', targetIndex, 'at', currentTime.toFixed(2), 's (', (progress * 100).toFixed(1), '% audio, target:', (sentenceTimingsRef.current[targetIndex] * 100).toFixed(1), '% content)');
         onHighlightChange(targetIndex);
@@ -163,6 +166,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     };
     
     audioRef.current.addEventListener('timeupdate', handleTimeUpdate);
+    highlightIntervalRef.current = handleTimeUpdate as any; // Store for cleanup
     
     // Clean up listener when audio ends
     const handleEnded = () => {
@@ -170,6 +174,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
         audioRef.current.removeEventListener('timeupdate', handleTimeUpdate);
         audioRef.current.removeEventListener('ended', handleEnded);
       }
+      highlightIntervalRef.current = null;
       console.log('[TTS] Clearing highlight');
       onHighlightChange(-1);
     };
@@ -178,8 +183,9 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   };
 
   const stopHighlighting = () => {
-    if (highlightIntervalRef.current) {
-      clearInterval(highlightIntervalRef.current);
+    if (highlightIntervalRef.current && audioRef.current) {
+      // Remove the timeupdate event listener
+      audioRef.current.removeEventListener('timeupdate', highlightIntervalRef.current as any);
       highlightIntervalRef.current = null;
     }
     if (onHighlightChange) {
