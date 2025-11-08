@@ -59,13 +59,16 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
 
   // Clear audio URL when simplification level changes (force regeneration)
   useEffect(() => {
+    // When simplification level changes, clear audio state
+    // Note: We don't clear audioRef.current.src here because it causes issues
+    // with skip buttons. The audio will be regenerated via setAudioUrl(null).
     setAudioUrl(null);
     setIsPlaying(false);
     setCurrentParagraphIndex(0); // Reset to first paragraph
+    currentParagraphIndexRef.current = 0;
     stopHighlighting(); // Clear any active highlighting
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.src = '';
     }
   }, [simplificationLevel]);
 
