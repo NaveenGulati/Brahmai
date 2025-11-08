@@ -42,6 +42,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   const sentencesRef = useRef<string[]>([]);
   const sentenceTimingsRef = useRef<number[]>([]);
   const highlightIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const currentParagraphIndexRef = useRef<number>(0);
 
   // Audio generation mutations
   const parentAudioMutation = trpc.parent.generateAudio.useMutation();
@@ -89,6 +90,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       sentenceTimingsRef.current = timings;
       
       // Reset paragraph index when text changes
+      currentParagraphIndexRef.current = 0;
       setCurrentParagraphIndex(0);
       
       console.log('[TTS DEBUG] ============ TIMING CALCULATION ============');
@@ -135,10 +137,9 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     console.log('[TTS] Starting highlighting with', paragraphCount, 'paragraphs');
     console.log('[TTS] Audio duration:', audioRef.current.duration, 'seconds');
     
-    let currentParagraphIndex = 0;
-    
     // Initial highlight
     console.log('[TTS] Highlighting paragraph 0');
+    setCurrentParagraphIndex(0);
     onHighlightChange(0);
     
     // Use audio's timeupdate event for accurate timing
@@ -163,7 +164,9 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       // Ensure we don't exceed paragraph count
       targetIndex = Math.min(targetIndex, paragraphCount - 1);
       
-      if (targetIndex !== currentParagraphIndex) {
+      // Use a ref to track the last index to avoid reading stale state
+      if (targetIndex !== currentParagraphIndexRef.current) {
+        currentParagraphIndexRef.current = targetIndex;
         setCurrentParagraphIndex(targetIndex);
         console.log('[TTS] Highlighting paragraph', targetIndex, 'at', currentTime.toFixed(2), 's (', (progress * 100).toFixed(1), '% audio, target:', (sentenceTimingsRef.current[targetIndex] * 100).toFixed(1), '% content)');
         onHighlightChange(targetIndex);
@@ -302,6 +305,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     const wasPlaying = !audioRef.current.paused;
     audioRef.current.currentTime = targetTime;
+    currentParagraphIndexRef.current = nextIndex;
     setCurrentParagraphIndex(nextIndex);
     if (onHighlightChange) {
       onHighlightChange(nextIndex);
@@ -342,6 +346,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     const wasPlaying = !audioRef.current.paused;
     audioRef.current.currentTime = targetTime;
+    currentParagraphIndexRef.current = prevIndex;
     setCurrentParagraphIndex(prevIndex);
     if (onHighlightChange) {
       onHighlightChange(prevIndex);
