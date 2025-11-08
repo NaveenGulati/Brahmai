@@ -232,8 +232,10 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   };
 
   const handlePlayPause = () => {
-    if (!audioRef.current || !audioUrl) return;
-
+    if (!audioRef.current) return;
+    
+    console.log('[TTS handlePlayPause] Called, isPlaying:', isPlaying);
+    
     if (isPlaying) {
       audioRef.current.pause();
       stopHighlighting();
@@ -281,6 +283,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     // Resume playing if it was playing
     if (wasPlaying && audioRef.current.paused) {
+      console.log('[TTS Skip] Resuming playback');
       audioRef.current.play();
     }
   };
@@ -316,6 +319,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     // Resume playing if it was playing
     if (wasPlaying && audioRef.current.paused) {
+      console.log('[TTS Skip] Resuming playback');
       audioRef.current.play();
     }
   };
