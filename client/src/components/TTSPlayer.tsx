@@ -442,6 +442,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
         {audioUrl && (
           <audio
             ref={audioRef}
+            preload="auto"
             onEnded={handleAudioEnded}
             onLoadedMetadata={() => {
               if (audioRef.current) {
