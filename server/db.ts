@@ -1774,7 +1774,20 @@ export async function generateAudioForQuestion(questionId: number): Promise<{ au
 
   console.log(`[TTS] Generated and cached audio for question ${questionId}`);
 
-  return { audioUrl };
+  // Re-fetch from database to ensure same code path as cached audio
+  const updated = await db
+    .select()
+    .from(aiExplanationCache)
+    .where(eq(aiExplanationCache.questionId, questionId))
+    .limit(1);
+
+  const fetchedAudioUrl = updated[0]?.audioUrl;
+  if (!fetchedAudioUrl) {
+    throw new Error('Failed to fetch audio URL after saving');
+  }
+
+  console.log(`[TTS] Re-fetched audio URL from database`);
+  return { audioUrl: fetchedAudioUrl };
 }
 
 /**

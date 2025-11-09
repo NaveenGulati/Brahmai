@@ -59,5 +59,18 @@ export async function generateAudioForExplanationVersion(
 
   console.log(`[Adaptive TTS] Generated and cached audio for question ${questionId}, level ${simplificationLevel}`);
 
-  return { audioUrl, fromCache: false };
+  // Re-fetch from database to ensure same code path as cached audio
+  const updatedVersions = await db
+    .select()
+    .from(explanationVersions)
+    .where(eq(explanationVersions.id, version.id))
+    .limit(1);
+
+  const fetchedAudioUrl = updatedVersions[0]?.audioUrl;
+  if (!fetchedAudioUrl) {
+    throw new Error('Failed to fetch audio URL after saving');
+  }
+
+  console.log(`[Adaptive TTS] Re-fetched audio URL from database`);
+  return { audioUrl: fetchedAudioUrl, fromCache: false };
 }
