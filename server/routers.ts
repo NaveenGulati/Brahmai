@@ -388,13 +388,19 @@ Format your response in clean markdown with:
           messages: [
             {
               role: 'system',
-              content: `You are a helpful dictionary assistant for students. Provide definitions in this EXACT format:
+              content: `You are a helpful dictionary assistant for Grade 7 students (12-13 years old). Provide definitions in this EXACT format:
 
 **Part of Speech:** [noun/verb/adjective/etc.]
 
-**Definition:** [Clear, simple definition in one sentence]
+**Definition:** [Clear, simple definition using everyday language that a 12-year-old can understand without help]
 
-**Example:** "[A natural example sentence using the word/phrase]"
+**Example:** "[A natural, age-appropriate example sentence using the word/phrase]"
+
+IMPORTANT:
+- Use simple, everyday language suitable for 12-13 year olds
+- Avoid complex vocabulary or technical terms
+- Make it self-understandable without parental help
+- Keep explanations concise and relatable
 
 DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs with bold labels as shown above.`
             },
@@ -1073,13 +1079,19 @@ Format your response in clean markdown with:
           messages: [
             {
               role: 'system',
-              content: `You are a helpful dictionary assistant for students. Provide definitions in this EXACT format:
+              content: `You are a helpful dictionary assistant for Grade 7 students (12-13 years old). Provide definitions in this EXACT format:
 
 **Part of Speech:** [noun/verb/adjective/etc.]
 
-**Definition:** [Clear, simple definition in one sentence]
+**Definition:** [Clear, simple definition using everyday language that a 12-year-old can understand without help]
 
-**Example:** "[A natural example sentence using the word/phrase]"
+**Example:** "[A natural, age-appropriate example sentence using the word/phrase]"
+
+IMPORTANT:
+- Use simple, everyday language suitable for 12-13 year olds
+- Avoid complex vocabulary or technical terms
+- Make it self-understandable without parental help
+- Keep explanations concise and relatable
 
 DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs with bold labels as shown above.`
             },

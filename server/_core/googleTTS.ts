@@ -12,8 +12,9 @@ function markdownToPlainText(markdown: string): string {
   text = text.replace(/```[\s\S]*?```/g, '');
   text = text.replace(/`([^`]+)`/g, '$1');
   
-  // Remove headers (# ## ###)
-  text = text.replace(/^#{1,6}\s+/gm, '');
+  // Add pauses after headings (convert # to text with pause)
+  // Using SSML break tags for natural pauses
+  text = text.replace(/^#{1,6}\s+(.+)$/gm, '$1. ');
   
   // Remove bold/italic (**text**, *text*, __text__, _text_)
   text = text.replace(/\*\*([^*]+)\*\*/g, '$1');
@@ -33,6 +34,10 @@ function markdownToPlainText(markdown: string): string {
   
   // Remove horizontal rules (---, ***, ___)
   text = text.replace(/^[\s]*[-*_]{3,}[\s]*$/gm, '');
+  
+  // Add pauses between sections (double line breaks become longer pauses)
+  // Replace double newlines with period + space for natural pause
+  text = text.replace(/\n\n+/g, '. ');
   
   // Remove ALL emojis (comprehensive Unicode ranges)
   // This removes all emoji characters including:

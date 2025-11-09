@@ -151,8 +151,25 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
   const answeredIds = responses.map(r => r.questionId);
   console.log(`[Adaptive Quiz] Filtering out answered questions:`, answeredIds);
   console.log(`[Adaptive Quiz] Total module questions: ${moduleQuestions.length}`);
-  const unansweredQuestions = moduleQuestions.filter(q => !answeredIds.includes(q.id));
+  let unansweredQuestions = moduleQuestions.filter(q => !answeredIds.includes(q.id));
   console.log(`[Adaptive Quiz] Unanswered questions remaining: ${unansweredQuestions.length}`);
+  
+  // Remove questions with duplicate text (data quality issue)
+  const answeredQuestionTexts = responses
+    .map(r => {
+      const q = allQuestions.find(aq => aq.id === r.questionId);
+      return q?.questionText || '';
+    })
+    .filter(text => text.length > 0);
+  
+  unansweredQuestions = unansweredQuestions.filter(q => {
+    const isDuplicate = answeredQuestionTexts.includes(q.questionText);
+    if (isDuplicate) {
+      console.log(`[Adaptive Quiz] Skipping duplicate question text: ${q.id} - "${q.questionText.substring(0, 60)}..."`);
+    }
+    return !isDuplicate;
+  });
+  console.log(`[Adaptive Quiz] After removing duplicate texts: ${unansweredQuestions.length}`);
   
   // Filter by target difficulty
   let candidateQuestions = unansweredQuestions.filter(q => q.difficulty === targetDifficulty);
@@ -215,17 +232,22 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
   // Select best question using quality scoring
   const selectedQuestion = selectBestQuestion(candidateQuestions, {
     recentTopics: metrics.recentTopics,
-    recentQuestionIds: answeredIds.slice(-5),
+    recentQuestionIds: answeredIds, // Pass ALL answered IDs to prevent any duplicates
     studentAvgTime: metrics.avgTimePerQuestion,
     focusArea: (session.focusArea as FocusArea) || 'balanced',
     questionHistory: questionHistory,
   });
   console.log(`[Adaptive Quiz] Selected question ${selectedQuestion.id} (difficulty: ${selectedQuestion.difficulty}) from ${candidateQuestions.length} candidates`);
   
-  // Safety check: Ensure we're not repeating a question
+  // Safety check: Ensure we're not repeating a question ID or text
   if (answeredIds.includes(selectedQuestion.id)) {
     console.error(`[Adaptive Quiz] ERROR: Selected question ${selectedQuestion.id} was already answered! This should never happen.`);
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Question selection error: duplicate question selected' });
+  }
+  
+  if (answeredQuestionTexts.includes(selectedQuestion.questionText)) {
+    console.error(`[Adaptive Quiz] ERROR: Selected question ${selectedQuestion.id} has duplicate text! This should never happen.`);
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Question selection error: duplicate question text selected' });
   }
 
   return {

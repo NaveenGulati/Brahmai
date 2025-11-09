@@ -683,6 +683,12 @@ export default function QuizReview() {
                                             }));
                                             
                                             toast.success(`Returned to level ${currentLevel}/4`);
+                                            
+                                            // Auto-scroll to top of explanation
+                                            const scrollContainer = explanationScrollRefs.current[response.questionId];
+                                            if (scrollContainer) {
+                                              scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+                                            }
                                           }
                                         }}
                                         variant="outline"
@@ -784,9 +790,8 @@ export default function QuizReview() {
                                     <Button
                                       onClick={() => handlePracticeSimilar(response)}
                                       disabled={generateSimilarQuestionsMutation.isPending}
-                                      variant="outline"
                                       size="sm"
-                                      className="w-full border-pink-300 text-pink-700 hover:bg-pink-50"
+                                      className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold shadow-lg hover:shadow-xl hover:from-pink-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-[1.02]"
                                     >
                                       {generateSimilarQuestionsMutation.isPending ? (
                                         <>
