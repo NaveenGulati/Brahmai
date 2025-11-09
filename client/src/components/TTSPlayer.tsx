@@ -300,23 +300,31 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     const wasPlaying = !audioRef.current.paused;
     
-    // Set flag to prevent timeupdate interference
-    isSkippingRef.current = true;
+    // CRITICAL: Remove timeupdate listener before setting currentTime
+    // This prevents the listener from interfering with the skip
+    const tempListener = highlightIntervalRef.current;
+    if (tempListener && audioRef.current) {
+      audioRef.current.removeEventListener('timeupdate', tempListener);
+      console.log('[TTS Skip] Removed timeupdate listener');
+    }
     
-    // CRITICAL: Update ref BEFORE setting currentTime to prevent race condition
-    // Setting currentTime triggers timeupdate event immediately, which checks the ref
+    // Update ref and state
     currentParagraphIndexRef.current = nextIndex;
     setCurrentParagraphIndex(nextIndex);
     if (onHighlightChange) {
       onHighlightChange(nextIndex);
     }
     
-    // Now safe to set currentTime
+    // Set currentTime (no interference now)
     audioRef.current.currentTime = targetTime;
+    console.log('[TTS Skip] Set currentTime to', targetTime);
     
-    // Clear flag after a short delay to allow currentTime to settle
+    // Re-add listener after a short delay
     setTimeout(() => {
-      isSkippingRef.current = false;
+      if (tempListener && audioRef.current) {
+        audioRef.current.addEventListener('timeupdate', tempListener);
+        console.log('[TTS Skip] Re-added timeupdate listener');
+      }
     }, 100);
     
     // Resume playing if it was playing
@@ -350,23 +358,31 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     const wasPlaying = !audioRef.current.paused;
     
-    // Set flag to prevent timeupdate interference
-    isSkippingRef.current = true;
+    // CRITICAL: Remove timeupdate listener before setting currentTime
+    // This prevents the listener from interfering with the skip
+    const tempListener = highlightIntervalRef.current;
+    if (tempListener && audioRef.current) {
+      audioRef.current.removeEventListener('timeupdate', tempListener);
+      console.log('[TTS Skip] Removed timeupdate listener');
+    }
     
-    // CRITICAL: Update ref BEFORE setting currentTime to prevent race condition
-    // Setting currentTime triggers timeupdate event immediately, which checks the ref
+    // Update ref and state
     currentParagraphIndexRef.current = prevIndex;
     setCurrentParagraphIndex(prevIndex);
     if (onHighlightChange) {
       onHighlightChange(prevIndex);
     }
     
-    // Now safe to set currentTime
+    // Set currentTime (no interference now)
     audioRef.current.currentTime = targetTime;
+    console.log('[TTS Skip] Set currentTime to', targetTime);
     
-    // Clear flag after a short delay to allow currentTime to settle
+    // Re-add listener after a short delay
     setTimeout(() => {
-      isSkippingRef.current = false;
+      if (tempListener && audioRef.current) {
+        audioRef.current.addEventListener('timeupdate', tempListener);
+        console.log('[TTS Skip] Re-added timeupdate listener');
+      }
     }, 100);
     
     // Resume playing if it was playing
