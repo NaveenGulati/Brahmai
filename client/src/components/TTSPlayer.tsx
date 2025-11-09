@@ -244,11 +244,6 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       if (result && result.audioUrl) {
         setAudioUrl(result.audioUrl);
         console.log('[TTSPlayer] Audio URL set:', result.audioUrl);
-        // Force page reload to reset component state (mimics cached behavior)
-        setTimeout(() => {
-          console.log('[TTSPlayer] Reloading page to reset state');
-          window.location.reload();
-        }, 500);
       } else {
         console.error('[TTSPlayer] No audioUrl in result:', result);
         alert('Failed to generate audio: No URL returned');
