@@ -242,16 +242,9 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       
       console.log('[TTSPlayer] Audio generated:', result);
       if (result && result.audioUrl) {
-        // Clear the current audioUrl first to trigger a clean reload
-        setAudioUrl('');
-        console.log('[TTSPlayer] Cleared audio URL for reset');
-        
-        // Wait a moment, then set the new URL (mimics cached behavior)
-        setTimeout(() => {
-          setAudioUrl(result.audioUrl);
-          console.log('[TTSPlayer] Audio URL set after reset:', result.audioUrl);
-        }, 100);
-      } else {
+        setAudioUrl(result.audioUrl);
+        console.log('[TTSPlayer] Audio URL set:', result.audioUrl);
+      } else{
         console.error('[TTSPlayer] No audioUrl in result:', result);
         alert('Failed to generate audio: No URL returned');
       }
