@@ -34,6 +34,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     return localStorage.getItem(STORAGE_KEY) || '1';
   });
   const [currentParagraphIndex, setCurrentParagraphIndex] = useState(0);
+  const [audioReady, setAudioReady] = useState(false);
   const [showMeaningDialog, setShowMeaningDialog] = useState(false);
   const [selectedText, setSelectedText] = useState('');
   const [wordMeaning, setWordMeaning] = useState('');
@@ -62,6 +63,8 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   useEffect(() => {
     if (audioRef.current && audioUrl) {
       console.log('[TTS] Setting audio src imperatively:', audioUrl);
+      // Reset audioReady when new audio is loading
+      setAudioReady(false);
       // Only set src if it's different (avoid unnecessary reloads)
       if (audioRef.current.src !== audioUrl) {
         audioRef.current.src = audioUrl;
@@ -266,11 +269,17 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   const handleSkipForward = () => {
     if (!audioRef.current || sentencesRef.current.length === 0) return;
     
+    // Guard: Don't allow skip if audio not fully loaded
+    const duration = audioRef.current.duration;
+    if (isNaN(duration) || duration === 0) {
+      console.log('[TTS Skip Forward] Audio not ready, duration:', duration);
+      return;
+    }
+    
     const nextIndex = Math.min(currentParagraphIndex + 1, sentencesRef.current.length - 1);
     if (nextIndex === currentParagraphIndex) return; // Already at last paragraph
     
     // Calculate target time based on next paragraph's timing
-    const duration = audioRef.current.duration;
     const targetProgress = nextIndex === 0 ? 0 : sentenceTimingsRef.current[nextIndex - 1];
     let targetTime = targetProgress * duration;
     // Add small buffer to ensure we CROSS the threshold (not just reach it)
@@ -302,11 +311,17 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   const handleSkipBackward = () => {
     if (!audioRef.current || sentencesRef.current.length === 0) return;
     
+    // Guard: Don't allow skip if audio not fully loaded
+    const duration = audioRef.current.duration;
+    if (isNaN(duration) || duration === 0) {
+      console.log('[TTS Skip Backward] Audio not ready, duration:', duration);
+      return;
+    }
+    
     const prevIndex = Math.max(currentParagraphIndex - 1, 0);
     if (prevIndex === currentParagraphIndex) return; // Already at first paragraph
     
     // Calculate target time based on previous paragraph's timing
-    const duration = audioRef.current.duration;
     const targetProgress = prevIndex === 0 ? 0 : sentenceTimingsRef.current[prevIndex - 1];
     let targetTime = targetProgress * duration;
     // Add small buffer to ensure we CROSS the threshold (not just reach it)
@@ -372,6 +387,11 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
             onLoadedMetadata={() => {
               if (audioRef.current) {
                 audioRef.current.playbackRate = parseFloat(playbackSpeed);
+                // Mark audio as ready when metadata is loaded (duration is available)
+                if (!isNaN(audioRef.current.duration)) {
+                  console.log('[TTS] Audio ready, duration:', audioRef.current.duration);
+                  setAudioReady(true);
+                }
               }
             }}
           />
@@ -383,7 +403,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
           size="sm"
           className="border-blue-300 text-blue-700 hover:bg-blue-50"
           title="Previous paragraph"
-          disabled={!audioUrl || generateAudioMutation.isPending}
+          disabled={!audioUrl || !audioReady || generateAudioMutation.isPending}
         >
           <SkipBack className="w-3 h-3" />
         </Button>
@@ -427,7 +447,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
           size="sm"
           className="border-blue-300 text-blue-700 hover:bg-blue-50"
           title="Next paragraph"
-          disabled={!audioUrl || generateAudioMutation.isPending}
+          disabled={!audioUrl || !audioReady || generateAudioMutation.isPending}
         >
           <SkipForward className="w-3 h-3" />
         </Button>
