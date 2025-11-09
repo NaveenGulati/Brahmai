@@ -393,14 +393,11 @@ export function insertImagesIntoExplanation(
   images.forEach(img => {
     // Build attribution text
     const attributionText = img.attribution 
-      ? `<p style="font-size: 12px; color: #888; margin-top: 8px;">${img.attribution}</p>` 
+      ? `\n*${img.attribution}*` 
       : '';
 
-    const imageMarkdown = `\n\n<div class="educational-image" style="text-align: center; margin: 24px 0; padding: 16px; background: #f8f9fa; border-radius: 12px;">
-  <img src="${img.url}" alt="${img.caption}" style="max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" />
-  <p style="font-style: italic; color: #555; margin-top: 12px; font-size: 14px; line-height: 1.5;">${img.caption}</p>
-  ${attributionText}
-</div>\n\n`;
+    // Use pure markdown format (compatible with ReactMarkdown)
+    const imageMarkdown = `\n\n---\n\n![${img.caption}](${img.url})\n\n*${img.caption}*${attributionText}\n\n---\n\n`;
 
     switch (img.position) {
       case 'after_intro':
