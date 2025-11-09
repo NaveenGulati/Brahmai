@@ -1624,7 +1624,22 @@ export async function generateDetailedExplanationForQuestion(
     // Update usage stats
     await updateCachedExplanationUsage(questionId);
     
-    return { detailedExplanation: cached[0].detailedExplanation, fromCache: true };
+    let explanation = cached[0].detailedExplanation;
+    
+    // Restore images from cache if available
+    if (cached[0].imageData) {
+      try {
+        const { restoreImagesIntoExplanation } = await import('./educational-images');
+        const imageData = JSON.parse(cached[0].imageData);
+        explanation = restoreImagesIntoExplanation(explanation, imageData);
+        console.log(`[AI] Restored ${imageData.length} cached images`);
+      } catch (error) {
+        console.error('[AI] Failed to restore cached images:', error);
+        // Continue with text-only explanation
+      }
+    }
+    
+    return { detailedExplanation: explanation, fromCache: true };
   }
 
   // Generate new explanation
@@ -1706,6 +1721,7 @@ Write in a natural, spoken style as if you're talking to the student. Be direct 
   let detailedExplanation = response.choices[0].message.content || 'Unable to generate explanation';
 
   // Enhance with educational images (non-blocking)
+  let imageDataJson: string | null = null;
   try {
     const { enhanceExplanationWithImages } = await import('./educational-images');
     const result = await enhanceExplanationWithImages(
@@ -1720,6 +1736,7 @@ Write in a natural, spoken style as if you're talking to the student. Be direct 
     
     if (result.imageCount > 0) {
       detailedExplanation = result.enhancedExplanation;
+      imageDataJson = result.imageDataJson; // Store for caching
       console.log(`[AI] Enhanced explanation with ${result.imageCount} educational images`);
     }
   } catch (imageError) {
@@ -1727,13 +1744,14 @@ Write in a natural, spoken style as if you're talking to the student. Be direct 
     // Continue without images - not critical
   }
 
-  // Cache the explanation (non-blocking - if it fails, still return the explanation)
+  // Cache the explanation with images (non-blocking - if it fails, still return the explanation)
   try {
     await db
       .insert(aiExplanationCache)
       .values({
         questionId,
         detailedExplanation,
+        imageData: imageDataJson,
         timesUsed: 1,
         lastUsedAt: new Date(),
       })
@@ -1741,6 +1759,7 @@ Write in a natural, spoken style as if you're talking to the student. Be direct 
         target: aiExplanationCache.questionId,
         set: {
           detailedExplanation,
+          imageData: imageDataJson,
           timesUsed: sql`COALESCE(${aiExplanationCache.timesUsed}, 0) + 1`,
           lastUsedAt: new Date(),
         },

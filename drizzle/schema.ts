@@ -366,6 +366,7 @@ export const aiExplanationCache = pgTable("aiExplanationCache", {
   questionId: integer("questionId").primaryKey().notNull(),
   detailedExplanation: text("detailedExplanation").notNull(),
   audioUrl: text("audioUrl"),
+  imageData: text("imageData"), // JSON array of {url, caption, attribution}
   generatedAt: timestamp("generatedAt").defaultNow().notNull(),
   timesUsed: integer("timesUsed").default(1).notNull(),
   lastUsedAt: timestamp("lastUsedAt").defaultNow().notNull(),
@@ -381,6 +382,7 @@ export const explanationVersions = pgTable("explanationVersions", {
   simplificationLevel: integer("simplificationLevel").notNull(), // 0=standard, 1=simple, 2=very simple, 3=ELI5
   explanationText: text("explanationText").notNull(),
   audioUrl: text("audioUrl"),
+  imageData: text("imageData"), // JSON array of {url, caption, attribution}
   generatedAt: timestamp("generatedAt").defaultNow().notNull(),
   usageCount: integer("usageCount").default(1).notNull(),
   lastUsedAt: timestamp("lastUsedAt").defaultNow().notNull(),

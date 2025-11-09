@@ -92,8 +92,23 @@ export async function getSimplifiedExplanation(
       })
       .where(eq(explanationVersions.id, cached[0].id));
     
+    let explanation = cached[0].explanationText;
+    
+    // Restore images from cache if available
+    if (cached[0].imageData) {
+      try {
+        const { restoreImagesIntoExplanation } = await import('./educational-images');
+        const imageData = JSON.parse(cached[0].imageData);
+        explanation = restoreImagesIntoExplanation(explanation, imageData);
+        console.log(`[Adaptive] Restored ${imageData.length} cached images for level ${simplificationLevel}`);
+      } catch (error) {
+        console.error('[Adaptive] Failed to restore cached images:', error);
+        // Continue with text-only explanation
+      }
+    }
+    
     return { 
-      explanationText: cached[0].explanationText, 
+      explanationText: explanation, 
       fromCache: true 
     };
   }
@@ -185,9 +200,33 @@ Write as if you're talking to ${levelInfo.audience}. Be warm, patient, and make 
     maxTokens: 500, // Allow longer explanations with examples
   });
 
-  const explanationText = response.choices[0].message.content || 'Unable to generate explanation';
+  let explanationText = response.choices[0].message.content || 'Unable to generate explanation';
 
-  // Cache the explanation
+  // Enhance with educational images (non-blocking)
+  let imageDataJson: string | null = null;
+  try {
+    const { enhanceExplanationWithImages } = await import('./educational-images');
+    const result = await enhanceExplanationWithImages(
+      questionId,
+      q.questionText,
+      q.correctAnswer,
+      explanationText,
+      q.subject,
+      q.topic,
+      q.grade
+    );
+    
+    if (result.imageCount > 0) {
+      explanationText = result.enhancedExplanation;
+      imageDataJson = result.imageDataJson;
+      console.log(`[Adaptive] Enhanced level ${simplificationLevel} with ${result.imageCount} images`);
+    }
+  } catch (imageError) {
+    console.error('[Adaptive] Failed to enhance with images:', imageError);
+    // Continue without images - not critical
+  }
+
+  // Cache the explanation with images
   try {
     await db
       .insert(explanationVersions)
@@ -195,6 +234,7 @@ Write as if you're talking to ${levelInfo.audience}. Be warm, patient, and make 
         questionId,
         simplificationLevel,
         explanationText,
+        imageData: imageDataJson,
         generatedAt: new Date(),
         usageCount: 1,
         lastUsedAt: new Date(),

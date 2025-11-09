@@ -435,7 +435,7 @@ export async function enhanceExplanationWithImages(
   subject: string = 'Science',
   topic: string = '',
   grade: number = 7
-): Promise<{ enhancedExplanation: string; imageCount: number }> {
+): Promise<{ enhancedExplanation: string; imageCount: number; imageDataJson: string | null }> {
   try {
     console.log(`[Educational Images] Analyzing question ${questionId}...`);
     
@@ -450,7 +450,7 @@ export async function enhanceExplanationWithImages(
 
     if (suggestions.length === 0) {
       console.log(`[Educational Images] No images needed for question ${questionId}`);
-      return { enhancedExplanation: explanation, imageCount: 0 };
+      return { enhancedExplanation: explanation, imageCount: 0, imageDataJson: null };
     }
 
     console.log(`[Educational Images] Processing ${suggestions.length} image suggestions...`);
@@ -460,17 +460,36 @@ export async function enhanceExplanationWithImages(
 
     if (processedImages.length === 0) {
       console.log(`[Educational Images] No images found for question ${questionId}`);
-      return { enhancedExplanation: explanation, imageCount: 0 };
+      return { enhancedExplanation: explanation, imageCount: 0, imageDataJson: null };
     }
 
     // Step 3: Insert images into explanation
     const enhancedExplanation = insertImagesIntoExplanation(explanation, processedImages);
 
+    // Step 4: Serialize image data for caching
+    const imageDataJson = JSON.stringify(processedImages);
+
     console.log(`[Educational Images] Enhanced with ${processedImages.length} images`);
-    return { enhancedExplanation, imageCount: processedImages.length };
+    return { enhancedExplanation, imageCount: processedImages.length, imageDataJson };
 
   } catch (error) {
     console.error('[Educational Images] Error enhancing explanation:', error);
-    return { enhancedExplanation: explanation, imageCount: 0 };
+    return { enhancedExplanation: explanation, imageCount: 0, imageDataJson: null };
   }
+}
+
+/**
+ * Restore images into explanation from cached image data
+ * Used when retrieving cached explanations from database
+ */
+export function restoreImagesIntoExplanation(
+  explanation: string,
+  imageData: ProcessedImage[]
+): string {
+  if (imageData.length === 0) return explanation;
+  
+  // Images are already embedded in the cached explanation text
+  // This function exists for future enhancements (e.g., updating image URLs)
+  // For now, just return the explanation as-is since images are in markdown format
+  return explanation;
 }
