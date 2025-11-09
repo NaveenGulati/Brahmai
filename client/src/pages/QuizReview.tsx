@@ -563,16 +563,17 @@ export default function QuizReview() {
                               >
                                 {/* Audio player - sticky within scrollable container */}
                                 <div className="sticky top-0 z-10 bg-gradient-to-br from-purple-50 to-pink-50">
-                                  <TTSPlayer
-                                    questionId={response.questionId}
-                                    isChild={isChild}
-                                    explanationText={expandedExplanations[response.questionId]}
-                                    simplificationLevel={simplificationLevels[response.questionId] ?? 0}
-                                    onHighlightChange={(index) => {
-                                      setHighlightedQuestionId(response.questionId);
-                                      setHighlightIndex(index);
-                                    }}
-                                  />
+                                <TTSPlayer
+                                  key={`tts-${response.questionId}-${simplificationLevels[response.questionId] ?? 0}`}
+                                  questionId={response.questionId}
+                                  isChild={isChild}
+                                  explanationText={expandedExplanations[response.questionId]}
+                                  simplificationLevel={simplificationLevels[response.questionId] ?? 0}
+                                  onHighlightChange={(index) => {
+                                    setHighlightedQuestionId(response.questionId);
+                                    setHighlightIndex(index);
+                                  }}
+                                />
                                 </div>
                                 
                                 {/* Explanation text - scrollable */}
