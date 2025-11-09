@@ -1,6 +1,7 @@
 /**
  * Educational Image Enhancement for Explanations
- * Hybrid approach: Search for existing images from web + Generate when needed
+ * FREE TIER Strategy: Pexels + Pixabay + Wikimedia + Unsplash
+ * All providers are free with unlimited or high limits
  */
 
 import { invokeLLM } from './_core/llm';
@@ -19,6 +20,7 @@ interface ProcessedImage {
   url: string;
   caption: string;
   position: string;
+  attribution?: string;
 }
 
 /**
@@ -40,22 +42,22 @@ export async function analyzeAndSuggestImages(
 
 **Your Task:**
 Suggest 1-2 images to search for. For each provide:
-1. searchQuery: What to search (e.g., "energy transformation diagram educational", "steam engine how it works illustration")
+1. searchQuery: What to search (e.g., "energy transformation", "steam engine diagram", "heat transfer illustration")
 2. caption: Brief description of what the image shows
 3. position: Where to place it ("after_intro", "after_example", or "end")
 
 **Guidelines:**
-- Search for educational diagrams, illustrations, or real photos
-- Use specific, descriptive search terms
-- Include words like "diagram", "illustration", "educational", "labeled" for better results
+- Use simple, clear search terms (2-4 words)
+- Focus on visual concepts that aid understanding
 - Only suggest if genuinely helpful (max 2 images)
 - Position strategically to support understanding
+- Prefer real photos over abstract concepts
 
 Respond in JSON:
 {
   "images": [
     {
-      "searchQuery": "energy transformation steam engine diagram educational",
+      "searchQuery": "energy transformation",
       "caption": "How energy transforms in a steam engine from chemical to mechanical",
       "position": "after_intro"
     }
@@ -136,39 +138,211 @@ async function downloadAndSaveImage(
 }
 
 /**
- * Search for educational images using Bing/Google image search
- * Returns array of image URLs
+ * Search Pexels API (FREE, Unlimited with attribution)
+ * https://www.pexels.com/api/documentation/
  */
-async function searchEducationalImages(query: string): Promise<string[]> {
-  try {
-    // Use Bing Image Search API (you'll need to set BING_SEARCH_API_KEY env var)
-    const apiKey = process.env.BING_SEARCH_API_KEY;
-    
-    if (!apiKey) {
-      console.log('[Educational Images] No Bing API key, skipping image search');
-      return [];
-    }
+async function searchPexels(query: string): Promise<{ url: string; attribution: string } | null> {
+  const apiKey = process.env.PEXELS_API_KEY;
+  if (!apiKey) {
+    console.log('[Educational Images] No Pexels API key');
+    return null;
+  }
 
-    const response = await axios.get('https://api.bing.microsoft.com/v7.0/images/search', {
+  try {
+    const response = await axios.get('https://api.pexels.com/v1/search', {
       params: {
-        q: query,
-        count: 5,
-        imageType: 'Photo',
-        license: 'Public', // Only public domain/creative commons
-        safeSearch: 'Strict',
+        query,
+        per_page: 3,
+        orientation: 'landscape',
       },
       headers: {
-        'Ocp-Apim-Subscription-Key': apiKey,
+        'Authorization': apiKey,
       },
       timeout: 5000,
     });
 
-    const imageUrls = response.data.value?.map((img: any) => img.contentUrl) || [];
-    return imageUrls.slice(0, 3); // Return top 3
+    if (response.data.photos && response.data.photos.length > 0) {
+      const photo = response.data.photos[0];
+      return {
+        url: photo.src.large,
+        attribution: `Photo by ${photo.photographer} from Pexels`,
+      };
+    }
   } catch (error) {
-    console.error('[Educational Images] Image search failed:', error);
-    return [];
+    console.error('[Educational Images] Pexels search failed:', error);
   }
+
+  return null;
+}
+
+/**
+ * Search Pixabay API (FREE, Unlimited, NO attribution required)
+ * https://pixabay.com/api/docs/
+ */
+async function searchPixabay(query: string): Promise<{ url: string; attribution?: string } | null> {
+  const apiKey = process.env.PIXABAY_API_KEY;
+  if (!apiKey) {
+    console.log('[Educational Images] No Pixabay API key');
+    return null;
+  }
+
+  try {
+    const response = await axios.get('https://pixabay.com/api/', {
+      params: {
+        key: apiKey,
+        q: query,
+        image_type: 'photo',
+        per_page: 3,
+        safesearch: 'true',
+      },
+      timeout: 5000,
+    });
+
+    if (response.data.hits && response.data.hits.length > 0) {
+      const image = response.data.hits[0];
+      return {
+        url: image.largeImageURL,
+        attribution: undefined, // CC0 - no attribution required!
+      };
+    }
+  } catch (error) {
+    console.error('[Educational Images] Pixabay search failed:', error);
+  }
+
+  return null;
+}
+
+/**
+ * Search Unsplash API (FREE, 50/hour)
+ * https://unsplash.com/documentation
+ */
+async function searchUnsplash(query: string): Promise<{ url: string; attribution: string } | null> {
+  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
+  if (!accessKey) {
+    console.log('[Educational Images] No Unsplash API key');
+    return null;
+  }
+
+  try {
+    const response = await axios.get('https://api.unsplash.com/search/photos', {
+      params: {
+        query,
+        per_page: 3,
+        orientation: 'landscape',
+      },
+      headers: {
+        'Authorization': `Client-ID ${accessKey}`,
+      },
+      timeout: 5000,
+    });
+
+    if (response.data.results && response.data.results.length > 0) {
+      const photo = response.data.results[0];
+      return {
+        url: photo.urls.regular,
+        attribution: `Photo by ${photo.user.name} on Unsplash`,
+      };
+    }
+  } catch (error) {
+    console.error('[Educational Images] Unsplash search failed:', error);
+  }
+
+  return null;
+}
+
+/**
+ * Search Wikimedia Commons (FREE, Unlimited, Educational focus)
+ * https://commons.wikimedia.org/w/api.php
+ */
+async function searchWikimedia(query: string): Promise<{ url: string; attribution: string } | null> {
+  try {
+    // Step 1: Search for images
+    const searchResponse = await axios.get('https://commons.wikimedia.org/w/api.php', {
+      params: {
+        action: 'query',
+        list: 'search',
+        srsearch: query,
+        srnamespace: 6, // File namespace
+        srlimit: 3,
+        format: 'json',
+      },
+      timeout: 5000,
+    });
+
+    const results = searchResponse.data.query?.search;
+    if (!results || results.length === 0) {
+      return null;
+    }
+
+    // Step 2: Get image URL
+    const imageTitle = results[0].title;
+    const imageResponse = await axios.get('https://commons.wikimedia.org/w/api.php', {
+      params: {
+        action: 'query',
+        titles: imageTitle,
+        prop: 'imageinfo',
+        iiprop: 'url',
+        format: 'json',
+      },
+      timeout: 5000,
+    });
+
+    const pages = imageResponse.data.query?.pages;
+    if (!pages) return null;
+
+    const page = Object.values(pages)[0] as any;
+    const imageUrl = page.imageinfo?.[0]?.url;
+
+    if (imageUrl) {
+      return {
+        url: imageUrl,
+        attribution: 'From Wikimedia Commons',
+      };
+    }
+  } catch (error) {
+    console.error('[Educational Images] Wikimedia search failed:', error);
+  }
+
+  return null;
+}
+
+/**
+ * Multi-provider search with fallback chain
+ * Priority: Pexels → Pixabay → Wikimedia → Unsplash
+ */
+async function searchEducationalImage(query: string): Promise<{ url: string; attribution?: string } | null> {
+  console.log(`[Educational Images] Searching for: "${query}"`);
+
+  // 1. Try Pexels (unlimited, high quality)
+  const pexelsResult = await searchPexels(query);
+  if (pexelsResult) {
+    console.log('[Educational Images] Found on Pexels');
+    return pexelsResult;
+  }
+
+  // 2. Try Pixabay (unlimited, no attribution needed)
+  const pixabayResult = await searchPixabay(query);
+  if (pixabayResult) {
+    console.log('[Educational Images] Found on Pixabay');
+    return pixabayResult;
+  }
+
+  // 3. Try Wikimedia (unlimited, educational focus)
+  const wikimediaResult = await searchWikimedia(query);
+  if (wikimediaResult) {
+    console.log('[Educational Images] Found on Wikimedia');
+    return wikimediaResult;
+  }
+
+  // 4. Try Unsplash (50/hour, high quality)
+  const unsplashResult = await searchUnsplash(query);
+  if (unsplashResult) {
+    console.log('[Educational Images] Found on Unsplash');
+    return unsplashResult;
+  }
+
+  console.log('[Educational Images] No image found');
+  return null;
 }
 
 /**
@@ -183,21 +357,20 @@ export async function processImageSuggestions(
   for (let i = 0; i < suggestions.length; i++) {
     const suggestion = suggestions[i];
     
-    console.log(`[Educational Images] Searching for: ${suggestion.searchQuery}`);
-    const imageUrls = await searchEducationalImages(suggestion.searchQuery);
-
-    if (imageUrls.length > 0) {
-      // Try to download the first available image
-      for (const url of imageUrls) {
-        const localPath = await downloadAndSaveImage(url, questionId, i + 1);
-        if (localPath) {
-          processedImages.push({
-            url: localPath,
-            caption: suggestion.caption,
-            position: suggestion.position,
-          });
-          break; // Successfully got one image, move to next suggestion
-        }
+    // Search for image
+    const imageResult = await searchEducationalImage(suggestion.searchQuery);
+    
+    if (imageResult) {
+      // Download and save locally
+      const localPath = await downloadAndSaveImage(imageResult.url, questionId, i + 1);
+      
+      if (localPath) {
+        processedImages.push({
+          url: localPath,
+          caption: suggestion.caption,
+          position: suggestion.position,
+          attribution: imageResult.attribution,
+        });
       }
     }
   }
@@ -218,9 +391,15 @@ export function insertImagesIntoExplanation(
   const sections = result.split('###');
 
   images.forEach(img => {
+    // Build attribution text
+    const attributionText = img.attribution 
+      ? `<p style="font-size: 12px; color: #888; margin-top: 8px;">${img.attribution}</p>` 
+      : '';
+
     const imageMarkdown = `\n\n<div class="educational-image" style="text-align: center; margin: 24px 0; padding: 16px; background: #f8f9fa; border-radius: 12px;">
   <img src="${img.url}" alt="${img.caption}" style="max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" />
   <p style="font-style: italic; color: #555; margin-top: 12px; font-size: 14px; line-height: 1.5;">${img.caption}</p>
+  ${attributionText}
 </div>\n\n`;
 
     switch (img.position) {
@@ -283,7 +462,7 @@ export async function enhanceExplanationWithImages(
 
     console.log(`[Educational Images] Processing ${suggestions.length} image suggestions...`);
 
-    // Step 2: Search and download images
+    // Step 2: Search and download images (multi-provider fallback)
     const processedImages = await processImageSuggestions(suggestions, questionId);
 
     if (processedImages.length === 0) {
