@@ -71,14 +71,20 @@ Generate ${count} high-quality practice questions now. Return ONLY valid JSON, n
     ]
   });
 
+  // Extract content from response
+  const content = response.choices[0]?.message?.content;
+  if (!content || typeof content !== 'string') {
+    throw new Error('Invalid response from AI');
+  }
+
   // Parse the JSON response
   let parsedResponse;
   try {
     // Remove markdown code blocks if present
-    const cleanedResponse = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const cleanedResponse = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     parsedResponse = JSON.parse(cleanedResponse);
   } catch (error) {
-    console.error('Failed to parse LLM response:', response);
+    console.error('Failed to parse LLM response:', content);
     throw new Error('Failed to generate questions - invalid response format');
   }
 
@@ -200,10 +206,16 @@ IMPORTANT:
     temperature: 0.8, // Higher temperature for more variety in questions
   });
 
+  // Extract content from response
+  const content = response.choices[0]?.message?.content;
+  if (!content || typeof content !== 'string') {
+    throw new Error('Invalid response from AI');
+  }
+
   // Parse the JSON response
   try {
     // Extract JSON from response (in case there's extra text)
-    const jsonMatch = response.match(/\[[\s\S]*\]/);
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       throw new Error('No JSON array found in response');
     }
@@ -235,7 +247,7 @@ IMPORTANT:
     return questions;
   } catch (error) {
     console.error('Failed to parse AI response:', error);
-    console.error('Raw response:', response);
+    console.error('Raw response:', content);
     throw new Error('Failed to generate practice questions. Please try again.');
   }
 }
