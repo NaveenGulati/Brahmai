@@ -11,6 +11,9 @@ import { trpc } from "@/lib/trpc";
 import { useLocation, useParams } from "wouter";
 import { CheckCircle2, XCircle, Clock, Award, Brain, Sparkles } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import { useState, useRef, useEffect } from 'react';
 import { TTSPlayer } from '@/components/TTSPlayer';
 
@@ -50,7 +53,12 @@ function HighlightedText({ text, highlightIndex }: { text: string; highlightInde
               : 'p-1'
           }`}
         >
-          <ReactMarkdown>{paragraph}</ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={[remarkMath]}
+            rehypePlugins={[rehypeKatex]}
+          >
+            {paragraph}
+          </ReactMarkdown>
         </div>
       ))}
     </div>
