@@ -94,6 +94,14 @@ export default function QuizReview() {
   const [highlightedQuestionId, setHighlightedQuestionId] = useState<number | null>(null);
   const [highlightIndex, setHighlightIndex] = useState<number>(-1);
   const explanationScrollRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  
+  // Practice Similar Questions state
+  const [showPracticeModal, setShowPracticeModal] = useState(false);
+  const [practiceQuestions, setPracticeQuestions] = useState<any[]>([]);
+  const [currentPracticeIndex, setCurrentPracticeIndex] = useState(0);
+  const [practiceAnswers, setPracticeAnswers] = useState<Record<number, string>>({});
+  const [practiceSubmitted, setPracticeSubmitted] = useState<Record<number, boolean>>({});
+  const [originalQuestionForPractice, setOriginalQuestionForPractice] = useState<any>(null);
   const [showReattemptDialog, setShowReattemptDialog] = useState(false);
   const [reattemptParams, setReattemptParams] = useState<{
     questionCount: number;
@@ -154,6 +162,11 @@ export default function QuizReview() {
   const parentSimplifyMutation = trpc.parent.simplifyExplanation.useMutation();
   const childSimplifyMutation = trpc.child.simplifyExplanation.useMutation();
   const simplifyExplanationMutation = isChild ? childSimplifyMutation : parentSimplifyMutation;
+  
+  // Similar questions mutations - call both unconditionally (React hooks rule)
+  const parentSimilarQuestionsMutation = trpc.parent.generateSimilarQuestions.useMutation();
+  const childSimilarQuestionsMutation = trpc.child.generateSimilarQuestions.useMutation();
+  const generateSimilarQuestionsMutation = isChild ? childSimilarQuestionsMutation : parentSimilarQuestionsMutation;
 
   // NOW we can do conditional returns - all hooks have been called
   if (actualLoading) {
@@ -207,6 +220,55 @@ export default function QuizReview() {
     } catch (error) {
       console.error('Failed to generate explanation:', error);
     }
+  };
+  
+  const handlePracticeSimilar = async (response: any) => {
+    try {
+      // Get the detailed explanation if available
+      const detailedExplanation = expandedExplanations[response.questionId] || '';
+      
+      const result = await generateSimilarQuestionsMutation.mutateAsync({
+        questionId: response.questionId,
+        questionText: response.questionText,
+        correctAnswer: response.correctAnswer,
+        detailedExplanation,
+        moduleId: session.moduleId,
+      });
+      
+      setPracticeQuestions(result.questions);
+      setOriginalQuestionForPractice(response);
+      setCurrentPracticeIndex(0);
+      setPracticeAnswers({});
+      setPracticeSubmitted({});
+      setShowPracticeModal(true);
+      toast.success('Practice questions generated!');
+    } catch (error) {
+      console.error('Failed to generate similar questions:', error);
+      toast.error('Failed to generate practice questions. Please try again.');
+    }
+  };
+  
+  const handlePracticeAnswer = (questionIndex: number, answer: string) => {
+    setPracticeAnswers(prev => ({
+      ...prev,
+      [questionIndex]: answer,
+    }));
+  };
+  
+  const handlePracticeSubmit = (questionIndex: number) => {
+    setPracticeSubmitted(prev => ({
+      ...prev,
+      [questionIndex]: true,
+    }));
+  };
+  
+  const closePracticeModal = () => {
+    setShowPracticeModal(false);
+    setPracticeQuestions([]);
+    setCurrentPracticeIndex(0);
+    setPracticeAnswers({});
+    setPracticeSubmitted({});
+    setOriginalQuestionForPractice(null);
   };
 
   return (
@@ -716,6 +778,29 @@ export default function QuizReview() {
                                       </span>
                                     </div>
                                   )}
+                                  
+                                  {/* Practice Similar Questions Button */}
+                                  <div className="mt-4 pt-4 border-t border-purple-200">
+                                    <Button
+                                      onClick={() => handlePracticeSimilar(response)}
+                                      disabled={generateSimilarQuestionsMutation.isPending}
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full border-pink-300 text-pink-700 hover:bg-pink-50"
+                                    >
+                                      {generateSimilarQuestionsMutation.isPending ? (
+                                        <>
+                                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-pink-600 mr-2"></div>
+                                          Generating Practice Questions...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Sparkles className="w-3 h-3 mr-2" />
+                                          Practice Similar Questions
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -810,6 +895,185 @@ export default function QuizReview() {
               disabled={createSelfChallengeMutation.isLoading}
             >
               {createSelfChallengeMutation.isLoading ? 'Creating...' : 'Start Quiz'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Practice Similar Questions Modal */}
+      <Dialog open={showPracticeModal} onOpenChange={closePracticeModal}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-pink-600" />
+              <DialogTitle>Practice Mode - Similar Questions</DialogTitle>
+            </div>
+            <DialogDescription>
+              Practice with {practiceQuestions.length} questions similar to the original concept. Your answers won't be saved.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {practiceQuestions.length > 0 && (
+            <div className="space-y-6 py-4">
+              {/* Progress indicator */}
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <span>Question {currentPracticeIndex + 1} of {practiceQuestions.length}</span>
+                <span className="text-pink-600 font-medium">Practice Mode</span>
+              </div>
+              
+              {/* Current practice question */}
+              {practiceQuestions.map((question, idx) => (
+                <div key={idx} className={idx === currentPracticeIndex ? 'block' : 'hidden'}>
+                  <div className="bg-gradient-to-br from-pink-50 to-purple-50 border-2 border-pink-200 rounded-lg p-6">
+                    {/* Question text */}
+                    <div className="mb-4">
+                      <h3 className="font-semibold text-lg mb-3">Question {idx + 1}</h3>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkMath]}
+                        rehypePlugins={[rehypeKatex]}
+                        className="prose prose-sm max-w-none"
+                      >
+                        {question.questionText}
+                      </ReactMarkdown>
+                    </div>
+                    
+                    {/* Answer options */}
+                    <div className="space-y-2 mb-4">
+                      {question.type === 'MCQ' ? (
+                        ['A', 'B', 'C', 'D'].map((option) => (
+                          <button
+                            key={option}
+                            onClick={() => handlePracticeAnswer(idx, option)}
+                            disabled={practiceSubmitted[idx]}
+                            className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                              practiceAnswers[idx] === option
+                                ? 'border-pink-500 bg-pink-100'
+                                : 'border-gray-300 hover:border-pink-300 bg-white'
+                            } ${
+                              practiceSubmitted[idx]
+                                ? option === question.correctAnswer
+                                  ? 'border-green-500 bg-green-100'
+                                  : practiceAnswers[idx] === option
+                                  ? 'border-red-500 bg-red-100'
+                                  : 'opacity-50'
+                                : ''
+                            }`}
+                          >
+                            <ReactMarkdown
+                              remarkPlugins={[remarkMath]}
+                              rehypePlugins={[rehypeKatex]}
+                              className="prose prose-sm max-w-none"
+                            >
+                              {question[`option${option}`]}
+                            </ReactMarkdown>
+                          </button>
+                        ))
+                      ) : (
+                        ['True', 'False'].map((option) => (
+                          <button
+                            key={option}
+                            onClick={() => handlePracticeAnswer(idx, option)}
+                            disabled={practiceSubmitted[idx]}
+                            className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                              practiceAnswers[idx] === option
+                                ? 'border-pink-500 bg-pink-100'
+                                : 'border-gray-300 hover:border-pink-300 bg-white'
+                            } ${
+                              practiceSubmitted[idx]
+                                ? option === question.correctAnswer
+                                  ? 'border-green-500 bg-green-100'
+                                  : practiceAnswers[idx] === option
+                                  ? 'border-red-500 bg-red-100'
+                                  : 'opacity-50'
+                                : ''
+                            }`}
+                          >
+                            {option}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                    
+                    {/* Submit button */}
+                    {!practiceSubmitted[idx] && practiceAnswers[idx] && (
+                      <Button
+                        onClick={() => handlePracticeSubmit(idx)}
+                        className="w-full bg-pink-600 hover:bg-pink-700"
+                      >
+                        Submit Answer
+                      </Button>
+                    )}
+                    
+                    {/* Feedback after submission */}
+                    {practiceSubmitted[idx] && (
+                      <div className="mt-4 space-y-3">
+                        {/* Correct/Incorrect indicator */}
+                        <div className={`p-3 rounded-lg ${
+                          practiceAnswers[idx] === question.correctAnswer
+                            ? 'bg-green-100 border-2 border-green-500'
+                            : 'bg-red-100 border-2 border-red-500'
+                        }`}>
+                          {practiceAnswers[idx] === question.correctAnswer ? (
+                            <div className="flex items-center gap-2 text-green-700">
+                              <CheckCircle2 className="w-5 h-5" />
+                              <span className="font-semibold">Correct!</span>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-red-700">
+                                <XCircle className="w-5 h-5" />
+                                <span className="font-semibold">Incorrect</span>
+                              </div>
+                              <p className="text-sm text-red-700">
+                                Correct answer: <strong>{question.correctAnswer}</strong>
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Explanation */}
+                        <div className="bg-white border-2 border-purple-200 rounded-lg p-4">
+                          <h4 className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
+                            <Brain className="w-4 h-4" />
+                            Explanation
+                          </h4>
+                          <ReactMarkdown
+                            remarkPlugins={[remarkMath]}
+                            rehypePlugins={[rehypeKatex]}
+                            className="prose prose-sm max-w-none"
+                          >
+                            {question.explanation}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Navigation buttons */}
+                  <div className="flex justify-between mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentPracticeIndex(Math.max(0, currentPracticeIndex - 1))}
+                      disabled={currentPracticeIndex === 0}
+                    >
+                      ← Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentPracticeIndex(Math.min(practiceQuestions.length - 1, currentPracticeIndex + 1))}
+                      disabled={currentPracticeIndex === practiceQuestions.length - 1}
+                    >
+                      Next →
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={closePracticeModal}>
+              Back to Review
             </Button>
           </DialogFooter>
         </DialogContent>

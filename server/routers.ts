@@ -345,6 +345,21 @@ Format your response in clean markdown with:
         };
       }),
 
+    // Generate similar practice questions based on original question
+    generateSimilarQuestions: parentProcedure
+      .input(z.object({
+        questionId: z.number(),
+        questionText: z.string(),
+        correctAnswer: z.string(),
+        detailedExplanation: z.string().optional(),
+        moduleId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const { generateSimilarQuestionsFromOriginal } = await import('./similar-questions');
+        const questions = await generateSimilarQuestionsFromOriginal(input);
+        return { questions };
+      }),
+
     // Generate audio for explanation
     generateAudio: parentProcedure
       .input(z.object({ questionId: z.number() }))
@@ -1013,6 +1028,21 @@ Format your response in clean markdown with:
           simplificationLevel: nextLevel,
           fromCache: result.fromCache,
         };
+      }),
+
+    // Generate similar practice questions based on original question
+    generateSimilarQuestions: publicProcedure
+      .input(z.object({
+        questionId: z.number(),
+        questionText: z.string(),
+        correctAnswer: z.string(),
+        detailedExplanation: z.string().optional(),
+        moduleId: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        const { generateSimilarQuestionsFromOriginal } = await import('./similar-questions');
+        const questions = await generateSimilarQuestionsFromOriginal(input);
+        return { questions };
       }),
 
     // Generate audio for explanation
