@@ -45,6 +45,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   const highlightIntervalRef = useRef<((this: HTMLAudioElement, ev: Event) => any) | null>(null);
   const handleEndedRef = useRef<((this: HTMLAudioElement, ev: Event) => any) | null>(null);
   const currentParagraphIndexRef = useRef<number>(0);
+  const isSkippingRef = useRef<boolean>(false);
 
   // Audio generation mutations
   const parentAudioMutation = trpc.parent.generateAudio.useMutation();
@@ -143,6 +144,11 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     // Use audio's timeupdate event for accurate timing
     const handleTimeUpdate = () => {
       if (!audioRef.current) return;
+      
+      // Skip timeupdate processing during skip operations
+      if (isSkippingRef.current) {
+        return;
+      }
       
       const currentTime = audioRef.current.currentTime;
       const duration = audioRef.current.duration;
@@ -290,6 +296,9 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     const wasPlaying = !audioRef.current.paused;
     
+    // Set flag to prevent timeupdate interference
+    isSkippingRef.current = true;
+    
     // CRITICAL: Update ref BEFORE setting currentTime to prevent race condition
     // Setting currentTime triggers timeupdate event immediately, which checks the ref
     currentParagraphIndexRef.current = nextIndex;
@@ -300,6 +309,11 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     // Now safe to set currentTime
     audioRef.current.currentTime = targetTime;
+    
+    // Clear flag after a short delay to allow currentTime to settle
+    setTimeout(() => {
+      isSkippingRef.current = false;
+    }, 100);
     
     // Resume playing if it was playing
     if (wasPlaying && audioRef.current.paused) {
@@ -332,6 +346,9 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     const wasPlaying = !audioRef.current.paused;
     
+    // Set flag to prevent timeupdate interference
+    isSkippingRef.current = true;
+    
     // CRITICAL: Update ref BEFORE setting currentTime to prevent race condition
     // Setting currentTime triggers timeupdate event immediately, which checks the ref
     currentParagraphIndexRef.current = prevIndex;
@@ -342,6 +359,11 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     // Now safe to set currentTime
     audioRef.current.currentTime = targetTime;
+    
+    // Clear flag after a short delay to allow currentTime to settle
+    setTimeout(() => {
+      isSkippingRef.current = false;
+    }, 100);
     
     // Resume playing if it was playing
     if (wasPlaying && audioRef.current.paused) {
