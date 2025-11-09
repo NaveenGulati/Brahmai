@@ -64,8 +64,12 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   useEffect(() => {
     if (audioRef.current && audioUrl) {
       console.log('[TTS] Setting audio src imperatively:', audioUrl);
-      // Reset audioReady when new audio is loading
+      // Reset all state when new audio loads
       setAudioReady(false);
+      setCurrentParagraphIndex(0);
+      currentParagraphIndexRef.current = 0;
+      setIsPlaying(false);
+      console.log('[TTS] Reset state for new audio');
       // Only set src if it's different (avoid unnecessary reloads)
       if (audioRef.current.src !== audioUrl) {
         audioRef.current.src = audioUrl;
