@@ -314,10 +314,16 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       onHighlightChange(nextIndex);
     }
     
-    // Set currentTime (no interference now)
-    console.log('[TTS Skip] BEFORE set - currentTime:', audioRef.current.currentTime, 'paused:', audioRef.current.paused);
+    // Pause before seeking (some browsers require this)
+    if (wasPlaying) {
+      audioRef.current.pause();
+      console.log('[TTS Skip] Paused for seeking');
+    }
+    
+    // Set currentTime
+    console.log('[TTS Skip] BEFORE set - currentTime:', audioRef.current.currentTime);
     audioRef.current.currentTime = targetTime;
-    console.log('[TTS Skip] AFTER set - currentTime:', audioRef.current.currentTime, 'paused:', audioRef.current.paused);
+    console.log('[TTS Skip] AFTER set - currentTime:', audioRef.current.currentTime);
     
     // Re-add listener after a short delay
     setTimeout(() => {
@@ -328,11 +334,9 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     }, 100);
     
     // Resume playing if it was playing
-    if (wasPlaying && audioRef.current.paused) {
+    if (wasPlaying) {
       console.log('[TTS Skip] Resuming playback');
       audioRef.current.play();
-    } else {
-      console.log('[TTS Skip] No resume needed - wasPlaying:', wasPlaying, 'paused:', audioRef.current.paused);
     }
   };
 
@@ -375,10 +379,16 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       onHighlightChange(prevIndex);
     }
     
-    // Set currentTime (no interference now)
-    console.log('[TTS Skip] BEFORE set - currentTime:', audioRef.current.currentTime, 'paused:', audioRef.current.paused);
+    // Pause before seeking (some browsers require this)
+    if (wasPlaying) {
+      audioRef.current.pause();
+      console.log('[TTS Skip] Paused for seeking');
+    }
+    
+    // Set currentTime
+    console.log('[TTS Skip] BEFORE set - currentTime:', audioRef.current.currentTime);
     audioRef.current.currentTime = targetTime;
-    console.log('[TTS Skip] AFTER set - currentTime:', audioRef.current.currentTime, 'paused:', audioRef.current.paused);
+    console.log('[TTS Skip] AFTER set - currentTime:', audioRef.current.currentTime);
     
     // Re-add listener after a short delay
     setTimeout(() => {
@@ -389,11 +399,9 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     }, 100);
     
     // Resume playing if it was playing
-    if (wasPlaying && audioRef.current.paused) {
+    if (wasPlaying) {
       console.log('[TTS Skip] Resuming playback');
       audioRef.current.play();
-    } else {
-      console.log('[TTS Skip] No resume needed - wasPlaying:', wasPlaying, 'paused:', audioRef.current.paused);
     }
   };
 
