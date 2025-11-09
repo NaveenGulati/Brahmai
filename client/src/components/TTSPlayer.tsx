@@ -434,9 +434,13 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
             onLoadedMetadata={() => {
               if (audioRef.current) {
                 audioRef.current.playbackRate = parseFloat(playbackSpeed);
-                // Mark audio as ready when metadata is loaded (duration is available)
+              }
+            }}
+            onCanPlayThrough={() => {
+              if (audioRef.current) {
+                // Mark audio as ready when it's fully buffered and seekable
                 if (!isNaN(audioRef.current.duration)) {
-                  console.log('[TTS] Audio ready, duration:', audioRef.current.duration);
+                  console.log('[TTS] Audio fully loaded and seekable, duration:', audioRef.current.duration);
                   setAudioReady(true);
                 }
               }
