@@ -132,9 +132,10 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     console.log('[TTS] Starting highlighting with', paragraphCount, 'paragraphs');
     console.log('[TTS] Audio duration:', audioRef.current.duration, 'seconds');
     
-    // Initial highlight
-    console.log('[TTS] Highlighting paragraph 0');
-    onHighlightChange(0);
+    // Highlight current paragraph (don't reset to 0)
+    const currentIndex = currentParagraphIndexRef.current;
+    console.log('[TTS] Initial highlight at paragraph', currentIndex);
+    onHighlightChange(currentIndex);
     
     // Use audio's timeupdate event for accurate timing
     const handleTimeUpdate = () => {
