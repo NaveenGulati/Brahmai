@@ -35,6 +35,8 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   });
   const [currentParagraphIndex, setCurrentParagraphIndex] = useState(0);
   const [audioReady, setAudioReady] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [isFullyDownloaded, setIsFullyDownloaded] = useState(false);
   const [showMeaningDialog, setShowMeaningDialog] = useState(false);
   const [selectedText, setSelectedText] = useState('');
   const [wordMeaning, setWordMeaning] = useState('');
@@ -66,6 +68,8 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       console.log('[TTS] Setting audio src imperatively:', audioUrl);
       // Reset all state when new audio loads
       setAudioReady(false);
+      setDownloadProgress(0);
+      setIsFullyDownloaded(false);
       setCurrentParagraphIndex(0);
       currentParagraphIndexRef.current = 0;
       setIsPlaying(false);
@@ -444,17 +448,28 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
                 audioRef.current.playbackRate = parseFloat(playbackSpeed);
               }
             }}
-            onCanPlayThrough={() => {
-              if (audioRef.current) {
-                // Mark audio as ready when it's fully buffered and seekable
-                if (!isNaN(audioRef.current.duration)) {
-                  console.log('[TTS] Audio fully loaded, waiting 3s for complete buffering...');
-                  // Wait 3 seconds to ensure audio is fully buffered before allowing skip
-                  setTimeout(() => {
-                    console.log('[TTS] Audio ready for playback and seeking');
+            onProgress={() => {
+              if (audioRef.current && audioRef.current.duration) {
+                const buffered = audioRef.current.buffered;
+                if (buffered.length > 0) {
+                  const bufferedEnd = buffered.end(buffered.length - 1);
+                  const duration = audioRef.current.duration;
+                  const progress = (bufferedEnd / duration) * 100;
+                  setDownloadProgress(progress);
+                  console.log(`[TTS] Download progress: ${progress.toFixed(1)}%`);
+                  
+                  // Check if fully downloaded (buffered to end)
+                  if (bufferedEnd >= duration - 0.1) {
+                    console.log('[TTS] Audio fully downloaded');
+                    setIsFullyDownloaded(true);
                     setAudioReady(true);
-                  }, 3000);
+                  }
                 }
+              }
+            }}
+            onCanPlayThrough={() => {
+              if (audioRef.current && !isNaN(audioRef.current.duration)) {
+                console.log('[TTS] Audio can play through');
               }
             }}
           />
@@ -466,7 +481,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
           size="sm"
           className="border-blue-300 text-blue-700 hover:bg-blue-50"
           title="Previous paragraph"
-          disabled={!audioUrl || !audioReady || generateAudioMutation.isPending}
+          disabled={!audioUrl || !isFullyDownloaded || generateAudioMutation.isPending}
         >
           <SkipBack className="w-3 h-3" />
         </Button>
@@ -498,9 +513,19 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
             variant="outline"
             size="sm"
             className="border-blue-300 text-blue-700 hover:bg-blue-50"
+            disabled={!isFullyDownloaded}
           >
-            <Volume2 className="w-3 h-3 mr-2" />
-            {isPlaying ? 'Pause' : 'Play'} Audio
+            {!isFullyDownloaded ? (
+              <>
+                <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                Downloading... {downloadProgress.toFixed(0)}%
+              </>
+            ) : (
+              <>
+                <Volume2 className="w-3 h-3 mr-2" />
+                {isPlaying ? 'Pause' : 'Play'} Audio
+              </>
+            )}
           </Button>
         )}
         
@@ -510,7 +535,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
           size="sm"
           className="border-blue-300 text-blue-700 hover:bg-blue-50"
           title="Next paragraph"
-          disabled={!audioUrl || !audioReady || generateAudioMutation.isPending}
+          disabled={!audioUrl || !isFullyDownloaded || generateAudioMutation.isPending}
         >
           <SkipForward className="w-3 h-3" />
         </Button>
