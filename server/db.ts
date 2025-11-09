@@ -1703,7 +1703,29 @@ Write in a natural, spoken style as if you're talking to the student. Be direct 
     ],
   });
 
-  const detailedExplanation = response.choices[0].message.content || 'Unable to generate explanation';
+  let detailedExplanation = response.choices[0].message.content || 'Unable to generate explanation';
+
+  // Enhance with educational images (non-blocking)
+  try {
+    const { enhanceExplanationWithImages } = await import('./educational-images');
+    const result = await enhanceExplanationWithImages(
+      questionId,
+      q.questionText,
+      q.correctAnswer,
+      detailedExplanation,
+      q.subject,
+      q.topic,
+      q.grade
+    );
+    
+    if (result.imageCount > 0) {
+      detailedExplanation = result.enhancedExplanation;
+      console.log(`[AI] Enhanced explanation with ${result.imageCount} educational images`);
+    }
+  } catch (imageError) {
+    console.error('[AI] Failed to enhance with images:', imageError);
+    // Continue without images - not critical
+  }
 
   // Cache the explanation (non-blocking - if it fails, still return the explanation)
   try {
