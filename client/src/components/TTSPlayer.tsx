@@ -320,8 +320,37 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       console.log('[TTS Skip] Paused for seeking');
     }
     
+    // Check if target time is seekable
+    const seekable = audioRef.current.seekable;
+    if (seekable.length === 0) {
+      console.log('[TTS Skip] Audio not seekable yet, aborting skip');
+      // Re-add listener and return
+      if (tempListener) {
+        audioRef.current.addEventListener('timeupdate', tempListener);
+      }
+      return;
+    }
+    
+    // Check if target time is within seekable range
+    let isSeekable = false;
+    for (let i = 0; i < seekable.length; i++) {
+      if (targetTime >= seekable.start(i) && targetTime <= seekable.end(i)) {
+        isSeekable = true;
+        break;
+      }
+    }
+    
+    if (!isSeekable) {
+      console.log('[TTS Skip] Target time not in seekable range, aborting skip');
+      // Re-add listener and return
+      if (tempListener) {
+        audioRef.current.addEventListener('timeupdate', tempListener);
+      }
+      return;
+    }
+    
     // Set currentTime
-    console.log('[TTS Skip] BEFORE set - currentTime:', audioRef.current.currentTime);
+    console.log('[TTS Skip] BEFORE set - currentTime:', audioRef.current.currentTime, 'seekable:', seekable.start(0), '-', seekable.end(seekable.length - 1));
     audioRef.current.currentTime = targetTime;
     console.log('[TTS Skip] AFTER set - currentTime:', audioRef.current.currentTime);
     
@@ -385,8 +414,37 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
       console.log('[TTS Skip] Paused for seeking');
     }
     
+    // Check if target time is seekable
+    const seekable = audioRef.current.seekable;
+    if (seekable.length === 0) {
+      console.log('[TTS Skip] Audio not seekable yet, aborting skip');
+      // Re-add listener and return
+      if (tempListener) {
+        audioRef.current.addEventListener('timeupdate', tempListener);
+      }
+      return;
+    }
+    
+    // Check if target time is within seekable range
+    let isSeekable = false;
+    for (let i = 0; i < seekable.length; i++) {
+      if (targetTime >= seekable.start(i) && targetTime <= seekable.end(i)) {
+        isSeekable = true;
+        break;
+      }
+    }
+    
+    if (!isSeekable) {
+      console.log('[TTS Skip] Target time not in seekable range, aborting skip');
+      // Re-add listener and return
+      if (tempListener) {
+        audioRef.current.addEventListener('timeupdate', tempListener);
+      }
+      return;
+    }
+    
     // Set currentTime
-    console.log('[TTS Skip] BEFORE set - currentTime:', audioRef.current.currentTime);
+    console.log('[TTS Skip] BEFORE set - currentTime:', audioRef.current.currentTime, 'seekable:', seekable.start(0), '-', seekable.end(seekable.length - 1));
     audioRef.current.currentTime = targetTime;
     console.log('[TTS Skip] AFTER set - currentTime:', audioRef.current.currentTime);
     
