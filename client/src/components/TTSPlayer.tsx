@@ -324,6 +324,10 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     const seekable = audioRef.current.seekable;
     if (seekable.length === 0) {
       console.log('[TTS Skip] Audio not seekable yet, aborting skip');
+      // Resume playback if it was playing
+      if (wasPlaying && audioRef.current.paused) {
+        audioRef.current.play();
+      }
       // Re-add listener and return
       if (tempListener) {
         audioRef.current.addEventListener('timeupdate', tempListener);
@@ -342,6 +346,10 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     if (!isSeekable) {
       console.log('[TTS Skip] Target time not in seekable range, aborting skip');
+      // Resume playback if it was playing
+      if (wasPlaying && audioRef.current.paused) {
+        audioRef.current.play();
+      }
       // Re-add listener and return
       if (tempListener) {
         audioRef.current.addEventListener('timeupdate', tempListener);
@@ -418,6 +426,10 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     const seekable = audioRef.current.seekable;
     if (seekable.length === 0) {
       console.log('[TTS Skip] Audio not seekable yet, aborting skip');
+      // Resume playback if it was playing
+      if (wasPlaying && audioRef.current.paused) {
+        audioRef.current.play();
+      }
       // Re-add listener and return
       if (tempListener) {
         audioRef.current.addEventListener('timeupdate', tempListener);
@@ -436,6 +448,10 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     
     if (!isSeekable) {
       console.log('[TTS Skip] Target time not in seekable range, aborting skip');
+      // Resume playback if it was playing
+      if (wasPlaying && audioRef.current.paused) {
+        audioRef.current.play();
+      }
       // Re-add listener and return
       if (tempListener) {
         audioRef.current.addEventListener('timeupdate', tempListener);
