@@ -64,22 +64,72 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   
   // Set audio src imperatively to prevent React from resetting it on re-renders
   useEffect(() => {
-    if (audioRef.current && audioUrl) {
-      console.log('[TTS] Setting audio src imperatively:', audioUrl);
-      // Reset all state when new audio loads
-      setAudioReady(false);
-      setDownloadProgress(0);
-      setIsFullyDownloaded(false);
-      setCurrentParagraphIndex(0);
-      currentParagraphIndexRef.current = 0;
-      setIsPlaying(false);
-      console.log('[TTS] Reset state for new audio');
-      // Only set src if it's different (avoid unnecessary reloads)
-      if (audioRef.current.src !== audioUrl) {
-        audioRef.current.src = audioUrl;
-        // Don't call load() - browser loads automatically and load() resets currentTime
+    if (!audioRef.current || !audioUrl) return;
+    
+    console.log('[TTS] Downloading audio:', audioUrl);
+    // Reset all state when new audio loads
+    setAudioReady(false);
+    setDownloadProgress(0);
+    setIsFullyDownloaded(false);
+    setCurrentParagraphIndex(0);
+    currentParagraphIndexRef.current = 0;
+    setIsPlaying(false);
+    console.log('[TTS] Reset state for new audio');
+    
+    // Manually download the audio file with progress tracking
+    const downloadAudio = async () => {
+      try {
+        const response = await fetch(audioUrl);
+        if (!response.ok) throw new Error('Download failed');
+        
+        const contentLength = response.headers.get('content-length');
+        const total = contentLength ? parseInt(contentLength, 10) : 0;
+        
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No reader available');
+        
+        const chunks: Uint8Array[] = [];
+        let receivedLength = 0;
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          chunks.push(value);
+          receivedLength += value.length;
+          
+          if (total > 0) {
+            const progress = (receivedLength / total) * 100;
+            setDownloadProgress(progress);
+            console.log(`[TTS] Download progress: ${progress.toFixed(1)}%`);
+          }
+        }
+        
+        // Combine chunks into a single Uint8Array
+        const allChunks = new Uint8Array(receivedLength);
+        let position = 0;
+        for (const chunk of chunks) {
+          allChunks.set(chunk, position);
+          position += chunk.length;
+        }
+        
+        // Create Blob and Blob URL
+        const blob = new Blob([allChunks], { type: 'audio/mpeg' });
+        const blobUrl = URL.createObjectURL(blob);
+        
+        console.log('[TTS] Audio fully downloaded, setting blob URL');
+        audioRef.current!.src = blobUrl;
+        setDownloadProgress(100);
+        setIsFullyDownloaded(true);
+        setAudioReady(true);
+        
+      } catch (error) {
+        console.error('[TTS] Download failed:', error);
+        alert('Failed to download audio');
       }
-    }
+    };
+    
+    downloadAudio();
   }, [audioUrl]);
 
   // Split text into paragraphs for highlighting
@@ -449,30 +499,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
                 audioRef.current.playbackRate = parseFloat(playbackSpeed);
               }
             }}
-            onProgress={() => {
-              if (audioRef.current && audioRef.current.duration) {
-                const buffered = audioRef.current.buffered;
-                if (buffered.length > 0) {
-                  const bufferedEnd = buffered.end(buffered.length - 1);
-                  const duration = audioRef.current.duration;
-                  const progress = (bufferedEnd / duration) * 100;
-                  setDownloadProgress(progress);
-                  console.log(`[TTS] Download progress: ${progress.toFixed(1)}%`);
-                  
-                  // Check if fully downloaded (buffered to end)
-                  if (bufferedEnd >= duration - 0.1) {
-                    console.log('[TTS] Audio fully downloaded');
-                    setIsFullyDownloaded(true);
-                    setAudioReady(true);
-                  }
-                }
-              }
-            }}
-            onCanPlayThrough={() => {
-              if (audioRef.current && !isNaN(audioRef.current.duration)) {
-                console.log('[TTS] Audio can play through');
-              }
-            }}
+
           />
         )}
         
