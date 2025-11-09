@@ -361,17 +361,13 @@ export async function processImageSuggestions(
     const imageResult = await searchEducationalImage(suggestion.searchQuery);
     
     if (imageResult) {
-      // Download and save locally
-      const localPath = await downloadAndSaveImage(imageResult.url, questionId, i + 1);
-      
-      if (localPath) {
-        processedImages.push({
-          url: localPath,
-          caption: suggestion.caption,
-          position: suggestion.position,
-          attribution: imageResult.attribution,
-        });
-      }
+      // Use direct URL (works in production without filesystem access)
+      processedImages.push({
+        url: imageResult.url,
+        caption: suggestion.caption,
+        position: suggestion.position,
+        attribution: imageResult.attribution,
+      });
     }
   }
 
