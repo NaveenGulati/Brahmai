@@ -448,8 +448,12 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
               if (audioRef.current) {
                 // Mark audio as ready when it's fully buffered and seekable
                 if (!isNaN(audioRef.current.duration)) {
-                  console.log('[TTS] Audio fully loaded and seekable, duration:', audioRef.current.duration);
-                  setAudioReady(true);
+                  console.log('[TTS] Audio fully loaded, waiting 3s for complete buffering...');
+                  // Wait 3 seconds to ensure audio is fully buffered before allowing skip
+                  setTimeout(() => {
+                    console.log('[TTS] Audio ready for playback and seeking');
+                    setAudioReady(true);
+                  }, 3000);
                 }
               }
             }}
