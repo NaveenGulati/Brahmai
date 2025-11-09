@@ -315,14 +315,15 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     }
     
     // Set currentTime (no interference now)
+    console.log('[TTS Skip] BEFORE set - currentTime:', audioRef.current.currentTime, 'paused:', audioRef.current.paused);
     audioRef.current.currentTime = targetTime;
-    console.log('[TTS Skip] Set currentTime to', targetTime);
+    console.log('[TTS Skip] AFTER set - currentTime:', audioRef.current.currentTime, 'paused:', audioRef.current.paused);
     
     // Re-add listener after a short delay
     setTimeout(() => {
       if (tempListener && audioRef.current) {
         audioRef.current.addEventListener('timeupdate', tempListener);
-        console.log('[TTS Skip] Re-added timeupdate listener');
+        console.log('[TTS Skip] Re-added listener - currentTime:', audioRef.current.currentTime);
       }
     }, 100);
     
@@ -330,6 +331,8 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     if (wasPlaying && audioRef.current.paused) {
       console.log('[TTS Skip] Resuming playback');
       audioRef.current.play();
+    } else {
+      console.log('[TTS Skip] No resume needed - wasPlaying:', wasPlaying, 'paused:', audioRef.current.paused);
     }
   };
 
@@ -373,14 +376,15 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     }
     
     // Set currentTime (no interference now)
+    console.log('[TTS Skip] BEFORE set - currentTime:', audioRef.current.currentTime, 'paused:', audioRef.current.paused);
     audioRef.current.currentTime = targetTime;
-    console.log('[TTS Skip] Set currentTime to', targetTime);
+    console.log('[TTS Skip] AFTER set - currentTime:', audioRef.current.currentTime, 'paused:', audioRef.current.paused);
     
     // Re-add listener after a short delay
     setTimeout(() => {
       if (tempListener && audioRef.current) {
         audioRef.current.addEventListener('timeupdate', tempListener);
-        console.log('[TTS Skip] Re-added timeupdate listener');
+        console.log('[TTS Skip] Re-added listener - currentTime:', audioRef.current.currentTime);
       }
     }, 100);
     
@@ -388,6 +392,8 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     if (wasPlaying && audioRef.current.paused) {
       console.log('[TTS Skip] Resuming playback');
       audioRef.current.play();
+    } else {
+      console.log('[TTS Skip] No resume needed - wasPlaying:', wasPlaying, 'paused:', audioRef.current.paused);
     }
   };
 
