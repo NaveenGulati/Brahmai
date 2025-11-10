@@ -29,10 +29,13 @@ export async function authenticateChild(username: string, password: string) {
 
   console.log('[Auth] Attempting login for username:', username);
 
+  // Convert username to lowercase for case-insensitive comparison
+  const normalizedUsername = username.toLowerCase();
+
   const result = await db
     .select()
     .from(users)
-    .where(eq(users.username, username))
+    .where(eq(users.username, normalizedUsername))
     .limit(1);
 
   console.log('[Auth] Query result:', result.length, 'users found');
@@ -87,11 +90,14 @@ export async function createChildWithPassword(
     throw new Error('Database not available');
   }
 
+  // Normalize username to lowercase for case-insensitive storage
+  const normalizedUsername = username.toLowerCase();
+
   // Check if username already exists
   const existing = await db
     .select()
     .from(users)
-    .where(eq(users.username, username))
+    .where(eq(users.username, normalizedUsername))
     .limit(1);
 
   if (existing.length > 0) {
@@ -104,7 +110,7 @@ export async function createChildWithPassword(
   // Create user in users table
   const userResult = await db.insert(users).values({
     name,
-    username,
+    username: normalizedUsername,
     passwordHash,
     email: email || null,
     role: 'child',
