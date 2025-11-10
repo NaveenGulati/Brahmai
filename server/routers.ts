@@ -1193,6 +1193,9 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
         
         return { challengeId: result.id };
       }),
+
+    // ============= SMART NOTES (moved from separate router) =============
+    ...smartNotesRouter._def.procedures,
   }),
 
   // ============= QB ADMIN MODULE =============
