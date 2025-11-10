@@ -477,10 +477,14 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   }, []);
 
   const handleSaveNote = () => {
-    if (selectedText && onSaveNote) {
-      onSaveNote(selectedText);
-      setHasSelection(false);
-      window.getSelection()?.removeAllRanges();
+    const selection = window.getSelection();
+    const text = selection?.toString().trim() || '';
+    
+    if (onSaveNote) {
+      onSaveNote(text);
+      if (text) {
+        window.getSelection()?.removeAllRanges();
+      }
     }
   };
 
@@ -607,12 +611,12 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
         </Select>
         
         <div className="ml-auto flex items-center gap-2">
-          {onSaveNote && hasSelection && (
+          {onSaveNote && (
             <Button
               onClick={handleSaveNote}
               variant="outline"
               size="sm"
-              className="border-pink-300 text-pink-700 hover:bg-pink-50 animate-in fade-in zoom-in duration-200"
+              className="border-pink-300 text-pink-700 hover:bg-pink-50"
               title="Save selected text to your notes"
             >
               <BookOpen className="w-3 h-3 mr-1" />

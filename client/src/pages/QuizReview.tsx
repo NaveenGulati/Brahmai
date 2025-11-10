@@ -645,9 +645,13 @@ export default function QuizReview() {
                                     setHighlightIndex(index);
                                   }}
                                   onSaveNote={async (selectedText) => {
+                                    if (!selectedText || selectedText.length < 10) {
+                                      toast.error('Please select the section you want to add to your notes (at least 10 characters)');
+                                      return;
+                                    }
+                                    
                                     try {
-                                      const question = quizData?.questions.find(q => q.id === response.questionId);
-                                      const subject = question?.subject || 'General';
+                                      const subject = session.subjectName || 'General';
                                       
                                       await trpc.smartNotes.create.mutate({
                                         highlightedText: selectedText,
