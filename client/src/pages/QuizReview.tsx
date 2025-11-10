@@ -662,9 +662,9 @@ export default function QuizReview() {
                                           const currentLevel = simplificationLevels[response.questionId] ?? 0;
                                           const history = explanationHistory[response.questionId] || [];
                                           
-                                          if (history.length >= 2) {
-                                            // Get previous explanation (second to last in history)
-                                            const previousExplanation = history[history.length - 2];
+                                          if (history.length >= 1) {
+                                            // Get previous explanation (last item in history)
+                                            const previousExplanation = history[history.length - 1];
                                             
                                             // Update to previous level
                                             setExpandedExplanations(prev => ({
