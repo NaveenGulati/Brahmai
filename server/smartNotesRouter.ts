@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from './_core/trpc';
 import { getDb } from './db';
 import { notes, tags, noteTags, generatedQuestions, noteQuizAttempts } from './db-schema-notes';
-import { questions } from './db-schema';
+import { questions } from '../drizzle/schema';
 import { eq, and, inArray, desc, sql } from 'drizzle-orm';
 import { generateNoteTags, generatePracticeQuestions } from './smart-notes-ai';
 import { TRPCError } from '@trpc/server';

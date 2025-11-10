@@ -1,6 +1,5 @@
 import { pgTable, serial, integer, text, timestamp, varchar, jsonb, index, primaryKey } from 'drizzle-orm/pg-core';
-import { users } from './db-schema';
-import { questions } from './db-schema';
+import { users, questions } from '../drizzle/schema';
 
 /**
  * Notes table - stores user-highlighted text snippets
