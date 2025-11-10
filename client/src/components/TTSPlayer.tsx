@@ -11,6 +11,7 @@ interface TTSPlayerProps {
   explanationText?: string;
   simplificationLevel?: number;
   onHighlightChange?: (paragraphIndex: number) => void;
+  onSaveNote?: () => void;
 }
 
 const PLAYBACK_SPEEDS = [
@@ -26,7 +27,7 @@ const STORAGE_KEY = 'tts-playback-speed';
  * TTSPlayer component for playing audio explanations
  * Supports playback speed control and text highlighting sync
  */
-export function TTSPlayer({ questionId, isChild, explanationText, simplificationLevel, onHighlightChange }: TTSPlayerProps) {
+export function TTSPlayer({ questionId, isChild, explanationText, simplificationLevel, onHighlightChange, onSaveNote }: TTSPlayerProps) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(() => {
@@ -582,6 +583,18 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
         </Select>
         
         <div className="ml-auto flex items-center gap-2">
+          {onSaveNote && (
+            <Button
+              onClick={onSaveNote}
+              variant="outline"
+              size="sm"
+              className="border-pink-300 text-pink-700 hover:bg-pink-50"
+              title="Save this explanation to your notes"
+            >
+              <BookOpen className="w-3 h-3 mr-1" />
+              Save to Notes
+            </Button>
+          )}
           <Button
             onClick={handleGetMeaning}
             variant="outline"

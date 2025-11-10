@@ -16,7 +16,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { useState, useRef, useEffect } from 'react';
 import { TTSPlayer } from '@/components/TTSPlayer';
-import { TextHighlighter } from '@/components/TextHighlighter';
+
 
 /**
  * Component to display text with paragraph-level highlighting
@@ -644,23 +644,17 @@ export default function QuizReview() {
                                     setHighlightedQuestionId(response.questionId);
                                     setHighlightIndex(index);
                                   }}
-                                />
-                                </div>
-                                
-                                {/* Explanation text - scrollable with text highlighting */}
-                                <TextHighlighter
-                                  onSave={async (highlightedText) => {
+                                  onSaveNote={async () => {
                                     try {
-                                      // Get subject from question
                                       const question = quizData?.questions.find(q => q.id === response.questionId);
                                       const subject = question?.subject || 'General';
-
+                                      
                                       await trpc.smartNotes.create.mutate({
-                                        highlightedText,
+                                        highlightedText: expandedExplanations[response.questionId],
                                         questionId: response.questionId,
                                         subject,
                                       });
-
+                                      
                                       toast.success(
                                         `Note saved to your ${subject} notes! 🚀`,
                                         {
@@ -675,8 +669,11 @@ export default function QuizReview() {
                                       console.error('Error saving note:', error);
                                     }
                                   }}
-                                  className="text-gray-800 p-4 pt-2"
-                                >
+                                />
+                                </div>
+                                
+                                {/* Explanation text - scrollable */}
+                                <div className="text-gray-800 p-4 pt-2">
                                   <HighlightedText
                                     text={expandedExplanations[response.questionId]}
                                     highlightIndex={highlightedQuestionId === response.questionId ? highlightIndex : -1}
@@ -835,7 +832,7 @@ export default function QuizReview() {
                                       )}
                                     </Button>
                                   </div>
-                                </TextHighlighter>
+                                </div>
                               </div>
                             </div>
                           )}
