@@ -655,8 +655,8 @@ export default function QuizReview() {
                                   
                                   {/* Feedback buttons */}
                                   <div className="mt-6 pt-4 border-t border-purple-200 flex items-center justify-center gap-3">
-                                    {/* Go Back button - only show if level >= 2 */}
-                                    {(simplificationLevels[response.questionId] ?? 0) >= 2 && (
+                                    {/* Go Back button - show at level 2/4 and above (simplificationLevel >= 1) */}
+                                    {(simplificationLevels[response.questionId] ?? 0) >= 1 && (
                                       <Button
                                         onClick={() => {
                                           const currentLevel = simplificationLevels[response.questionId] ?? 0;
