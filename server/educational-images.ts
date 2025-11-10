@@ -42,16 +42,19 @@ export async function analyzeAndSuggestImages(
 
 **Your Task:**
 Suggest 1-2 images to search for. For each provide:
-1. searchQuery: What to search (e.g., "energy transformation", "steam engine diagram", "heat transfer illustration")
+1. searchQuery: VERY SPECIFIC search terms that will find the EXACT visual concept (e.g., "ball bouncing physics diagram", "tennis ball energy loss illustration", "hydroelectric dam turbine")
 2. caption: Brief description of what the image shows
 3. position: Where to place it ("after_intro", "after_example", or "end")
 
-**Guidelines:**
-- Use simple, clear search terms (2-4 words)
-- Focus on visual concepts that aid understanding
+**CRITICAL GUIDELINES:**
+- Use SPECIFIC, DESCRIPTIVE search terms (4-8 words) - NOT generic terms like "energy" or "motion"
+- Include the actual object/concept from the question (e.g., "tennis ball", "steam engine", "hydroelectric plant")
+- Add context words like "diagram", "illustration", "educational", "physics", "science" to get educational content
+- For processes: use "diagram" or "illustration" (e.g., "water cycle diagram", "photosynthesis illustration")
+- For objects: use "educational" or "science" (e.g., "thermometer science education", "lever physics diagram")
+- For comparisons: be explicit (e.g., "renewable vs non-renewable energy comparison")
 - Only suggest if genuinely helpful (max 2 images)
-- Position strategically to support understanding
-- Prefer real photos over abstract concepts
+- Avoid abstract concepts that can't be visualized clearly
 
 Respond in JSON:
 {
@@ -187,13 +190,19 @@ async function searchPixabay(query: string): Promise<{ url: string; attribution?
   }
 
   try {
+    // Try with educational/diagram keywords first for better relevance
+    const educationalQuery = query.includes('diagram') || query.includes('illustration') 
+      ? query 
+      : `${query} educational diagram`;
+    
     const response = await axios.get('https://pixabay.com/api/', {
       params: {
         key: apiKey,
-        q: query,
-        image_type: 'photo',
-        per_page: 3,
+        q: educationalQuery,
+        image_type: 'all', // Include illustrations and vectors
+        per_page: 5, // Get more options
         safesearch: 'true',
+        category: 'education', // Prefer educational content
       },
       timeout: 5000,
     });
