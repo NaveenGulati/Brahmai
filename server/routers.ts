@@ -1194,8 +1194,79 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
         return { challengeId: result.id };
       }),
 
-    // ============= SMART NOTES (moved from separate router) =============
-    ...smartNotesRouter._def.procedures,
+    // ============= SMART NOTES =============
+    // Create a new note from highlighted text
+    createNote: protectedProcedure
+      .input(z.object({
+        highlightedText: z.string().min(10).max(5000),
+        questionId: z.number().optional(),
+        subject: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+        const userId = ctx.user.id;
+
+        // 1. Insert the note
+        const noteResult = await db.insert(notes).values({
+          userId,
+          questionId: input.questionId || null,
+          content: input.highlightedText,
+        }).returning();
+
+        const newNote = noteResult[0];
+        console.log('[Smart Notes] Created note:', newNote.id);
+
+        // 2. Generate tags asynchronously (don't block the response)
+        (async () => {
+          try {
+            const { generateNoteTags } = await import('./smart-notes-ai');
+            const aiTags = await generateNoteTags(input.highlightedText, input.subject);
+            console.log('[Smart Notes] AI generated tags:', aiTags);
+
+            // 3. Find or create tags
+            const tagNames = [
+              { name: input.subject, type: 'subject' },
+              { name: aiTags.topic, type: 'topic' },
+              { name: aiTags.subTopic, type: 'subTopic' },
+            ];
+
+            const tagIds: number[] = [];
+            for (const tagData of tagNames) {
+              // Try to find existing tag
+              const existing = await db.select().from(tags)
+                .where(and(eq(tags.name, tagData.name), eq(tags.type, tagData.type)))
+                .limit(1);
+
+              if (existing.length > 0) {
+                tagIds.push(existing[0].id);
+              } else {
+                // Create new tag
+                const newTag = await db.insert(tags).values(tagData).returning();
+                tagIds.push(newTag[0].id);
+              }
+            }
+
+            // 4. Link tags to note
+            const noteTagsData = tagIds.map(tagId => ({
+              noteId: newNote.id,
+              tagId,
+            }));
+            await db.insert(noteTags).values(noteTagsData);
+
+            console.log('[Smart Notes] Linked', tagIds.length, 'tags to note');
+          } catch (error) {
+            console.error('[Smart Notes] Error in async tag generation:', error);
+          }
+        })();
+
+        return {
+          success: true,
+          noteId: newNote.id,
+          message: 'Note saved successfully!',
+        };
+      }),
   }),
 
   // ============= QB ADMIN MODULE =============
