@@ -9,6 +9,7 @@ import axios from 'axios';
 import path from 'path';
 import fs from 'fs/promises';
 import crypto from 'crypto';
+import { validateImageRelevance } from './educational-images-validation';
 
 interface ImageSuggestion {
   searchQuery: string;
@@ -356,10 +357,14 @@ async function searchEducationalImage(query: string): Promise<{ url: string; att
 
 /**
  * Process image suggestions and get actual image URLs
+ * Now includes AI-powered relevance validation
  */
 export async function processImageSuggestions(
   suggestions: ImageSuggestion[],
-  questionId: number
+  questionId: number,
+  questionText: string,
+  correctAnswer: string,
+  subject: string
 ): Promise<ProcessedImage[]> {
   const processedImages: ProcessedImage[] = [];
 
@@ -370,13 +375,31 @@ export async function processImageSuggestions(
     const imageResult = await searchEducationalImage(suggestion.searchQuery);
     
     if (imageResult) {
-      // Use direct URL (works in production without filesystem access)
-      processedImages.push({
-        url: imageResult.url,
-        caption: suggestion.caption,
-        position: suggestion.position,
-        attribution: imageResult.attribution,
-      });
+      // VALIDATE RELEVANCE before adding
+      console.log(`[Image Validation] Validating image for: "${suggestion.searchQuery}"`);
+      
+      const validation = await validateImageRelevance(
+        questionText,
+        correctAnswer,
+        suggestion.searchQuery,
+        suggestion.caption,
+        subject
+      );
+      
+      console.log(`[Image Validation] Result: ${validation.isRelevant ? 'RELEVANT' : 'NOT RELEVANT'} (confidence: ${validation.confidence}%) - ${validation.reason}`);
+      
+      // Only add if relevant with high confidence (>= 70%)
+      if (validation.isRelevant && validation.confidence >= 70) {
+        processedImages.push({
+          url: imageResult.url,
+          caption: suggestion.caption,
+          position: suggestion.position,
+          attribution: imageResult.attribution,
+        });
+        console.log(`[Image Validation] ✓ Image APPROVED and added`);
+      } else {
+        console.log(`[Image Validation] ✗ Image REJECTED: ${validation.reason}`);
+      }
     }
   }
 
@@ -464,8 +487,14 @@ export async function enhanceExplanationWithImages(
 
     console.log(`[Educational Images] Processing ${suggestions.length} image suggestions...`);
 
-    // Step 2: Search and download images (multi-provider fallback)
-    const processedImages = await processImageSuggestions(suggestions, questionId);
+    // Step 2: Search and validate images (multi-provider fallback + AI validation)
+    const processedImages = await processImageSuggestions(
+      suggestions,
+      questionId,
+      questionText,
+      correctAnswer,
+      subject
+    );
 
     if (processedImages.length === 0) {
       console.log(`[Educational Images] No images found for question ${questionId}`);
