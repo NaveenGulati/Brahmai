@@ -682,9 +682,9 @@ export default function QuizReview() {
                                     highlightIndex={highlightedQuestionId === response.questionId ? highlightIndex : -1}
                                   />
                                 </TextHighlighter>
-                                  
-                                  {/* Feedback buttons */}
-                                  <div className="mt-6 pt-4 border-t border-purple-200 flex items-center justify-center gap-3">
+                                
+                                {/* Feedback buttons */}
+                                <div className="mt-6 pt-4 border-t border-purple-200 flex items-center justify-center gap-3 px-4">
                                     {/* Go Back button - show at level 2/4 and above (simplificationLevel >= 1) */}
                                     {(simplificationLevels[response.questionId] ?? 0) >= 1 && (
                                       <Button

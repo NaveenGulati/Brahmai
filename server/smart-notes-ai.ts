@@ -1,10 +1,9 @@
-import OpenAI from 'openai';
-
-const client = new OpenAI();
+import { invokeLLM } from './_core/llm';
 
 /**
  * AI-powered note indexing
  * Analyzes note content and generates topic and sub-topic tags
+ * Uses Gemini 2.5 Flash (same as detailed explanations)
  */
 export async function generateNoteTags(
   noteContent: string,
@@ -31,8 +30,7 @@ Based on the text, identify the primary "topic" and a more specific "subTopic". 
 }`;
 
   try {
-    const response = await client.chat.completions.create({
-      model: 'gpt-4.1-mini',
+    const response = await invokeLLM({
       messages: [
         {
           role: 'system',
@@ -43,8 +41,6 @@ Based on the text, identify the primary "topic" and a more specific "subTopic". 
           content: prompt,
         },
       ],
-      temperature: 0.3,
-      max_tokens: 150,
     });
 
     const content = response.choices[0]?.message?.content?.trim();
@@ -73,6 +69,7 @@ Based on the text, identify the primary "topic" and a more specific "subTopic". 
 /**
  * AI-powered question generation
  * Creates 5 practice questions based on note content
+ * Uses Gemini 2.5 Flash (same as detailed explanations)
  */
 export async function generatePracticeQuestions(
   noteContent: string,
@@ -121,8 +118,7 @@ Generate 5 multiple-choice questions based on the "Specific Concept from Note".
 **Important:** Return ONLY the JSON array, no additional text.`;
 
   try {
-    const response = await client.chat.completions.create({
-      model: 'gpt-4.1-mini',
+    const response = await invokeLLM({
       messages: [
         {
           role: 'system',
@@ -133,8 +129,6 @@ Generate 5 multiple-choice questions based on the "Specific Concept from Note".
           content: prompt,
         },
       ],
-      temperature: 0.7,
-      max_tokens: 2000,
     });
 
     const content = response.choices[0]?.message?.content?.trim();
