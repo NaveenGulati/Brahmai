@@ -12,6 +12,7 @@ import { authRouter } from "./authRouter";
 import { adaptiveChallengeRouter } from "./adaptive-challenge-router";
 import { adaptiveQuizRouter } from "./adaptive-quiz";
 import { smartNotesRouter } from "./smartNotesRouter";
+import { notes, tags, noteTags, generatedQuestions, noteQuizAttempts } from "./db-schema-notes";
 
 // Custom procedure for child access
 const childProcedure = protectedProcedure.use(({ ctx, next }) => {
