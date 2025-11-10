@@ -24,6 +24,12 @@ interface ProcessedImage {
   attribution?: string;
 }
 
+interface ImageSearchResult {
+  url: string;
+  attribution?: string;
+  altText?: string; // Actual description from the API
+}
+
 /**
  * Analyze explanation and suggest image search queries
  */
@@ -145,7 +151,7 @@ async function downloadAndSaveImage(
  * Search Pexels API (FREE, Unlimited with attribution)
  * https://www.pexels.com/api/documentation/
  */
-async function searchPexels(query: string): Promise<{ url: string; attribution: string } | null> {
+async function searchPexels(query: string): Promise<ImageSearchResult | null> {
   const apiKey = process.env.PEXELS_API_KEY;
   if (!apiKey) {
     console.log('[Educational Images] No Pexels API key');
@@ -170,6 +176,7 @@ async function searchPexels(query: string): Promise<{ url: string; attribution: 
       return {
         url: photo.src.large,
         attribution: `Photo by ${photo.photographer} from Pexels`,
+        altText: photo.alt || undefined,
       };
     }
   } catch (error) {
@@ -183,7 +190,7 @@ async function searchPexels(query: string): Promise<{ url: string; attribution: 
  * Search Pixabay API (FREE, Unlimited, NO attribution required)
  * https://pixabay.com/api/docs/
  */
-async function searchPixabay(query: string): Promise<{ url: string; attribution?: string } | null> {
+async function searchPixabay(query: string): Promise<ImageSearchResult | null> {
   const apiKey = process.env.PIXABAY_API_KEY;
   if (!apiKey) {
     console.log('[Educational Images] No Pixabay API key');
@@ -213,6 +220,7 @@ async function searchPixabay(query: string): Promise<{ url: string; attribution?
       return {
         url: image.largeImageURL,
         attribution: undefined, // CC0 - no attribution required!
+        altText: image.tags || undefined, // Pixabay provides tags
       };
     }
   } catch (error) {
@@ -226,7 +234,7 @@ async function searchPixabay(query: string): Promise<{ url: string; attribution?
  * Search Unsplash API (FREE, 50/hour)
  * https://unsplash.com/documentation
  */
-async function searchUnsplash(query: string): Promise<{ url: string; attribution: string } | null> {
+async function searchUnsplash(query: string): Promise<ImageSearchResult | null> {
   const accessKey = process.env.UNSPLASH_ACCESS_KEY;
   if (!accessKey) {
     console.log('[Educational Images] No Unsplash API key');
@@ -251,6 +259,7 @@ async function searchUnsplash(query: string): Promise<{ url: string; attribution
       return {
         url: photo.urls.regular,
         attribution: `Photo by ${photo.user.name} on Unsplash`,
+        altText: photo.alt_description || photo.description || undefined,
       };
     }
   } catch (error) {
@@ -264,7 +273,7 @@ async function searchUnsplash(query: string): Promise<{ url: string; attribution
  * Search Wikimedia Commons (FREE, Unlimited, Educational focus)
  * https://commons.wikimedia.org/w/api.php
  */
-async function searchWikimedia(query: string): Promise<{ url: string; attribution: string } | null> {
+async function searchWikimedia(query: string): Promise<ImageSearchResult | null> {
   try {
     // Step 1: Search for images
     const searchResponse = await axios.get('https://commons.wikimedia.org/w/api.php', {
@@ -319,40 +328,43 @@ async function searchWikimedia(query: string): Promise<{ url: string; attributio
 /**
  * Multi-provider search with fallback chain
  * Priority: Pexels → Pixabay → Wikimedia → Unsplash
+ * Returns ALL results from all providers for validation
  */
-async function searchEducationalImage(query: string): Promise<{ url: string; attribution?: string } | null> {
-  console.log(`[Educational Images] Searching for: "${query}"`);
+async function searchAllProviders(query: string): Promise<ImageSearchResult[]> {
+  console.log(`[Educational Images] Searching all providers for: "${query}"`);
+  
+  const results: ImageSearchResult[] = [];
 
   // 1. Try Pexels (unlimited, high quality)
   const pexelsResult = await searchPexels(query);
   if (pexelsResult) {
     console.log('[Educational Images] Found on Pexels');
-    return pexelsResult;
+    results.push(pexelsResult);
   }
 
   // 2. Try Pixabay (unlimited, no attribution needed)
   const pixabayResult = await searchPixabay(query);
   if (pixabayResult) {
     console.log('[Educational Images] Found on Pixabay');
-    return pixabayResult;
+    results.push(pixabayResult);
   }
 
   // 3. Try Wikimedia (unlimited, educational focus)
   const wikimediaResult = await searchWikimedia(query);
   if (wikimediaResult) {
     console.log('[Educational Images] Found on Wikimedia');
-    return wikimediaResult;
+    results.push(wikimediaResult);
   }
 
   // 4. Try Unsplash (50/hour, high quality)
   const unsplashResult = await searchUnsplash(query);
   if (unsplashResult) {
     console.log('[Educational Images] Found on Unsplash');
-    return unsplashResult;
+    results.push(unsplashResult);
   }
 
-  console.log('[Educational Images] No image found');
-  return null;
+  console.log(`[Educational Images] Found ${results.length} total results across all providers`);
+  return results;
 }
 
 /**
@@ -371,19 +383,27 @@ export async function processImageSuggestions(
   for (let i = 0; i < suggestions.length; i++) {
     const suggestion = suggestions[i];
     
-    // Search for image
-    const imageResult = await searchEducationalImage(suggestion.searchQuery);
+    // Search ALL providers for this query
+    const allResults = await searchAllProviders(suggestion.searchQuery);
     
-    if (imageResult) {
-      // VALIDATE RELEVANCE before adding
+    if (allResults.length === 0) {
+      console.log(`[Educational Images] No images found for: "${suggestion.searchQuery}"`);
+      continue;
+    }
+    
+    // Try each result until we find a relevant one
+    let foundRelevantImage = false;
+    for (const imageResult of allResults) {
       console.log(`[Image Validation] Validating image for: "${suggestion.searchQuery}"`);
+      console.log(`[Image Validation] Image alt text: "${imageResult.altText || 'Not available'}"`);
       
       const validation = await validateImageRelevance(
         questionText,
         correctAnswer,
         suggestion.searchQuery,
         suggestion.caption,
-        subject
+        subject,
+        imageResult.altText // Pass actual image description from API
       );
       
       console.log(`[Image Validation] Result: ${validation.isRelevant ? 'RELEVANT' : 'NOT RELEVANT'} (confidence: ${validation.confidence}%) - ${validation.reason}`);
@@ -397,9 +417,15 @@ export async function processImageSuggestions(
           attribution: imageResult.attribution,
         });
         console.log(`[Image Validation] ✓ Image APPROVED and added`);
+        foundRelevantImage = true;
+        break; // Found a good image, stop trying other providers
       } else {
         console.log(`[Image Validation] ✗ Image REJECTED: ${validation.reason}`);
       }
+    }
+    
+    if (!foundRelevantImage) {
+      console.log(`[Image Validation] ✗ No relevant images found across all providers for: "${suggestion.searchQuery}"`);
     }
   }
 

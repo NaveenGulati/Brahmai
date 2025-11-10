@@ -20,7 +20,8 @@ export async function validateImageRelevance(
   correctAnswer: string,
   searchQuery: string,
   imageCaption: string,
-  subject: string
+  subject: string,
+  actualImageAltText?: string
 ): Promise<ValidationResult> {
   const prompt = `You are an educational content quality validator. Determine if an image is TRULY RELEVANT to help a student understand this question.
 
@@ -30,16 +31,20 @@ export async function validateImageRelevance(
 
 **Image Details:**
 - Search Query: "${searchQuery}"
-- Image Caption: "${imageCaption}"
+- Our Caption: "${imageCaption}"
+- Actual Image Description from API: "${actualImageAltText || 'Not available'}"
 
 **Your Task:**
 Determine if this image would ACTUALLY help a Grade 7 student understand this specific question.
 
 **Strict Criteria:**
+- **MOST IMPORTANT:** Check the "Actual Image Description from API" - this is what the image ACTUALLY shows
+- If the actual description doesn't match the question concept, REJECT it (even if our search query was good)
 - The image must show the EXACT concept from the question (e.g., if question is about a hammer hitting a nail, image must show a hammer and nail, NOT just "energy" or "force")
-- Generic stock photos are NOT relevant (e.g., light bulb for "energy", random tools for "work")
+- Generic stock photos are NOT relevant (e.g., light bulb for "energy", random tools for "work", welding sparks for "steam engine")
 - Abstract concepts that don't match the specific scenario are NOT relevant
 - The image must be educational and directly related to the physics/science concept in the question
+- If actual image description is missing or vague, be VERY strict with validation
 
 **Respond in JSON:**
 {
