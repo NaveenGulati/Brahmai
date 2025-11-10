@@ -11,6 +11,7 @@ import { eq, and, lt, desc } from "drizzle-orm";
 import { authRouter } from "./authRouter";
 import { adaptiveChallengeRouter } from "./adaptive-challenge-router";
 import { adaptiveQuizRouter } from "./adaptive-quiz";
+import { smartNotesRouter } from "./smartNotesRouter";
 
 // Custom procedure for child access
 const childProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -27,6 +28,7 @@ export const appRouter = router({
   system: systemRouter,
   localAuth: authRouter,
   adaptiveQuiz: adaptiveQuizRouter,
+  smartNotes: smartNotesRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

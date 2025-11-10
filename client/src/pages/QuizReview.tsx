@@ -16,6 +16,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { useState, useRef, useEffect } from 'react';
 import { TTSPlayer } from '@/components/TTSPlayer';
+import { TextHighlighter } from '@/components/TextHighlighter';
 
 /**
  * Component to display text with paragraph-level highlighting
@@ -646,12 +647,41 @@ export default function QuizReview() {
                                 />
                                 </div>
                                 
-                                {/* Explanation text - scrollable */}
-                                <div className="text-gray-800 p-4 pt-2">
+                                {/* Explanation text - scrollable with text highlighting */}
+                                <TextHighlighter
+                                  onSave={async (highlightedText) => {
+                                    try {
+                                      // Get subject from question
+                                      const question = quizData?.questions.find(q => q.id === response.questionId);
+                                      const subject = question?.subject || 'General';
+
+                                      await trpc.smartNotes.create.mutate({
+                                        highlightedText,
+                                        questionId: response.questionId,
+                                        subject,
+                                      });
+
+                                      toast.success(
+                                        `Note saved to your ${subject} notes! 🚀`,
+                                        {
+                                          action: {
+                                            label: 'View All Notes',
+                                            onClick: () => window.location.href = '/child/notes',
+                                          },
+                                        }
+                                      );
+                                    } catch (error) {
+                                      toast.error('Failed to save note. Please try again.');
+                                      console.error('Error saving note:', error);
+                                    }
+                                  }}
+                                  className="text-gray-800 p-4 pt-2"
+                                >
                                   <HighlightedText
                                     text={expandedExplanations[response.questionId]}
                                     highlightIndex={highlightedQuestionId === response.questionId ? highlightIndex : -1}
                                   />
+                                </TextHighlighter>
                                   
                                   {/* Feedback buttons */}
                                   <div className="mt-6 pt-4 border-t border-purple-200 flex items-center justify-center gap-3">

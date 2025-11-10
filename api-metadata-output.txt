@@ -1,0 +1,153 @@
+[dotenv@17.2.3] injecting env (17) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+
+=== PEXELS API ===
+Available fields: [
+  'id',
+  'width',
+  'height',
+  'url',
+  'photographer',
+  'photographer_url',
+  'photographer_id',
+  'avg_color',
+  'src',
+  'liked',
+  'alt'
+]
+Full photo object: {
+  "id": 258455,
+  "width": 5320,
+  "height": 3327,
+  "url": "https://www.pexels.com/photo/train-on-railroad-tracks-against-sky-258455/",
+  "photographer": "Pixabay",
+  "photographer_url": "https://www.pexels.com/@pixabay",
+  "photographer_id": 2659,
+  "avg_color": "#646464",
+  "src": {
+    "original": "https://images.pexels.com/photos/258455/pexels-photo-258455.jpeg",
+    "large2x": "https://images.pexels.com/photos/258455/pexels-photo-258455.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "large": "https://images.pexels.com/photos/258455/pexels-photo-258455.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+    "medium": "https://images.pexels.com/photos/258455/pexels-photo-258455.jpeg?auto=compress&cs=tinysrgb&h=350",
+    "small": "https://images.pexels.com/photos/258455/pexels-photo-258455.jpeg?auto=compress&cs=tinysrgb&h=130",
+    "portrait": "https://images.pexels.com/photos/258455/pexels-photo-258455.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=800",
+    "landscape": "https://images.pexels.com/photos/258455/pexels-photo-258455.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+    "tiny": "https://images.pexels.com/photos/258455/pexels-photo-258455.jpeg?auto=compress&cs=tinysrgb&dpr=1&fit=crop&h=200&w=280"
+  },
+  "liked": false,
+  "alt": "A nostalgic black and white image of a vintage steam locomotive with smoke, outdoors on railtracks."
+}
+
+=== PIXABAY API ===
+Error: Request failed with status code 400
+
+=== UNSPLASH API ===
+Available fields: [
+  'id',
+  'slug',
+  'alternative_slugs',
+  'created_at',
+  'updated_at',
+  'promoted_at',
+  'width',
+  'height',
+  'color',
+  'blur_hash',
+  'description',
+  'alt_description',
+  'breadcrumbs',
+  'urls',
+  'links',
+  'likes',
+  'liked_by_user',
+  'bookmarked',
+  'current_user_collections',
+  'sponsorship',
+  'topic_submissions',
+  'asset_type',
+  'user'
+]
+Full photo object: {
+  "id": "HRB7XlnyRy0",
+  "slug": "a-black-and-white-photo-of-a-man-driving-a-tractor-HRB7XlnyRy0",
+  "alternative_slugs": {
+    "en": "a-black-and-white-photo-of-a-man-driving-a-tractor-HRB7XlnyRy0",
+    "es": "una-foto-en-blanco-y-negro-de-un-hombre-conduciendo-un-tractor-HRB7XlnyRy0",
+    "ja": "トラクターを運転する男性の白黒写真-HRB7XlnyRy0",
+    "fr": "une-photo-en-noir-et-blanc-dun-homme-conduisant-un-tracteur-HRB7XlnyRy0",
+    "it": "una-foto-in-bianco-e-nero-di-un-uomo-alla-guida-di-un-trattore-HRB7XlnyRy0",
+    "ko": "트랙터를-운전하는-남자의-흑백-사진-HRB7XlnyRy0",
+    "de": "ein-schwarz-weiss-foto-eines-mannes-der-einen-traktor-fahrt-HRB7XlnyRy0",
+    "pt": "uma-foto-em-preto-e-branco-de-um-homem-dirigindo-um-trator-HRB7XlnyRy0",
+    "id": "foto-hitam-putih-seorang-pria-yang-mengendarai-traktor-HRB7XlnyRy0"
+  },
+  "created_at": "2021-10-11T15:56:17Z",
+  "updated_at": "2025-11-10T06:01:15Z",
+  "promoted_at": null,
+  "width": 6000,
+  "height": 4000,
+  "color": "#f3f3f3",
+  "blur_hash": "LpNKFyWB-;j[~qofWBfQ%Mj[IUfQ",
+  "description": null,
+  "alt_description": "a black and white photo of a man driving a tractor",
+  "breadcrumbs": [],
+  "urls": {
+    "raw": "https://images.unsplash.com/photo-1633966096912-e80152227692?ixid=M3w4Mjg0NTd8MHwxfHNlYXJjaHwxfHxzdGVhbSUyMGVuZ2luZXxlbnwwfHx8fDE3NjI3NTY5OTF8MA&ixlib=rb-4.1.0",
+    "full": "https://images.unsplash.com/photo-1633966096912-e80152227692?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4Mjg0NTd8MHwxfHNlYXJjaHwxfHxzdGVhbSUyMGVuZ2luZXxlbnwwfHx8fDE3NjI3NTY5OTF8MA&ixlib=rb-4.1.0&q=85",
+    "regular": "https://images.unsplash.com/photo-1633966096912-e80152227692?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mjg0NTd8MHwxfHNlYXJjaHwxfHxzdGVhbSUyMGVuZ2luZXxlbnwwfHx8fDE3NjI3NTY5OTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+    "small": "https://images.unsplash.com/photo-1633966096912-e80152227692?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mjg0NTd8MHwxfHNlYXJjaHwxfHxzdGVhbSUyMGVuZ2luZXxlbnwwfHx8fDE3NjI3NTY5OTF8MA&ixlib=rb-4.1.0&q=80&w=400",
+    "thumb": "https://images.unsplash.com/photo-1633966096912-e80152227692?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4Mjg0NTd8MHwxfHNlYXJjaHwxfHxzdGVhbSUyMGVuZ2luZXxlbnwwfHx8fDE3NjI3NTY5OTF8MA&ixlib=rb-4.1.0&q=80&w=200",
+    "small_s3": "https://s3.us-west-2.amazonaws.com/images.unsplash.com/small/photo-1633966096912-e80152227692"
+  },
+  "links": {
+    "self": "https://api.unsplash.com/photos/a-black-and-white-photo-of-a-man-driving-a-tractor-HRB7XlnyRy0",
+    "html": "https://unsplash.com/photos/a-black-and-white-photo-of-a-man-driving-a-tractor-HRB7XlnyRy0",
+    "download": "https://unsplash.com/photos/HRB7XlnyRy0/download?ixid=M3w4Mjg0NTd8MHwxfHNlYXJjaHwxfHxzdGVhbSUyMGVuZ2luZXxlbnwwfHx8fDE3NjI3NTY5OTF8MA",
+    "download_location": "https://api.unsplash.com/photos/HRB7XlnyRy0/download?ixid=M3w4Mjg0NTd8MHwxfHNlYXJjaHwxfHxzdGVhbSUyMGVuZ2luZXxlbnwwfHx8fDE3NjI3NTY5OTF8MA"
+  },
+  "likes": 21,
+  "liked_by_user": false,
+  "bookmarked": false,
+  "current_user_collections": [],
+  "sponsorship": null,
+  "topic_submissions": {},
+  "asset_type": "photo",
+  "user": {
+    "id": "mY55AF3I5Jc",
+    "updated_at": "2025-10-30T17:45:08Z",
+    "username": "honeypoppet",
+    "name": "Sandie Clarke",
+    "first_name": "Sandie",
+    "last_name": "Clarke",
+    "twitter_username": null,
+    "portfolio_url": "https://e2333e.myshopify.com/",
+    "bio": "Hi, I'm a part-time photographer who loves to share my photos with everyone. Please visit https://e2333e.myshopify.com/ to buy beautiful greetings cards with my photos on.\r\nI hope you find my pictures useful!",
+    "location": null,
+    "links": {
+      "self": "https://api.unsplash.com/users/honeypoppet",
+      "html": "https://unsplash.com/@honeypoppet",
+      "photos": "https://api.unsplash.com/users/honeypoppet/photos",
+      "likes": "https://api.unsplash.com/users/honeypoppet/likes",
+      "portfolio": "https://api.unsplash.com/users/honeypoppet/portfolio"
+    },
+    "profile_image": {
+      "small": "https://images.unsplash.com/profile-1544609889811-9d487cff6dbe?ixlib=rb-4.1.0&crop=faces&fit=crop&w=32&h=32",
+      "medium": "https://images.unsplash.com/profile-1544609889811-9d487cff6dbe?ixlib=rb-4.1.0&crop=faces&fit=crop&w=64&h=64",
+      "large": "https://images.unsplash.com/profile-1544609889811-9d487cff6dbe?ixlib=rb-4.1.0&crop=faces&fit=crop&w=128&h=128"
+    },
+    "instagram_username": null,
+    "total_collections": 0,
+    "total_likes": 1,
+    "total_photos": 308,
+    "total_promoted_photos": 13,
+    "total_illustrations": 0,
+    "total_promoted_illustrations": 0,
+    "accepted_tos": true,
+    "for_hire": true,
+    "social": {
+      "instagram_username": null,
+      "portfolio_url": "https://e2333e.myshopify.com/",
+      "twitter_username": null,
+      "paypal_email": null
+    }
+  }
+}
