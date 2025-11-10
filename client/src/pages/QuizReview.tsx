@@ -644,13 +644,13 @@ export default function QuizReview() {
                                     setHighlightedQuestionId(response.questionId);
                                     setHighlightIndex(index);
                                   }}
-                                  onSaveNote={async () => {
+                                  onSaveNote={async (selectedText) => {
                                     try {
                                       const question = quizData?.questions.find(q => q.id === response.questionId);
                                       const subject = question?.subject || 'General';
                                       
                                       await trpc.smartNotes.create.mutate({
-                                        highlightedText: expandedExplanations[response.questionId],
+                                        highlightedText: selectedText,
                                         questionId: response.questionId,
                                         subject,
                                       });

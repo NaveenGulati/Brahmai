@@ -11,7 +11,7 @@ interface TTSPlayerProps {
   explanationText?: string;
   simplificationLevel?: number;
   onHighlightChange?: (paragraphIndex: number) => void;
-  onSaveNote?: () => void;
+  onSaveNote?: (selectedText: string) => void;
 }
 
 const PLAYBACK_SPEEDS = [
@@ -41,6 +41,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   const [showMeaningDialog, setShowMeaningDialog] = useState(false);
   const [selectedText, setSelectedText] = useState('');
   const [wordMeaning, setWordMeaning] = useState('');
+  const [hasSelection, setHasSelection] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const sentencesRef = useRef<string[]>([]);
@@ -460,6 +461,29 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
     }
   };
 
+  // Monitor text selection
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      const text = selection?.toString().trim();
+      setHasSelection(!!text && text.length >= 10);
+      if (text && text.length >= 10) {
+        setSelectedText(text);
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, []);
+
+  const handleSaveNote = () => {
+    if (selectedText && onSaveNote) {
+      onSaveNote(selectedText);
+      setHasSelection(false);
+      window.getSelection()?.removeAllRanges();
+    }
+  };
+
   const handleGetMeaning = async () => {
     const selection = window.getSelection();
     const text = selection?.toString().trim();
@@ -583,13 +607,13 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
         </Select>
         
         <div className="ml-auto flex items-center gap-2">
-          {onSaveNote && (
+          {onSaveNote && hasSelection && (
             <Button
-              onClick={onSaveNote}
+              onClick={handleSaveNote}
               variant="outline"
               size="sm"
-              className="border-pink-300 text-pink-700 hover:bg-pink-50"
-              title="Save this explanation to your notes"
+              className="border-pink-300 text-pink-700 hover:bg-pink-50 animate-in fade-in zoom-in duration-200"
+              title="Save selected text to your notes"
             >
               <BookOpen className="w-3 h-3 mr-1" />
               Save to Notes
