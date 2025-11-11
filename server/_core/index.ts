@@ -110,13 +110,10 @@ async function startServer() {
         console.error('❌ Database not available');
         return res.status(500).json({ error: 'Database not available' });
       }
-      
       const newNote = await db.insert(notes).values({
         userId: session.userId,
-        highlightedText,
+        content: highlightedText,
         questionId,
-        subject,
-        createdAt: new Date(),
       }).returning();
       
       console.log('\u2705 Note saved successfully:', newNote[0]);
