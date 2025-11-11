@@ -281,6 +281,229 @@ async function startServer() {
     }
   });
   
+  // AI-powered tag generation
+  app.post('/api/notes/:id/generate-tags', async (req, res) => {
+    try {
+      const { COOKIE_NAME } = await import('@shared/const');
+      const sessionCookie = req.cookies[COOKIE_NAME];
+      
+      if (!sessionCookie) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      let session;
+      try {
+        session = JSON.parse(sessionCookie);
+      } catch (e) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+      
+      if (!session?.userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      const noteId = parseInt(req.params.id);
+      if (isNaN(noteId)) {
+        return res.status(400).json({ error: 'Invalid note ID' });
+      }
+      
+      const { getDb } = await import('../db');
+      const { notes, tags, noteTags } = await import('../db-schema-notes');
+      const { eq, and } = await import('drizzle-orm');
+      
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+      
+      const [note] = await db
+        .select()
+        .from(notes)
+        .where(and(eq(notes.id, noteId), eq(notes.userId, session.userId)));
+      
+      if (!note) {
+        return res.status(404).json({ error: 'Note not found' });
+      }
+      
+      const { generateTags, stripHtml } = await import('../ai-notes-service');
+      const plainText = stripHtml(note.content);
+      const generatedTags = await generateTags(plainText);
+      
+      const tagIds = [];
+      for (const tag of generatedTags) {
+        const [existingTag] = await db
+          .select()
+          .from(tags)
+          .where(and(eq(tags.name, tag.name), eq(tags.type, tag.type)));
+        
+        let tagId;
+        if (existingTag) {
+          tagId = existingTag.id;
+        } else {
+          const [newTag] = await db
+            .insert(tags)
+            .values({ name: tag.name, type: tag.type })
+            .returning();
+          tagId = newTag.id;
+        }
+        
+        tagIds.push(tagId);
+        
+        const [existing] = await db
+          .select()
+          .from(noteTags)
+          .where(and(eq(noteTags.noteId, noteId), eq(noteTags.tagId, tagId)));
+        
+        if (!existing) {
+          await db.insert(noteTags).values({ noteId, tagId });
+        }
+      }
+      
+      const noteTagsList = await db
+        .select({
+          id: tags.id,
+          name: tags.name,
+          type: tags.type,
+        })
+        .from(tags)
+        .innerJoin(noteTags, eq(noteTags.tagId, tags.id))
+        .where(eq(noteTags.noteId, noteId));
+      
+      res.json({ success: true, tags: noteTagsList });
+    } catch (error) {
+      console.error('\u274c Error generating tags:', error);
+      res.status(500).json({ error: 'Failed to generate tags' });
+    }
+  });
+
+  // AI-powered quiz generation
+  app.post('/api/notes/:id/generate-quiz', async (req, res) => {
+    try {
+      const { COOKIE_NAME } = await import('@shared/const');
+      const sessionCookie = req.cookies[COOKIE_NAME];
+      
+      if (!sessionCookie) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      let session;
+      try {
+        session = JSON.parse(sessionCookie);
+      } catch (e) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+      
+      if (!session?.userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      const noteId = parseInt(req.params.id);
+      if (isNaN(noteId)) {
+        return res.status(400).json({ error: 'Invalid note ID' });
+      }
+      
+      const { numQuestions = 5 } = req.body;
+      
+      const { getDb } = await import('../db');
+      const { notes, generatedQuestions } = await import('../db-schema-notes');
+      const { eq, and } = await import('drizzle-orm');
+      
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+      
+      const [note] = await db
+        .select()
+        .from(notes)
+        .where(and(eq(notes.id, noteId), eq(notes.userId, session.userId)));
+      
+      if (!note) {
+        return res.status(404).json({ error: 'Note not found' });
+      }
+      
+      const { generateQuizQuestions, stripHtml } = await import('../ai-notes-service');
+      const plainText = stripHtml(note.content);
+      const questions = await generateQuizQuestions(plainText, numQuestions);
+      
+      const savedQuestions = [];
+      for (const q of questions) {
+        const [saved] = await db
+          .insert(generatedQuestions)
+          .values({
+            noteId,
+            questionText: q.questionText,
+            options: q.options,
+            correctAnswerIndex: q.correctAnswerIndex,
+            explanation: q.explanation,
+          })
+          .returning();
+        savedQuestions.push(saved);
+      }
+      
+      res.json({ success: true, questions: savedQuestions });
+    } catch (error) {
+      console.error('\u274c Error generating quiz:', error);
+      res.status(500).json({ error: 'Failed to generate quiz' });
+    }
+  });
+
+  // Get quiz questions for a note
+  app.get('/api/notes/:id/quiz', async (req, res) => {
+    try {
+      const { COOKIE_NAME } = await import('@shared/const');
+      const sessionCookie = req.cookies[COOKIE_NAME];
+      
+      if (!sessionCookie) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      let session;
+      try {
+        session = JSON.parse(sessionCookie);
+      } catch (e) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+      
+      if (!session?.userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      const noteId = parseInt(req.params.id);
+      if (isNaN(noteId)) {
+        return res.status(400).json({ error: 'Invalid note ID' });
+      }
+      
+      const { getDb } = await import('../db');
+      const { notes, generatedQuestions } = await import('../db-schema-notes');
+      const { eq, and } = await import('drizzle-orm');
+      
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+      
+      const [note] = await db
+        .select()
+        .from(notes)
+        .where(and(eq(notes.id, noteId), eq(notes.userId, session.userId)));
+      
+      if (!note) {
+        return res.status(404).json({ error: 'Note not found' });
+      }
+      
+      const questions = await db
+        .select()
+        .from(generatedQuestions)
+        .where(eq(generatedQuestions.noteId, noteId));
+      
+      res.json({ questions });
+    } catch (error) {
+      console.error('\u274c Error fetching quiz:', error);
+      res.status(500).json({ error: 'Failed to fetch quiz' });
+    }
+  });
+  
   // tRPC API
   app.use(
     "/api/trpc",
