@@ -28,6 +28,7 @@ const STORAGE_KEY = 'tts-playback-speed';
  * Supports playback speed control and text highlighting sync
  */
 export function TTSPlayer({ questionId, isChild, explanationText, simplificationLevel, onHighlightChange, onSaveNote }: TTSPlayerProps) {
+  console.log('🔵 TTSPlayer component rendering!', { onSaveNote: !!onSaveNote });
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(() => {
@@ -620,16 +621,14 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
         
         <div className="ml-auto flex items-center gap-2">
           {onSaveNote && (
-            <Button
+            <button
               onClick={handleSaveNote}
-              variant="outline"
-              size="sm"
-              className="border-pink-300 text-pink-700 hover:bg-pink-50"
+              className="inline-flex items-center h-8 rounded-md gap-1.5 px-3 border border-pink-300 text-pink-700 hover:bg-pink-50 text-sm"
               title="Save selected text to your notes"
             >
               <BookOpen className="w-3 h-3 mr-1" />
               Save to Notes
-            </Button>
+            </button>
           )}
           <Button
             onClick={handleGetMeaning}
