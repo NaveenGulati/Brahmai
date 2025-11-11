@@ -216,6 +216,70 @@ async function startServer() {
       res.status(500).json({ error: 'Failed to delete note' });
     }
   });
+
+  // Update a note
+  app.put('/api/notes/:id', async (req, res) => {
+    try {
+      const { COOKIE_NAME } = await import('@shared/const');
+      const sessionCookie = req.cookies[COOKIE_NAME];
+      
+      if (!sessionCookie) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      let session;
+      try {
+        session = JSON.parse(sessionCookie);
+      } catch (e) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+      
+      if (!session?.userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      const noteId = parseInt(req.params.id);
+      if (isNaN(noteId)) {
+        return res.status(400).json({ error: 'Invalid note ID' });
+      }
+      
+      const { content } = req.body;
+      if (!content || content.trim().length < 10) {
+        return res.status(400).json({ error: 'Note content must be at least 10 characters' });
+      }
+      
+      const { getDb } = await import('../db');
+      const { notes } = await import('../db-schema-notes');
+      const { eq, and } = await import('drizzle-orm');
+      
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+      
+      // Update only if the note belongs to the user
+      const updatedNote = await db
+        .update(notes)
+        .set({ 
+          content: content.trim(),
+          updatedAt: new Date()
+        })
+        .where(and(
+          eq(notes.id, noteId),
+          eq(notes.userId, session.userId)
+        ))
+        .returning();
+      
+      if (updatedNote.length === 0) {
+        return res.status(404).json({ error: 'Note not found' });
+      }
+      
+      res.json({ success: true, note: updatedNote[0] });
+    } catch (error) {
+      console.error('\u274c Error updating note:', error);
+      res.status(500).json({ error: 'Failed to update note' });
+    }
+  });
   
   // tRPC API
   app.use(
