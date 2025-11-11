@@ -658,6 +658,7 @@ export default function QuizReview() {
                                         headers: {
                                           'Content-Type': 'application/json',
                                         },
+                                        credentials: 'include',
                                         body: JSON.stringify({
                                           highlightedText: selectedText,
                                           questionId: response.questionId,
