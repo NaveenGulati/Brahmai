@@ -1,20 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { RichTextEditor } from '@/components/RichTextEditor';
-import { Search, BookOpen, Calendar, Trash2, Sparkles, ArrowLeft, Plus, Edit, Loader2, Tag, Brain, X } from 'lucide-react';
+import { Search, BookOpen, Calendar, Trash2, Sparkles, ArrowLeft, Plus, Edit, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLocation } from 'wouter';
 import { formatDistanceToNow } from 'date-fns';
-
-interface NoteTag {
-  id: number;
-  name: string;
-  type: 'subject' | 'topic' | 'subTopic';
-}
 
 interface Note {
   id: number;
@@ -25,40 +19,24 @@ interface Note {
   topic?: string;
   createdAt: string;
   updatedAt: string;
-  tags?: NoteTag[];
-}
-
-interface QuizQuestion {
-  id: number;
-  noteId: number;
-  questionText: string;
-  options: string[];
-  correctAnswerIndex: number;
-  explanation: string;
-  createdAt: string;
 }
 
 export function MyNotes() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isGeneratingTags, setIsGeneratingTags] = useState(false);
-  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [deletingNote, setDeletingNote] = useState<Note | null>(null);
-  const [quizNote, setQuizNote] = useState<Note | null>(null);
-  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [noteContent, setNoteContent] = useState('');
 
+  // Fetch notes on mount
   useEffect(() => {
     fetchNotes();
   }, []);
@@ -90,6 +68,11 @@ export function MyNotes() {
       return;
     }
 
+    if (noteContent.length > 1000) {
+      toast.error('Note content must be less than 1000 characters');
+      return;
+    }
+
     try {
       setIsCreating(true);
       const response = await fetch('/api/notes', {
@@ -99,7 +82,7 @@ export function MyNotes() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          highlightedText: noteContent,
+          content: noteContent,
         }),
       });
 
@@ -107,8 +90,7 @@ export function MyNotes() {
         throw new Error('Failed to create note');
       }
 
-      const data = await response.json();
-      const newNote = data.note || data;
+      const newNote = await response.json();
       setNotes([newNote, ...notes]);
       setNoteContent('');
       setIsCreateDialogOpen(false);
@@ -129,6 +111,11 @@ export function MyNotes() {
       return;
     }
 
+    if (noteContent.length > 1000) {
+      toast.error('Note content must be less than 1000 characters');
+      return;
+    }
+
     try {
       setIsUpdating(true);
       const response = await fetch(`/api/notes/${editingNote.id}`, {
@@ -146,8 +133,7 @@ export function MyNotes() {
         throw new Error('Failed to update note');
       }
 
-      const data = await response.json();
-      const updatedNote = data.note || data;
+      const updatedNote = await response.json();
       setNotes(notes.map((n) => (n.id === updatedNote.id ? updatedNote : n)));
       setEditingNote(null);
       setNoteContent('');
@@ -187,67 +173,6 @@ export function MyNotes() {
     }
   };
 
-  const handleGenerateTags = async (noteId: number) => {
-    try {
-      setIsGeneratingTags(true);
-      toast.info('AI is generating tags...');
-      
-      const response = await fetch(`/api/notes/${noteId}/generate-tags`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate tags');
-      }
-
-      const data = await response.json();
-      
-      // Update the note with tags
-      setNotes(notes.map((n) => 
-        n.id === noteId ? { ...n, tags: data.tags } : n
-      ));
-      
-      toast.success(`Generated ${data.tags.length} tags!`);
-    } catch (error) {
-      console.error('Error generating tags:', error);
-      toast.error('Failed to generate tags. Please try again.');
-    } finally {
-      setIsGeneratingTags(false);
-    }
-  };
-
-  const handleGenerateQuiz = async (note: Note) => {
-    try {
-      setIsGeneratingQuiz(true);
-      setQuizNote(note);
-      toast.info('AI is generating quiz questions...');
-      
-      const response = await fetch(`/api/notes/${note.id}/generate-quiz`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ numQuestions: 5 }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate quiz');
-      }
-
-      const data = await response.json();
-      setQuizQuestions(data.questions);
-      setIsQuizDialogOpen(true);
-      toast.success(`Generated ${data.questions.length} quiz questions!`);
-    } catch (error) {
-      console.error('Error generating quiz:', error);
-      toast.error('Failed to generate quiz. Please try again.');
-    } finally {
-      setIsGeneratingQuiz(false);
-    }
-  };
-
   const openEditDialog = (note: Note) => {
     setEditingNote(note);
     setNoteContent(note.content);
@@ -259,19 +184,8 @@ export function MyNotes() {
     setIsDeleteDialogOpen(true);
   };
 
-  const stripHtml = (html: string) => {
-    return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-  };
-
-  const filteredNotes = notes.filter((note) => {
-    const matchesSearch = stripHtml(note.content).toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTag = !selectedTagFilter || note.tags?.some(t => t.name === selectedTagFilter);
-    return matchesSearch && matchesTag;
-  });
-
-  // Get all unique tags from all notes
-  const allTags = Array.from(
-    new Set(notes.flatMap(n => n.tags || []).map(t => t.name))
+  const filteredNotes = notes.filter((note) =>
+    note.content.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -309,8 +223,8 @@ export function MyNotes() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Filter Bar */}
-        <div className="mb-8 space-y-4">
+        {/* Search Bar */}
+        <div className="mb-8">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <Input
@@ -321,35 +235,6 @@ export function MyNotes() {
               className="pl-10 h-12 text-lg border-gray-300 focus:border-purple-500 focus:ring-purple-500"
             />
           </div>
-          
-          {/* Tag Filter */}
-          {allTags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              <span className="text-sm font-medium text-gray-700 flex items-center">
-                <Tag className="w-4 h-4 mr-2" />
-                Filter by tag:
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedTagFilter(null)}
-                className={!selectedTagFilter ? 'bg-purple-100 border-purple-300' : ''}
-              >
-                All
-              </Button>
-              {allTags.map((tag) => (
-                <Button
-                  key={tag}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedTagFilter(tag)}
-                  className={selectedTagFilter === tag ? 'bg-purple-100 border-purple-300' : ''}
-                >
-                  {tag}
-                </Button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Loading State */}
@@ -361,7 +246,7 @@ export function MyNotes() {
         )}
 
         {/* Empty State */}
-        {!isLoading && filteredNotes.length === 0 && !searchQuery && !selectedTagFilter && (
+        {!isLoading && filteredNotes.length === 0 && !searchQuery && (
           <div className="flex flex-col items-center justify-center py-20">
             <BookOpen className="w-20 h-20 text-gray-300 mb-4" />
             <h3 className="text-2xl font-semibold text-gray-700 mb-2">No notes yet</h3>
@@ -380,20 +265,11 @@ export function MyNotes() {
         )}
 
         {/* No Search Results */}
-        {!isLoading && filteredNotes.length === 0 && (searchQuery || selectedTagFilter) && (
+        {!isLoading && filteredNotes.length === 0 && searchQuery && (
           <div className="flex flex-col items-center justify-center py-20">
             <Search className="w-20 h-20 text-gray-300 mb-4" />
             <h3 className="text-2xl font-semibold text-gray-700 mb-2">No notes found</h3>
-            <p className="text-gray-500 mb-6">Try searching with different keywords or clear filters</p>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedTagFilter(null);
-              }}
-            >
-              Clear Filters
-            </Button>
+            <p className="text-gray-500 mb-6">Try searching with different keywords</p>
           </div>
         )}
 
@@ -412,84 +288,27 @@ export function MyNotes() {
                     </div>
                   </div>
 
-                  {/* Note Content */}
-                  <div 
-                    className="text-gray-700 mb-4 line-clamp-6 prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: note.content }}
-                  />
+                  <p className="text-gray-700 mb-4 line-clamp-6 whitespace-pre-wrap">{note.content}</p>
 
-                  {/* Tags */}
-                  {note.tags && note.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {note.tags.map((tag) => (
-                        <span
-                          key={tag.id}
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            tag.type === 'subject'
-                              ? 'bg-blue-100 text-blue-700'
-                              : tag.type === 'topic'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-purple-100 text-purple-700'
-                          }`}
-                        >
-                          {tag.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        onClick={() => openEditDialog(note)}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50"
-                      >
-                        <Edit className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        onClick={() => openDeleteDialog(note)}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-red-300 text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4 mr-1" />
-                        Delete
-                      </Button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        onClick={() => handleGenerateTags(note.id)}
-                        disabled={isGeneratingTags}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-purple-300 text-purple-700 hover:bg-purple-50"
-                      >
-                        {isGeneratingTags ? (
-                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                        ) : (
-                          <Sparkles className="w-4 h-4 mr-1" />
-                        )}
-                        AI Tags
-                      </Button>
-                      <Button
-                        onClick={() => handleGenerateQuiz(note)}
-                        disabled={isGeneratingQuiz}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-green-300 text-green-700 hover:bg-green-50"
-                      >
-                        {isGeneratingQuiz ? (
-                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                        ) : (
-                          <Brain className="w-4 h-4 mr-1" />
-                        )}
-                        AI Quiz
-                      </Button>
-                    </div>
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
+                    <Button
+                      onClick={() => openEditDialog(note)}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      onClick={() => openDeleteDialog(note)}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 border-red-300 text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Delete
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -500,7 +319,7 @@ export function MyNotes() {
 
       {/* Create Note Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-2xl">
               <Sparkles className="w-6 h-6 text-purple-600" />
@@ -508,11 +327,20 @@ export function MyNotes() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <RichTextEditor
-              content={noteContent}
-              onChange={setNoteContent}
-              placeholder="Write your note here... Use the toolbar to format your text!"
-            />
+            <div>
+              <Textarea
+                placeholder="Write your note here..."
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                className="min-h-[200px] text-base"
+                maxLength={1000}
+              />
+              <div className="flex justify-between items-center mt-2">
+                <p className="text-sm text-gray-500">
+                  {noteContent.length}/1000 characters
+                </p>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -548,7 +376,7 @@ export function MyNotes() {
 
       {/* Edit Note Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-2xl">
               <Edit className="w-6 h-6 text-blue-600" />
@@ -556,11 +384,20 @@ export function MyNotes() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <RichTextEditor
-              content={noteContent}
-              onChange={setNoteContent}
-              placeholder="Write your note here... Use the toolbar to format your text!"
-            />
+            <div>
+              <Textarea
+                placeholder="Write your note here..."
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                className="min-h-[200px] text-base"
+                maxLength={1000}
+              />
+              <div className="flex justify-between items-center mt-2">
+                <p className="text-sm text-gray-500">
+                  {noteContent.length}/1000 characters
+                </p>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -603,10 +440,9 @@ export function MyNotes() {
             <AlertDialogDescription className="text-base">
               Are you sure you want to delete this note? This action cannot be undone.
               <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div 
-                  className="text-sm text-gray-700 line-clamp-3 prose prose-sm"
-                  dangerouslySetInnerHTML={{ __html: deletingNote?.content || '' }}
-                />
+                <p className="text-sm text-gray-700 line-clamp-3">
+                  {deletingNote?.content}
+                </p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -629,64 +465,6 @@ export function MyNotes() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Quiz Dialog */}
-      <Dialog open={isQuizDialogOpen} onOpenChange={setIsQuizDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl">
-              <Brain className="w-6 h-6 text-green-600" />
-              AI-Generated Quiz
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            {quizQuestions.map((q, idx) => (
-              <Card key={q.id} className="border-2 border-gray-200">
-                <CardContent className="p-6">
-                  <h3 className="font-semibold text-lg mb-4">
-                    Question {idx + 1}: {q.questionText}
-                  </h3>
-                  <div className="space-y-2 mb-4">
-                    {q.options.map((option, optIdx) => (
-                      <div
-                        key={optIdx}
-                        className={`p-3 rounded-lg border-2 ${
-                          optIdx === q.correctAnswerIndex
-                            ? 'bg-green-50 border-green-500'
-                            : 'bg-gray-50 border-gray-200'
-                        }`}
-                      >
-                        <span className="font-medium mr-2">
-                          {String.fromCharCode(65 + optIdx)}.
-                        </span>
-                        {option}
-                        {optIdx === q.correctAnswerIndex && (
-                          <span className="ml-2 text-green-600 font-semibold">✓ Correct</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-                    <p className="text-sm font-semibold text-blue-900 mb-2">Explanation:</p>
-                    <p className="text-sm text-blue-800">{q.explanation}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={() => {
-                setIsQuizDialogOpen(false);
-                setQuizNote(null);
-                setQuizQuestions([]);
-              }}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
