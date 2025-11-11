@@ -102,8 +102,14 @@ async function startServer() {
       }
       
       // Import db dynamically to avoid circular dependencies
-      const { db } = await import('../db');
+      const { getDb } = await import('../db');
       const { notes } = await import('../db-schema-notes');
+      
+      const db = await getDb();
+      if (!db) {
+        console.error('❌ Database not available');
+        return res.status(500).json({ error: 'Database not available' });
+      }
       
       const newNote = await db.insert(notes).values({
         userId: session.userId,
