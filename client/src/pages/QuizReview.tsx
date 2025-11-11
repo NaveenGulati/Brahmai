@@ -645,28 +645,32 @@ export default function QuizReview() {
                                     setHighlightIndex(index);
                                   }}
                                   onSaveNote={async (selectedText) => {
-                                    console.log('🔵 onSaveNote called!');
-                                    console.log('🔵 Selected text:', selectedText);
-                                    console.log('🔵 Selected text length:', selectedText?.length);
-                                    
                                     if (!selectedText || selectedText.length < 10) {
-                                      console.log('🔴 Text too short or empty');
                                       toast.error('Please select the section you want to add to your notes (at least 10 characters)');
                                       return;
                                     }
                                     
                                     try {
                                       const subject = session.subjectName || 'General';
-                                      console.log('🔵 Subject:', subject);
-                                      console.log('🔵 Question ID:', response.questionId);
-                                      console.log('🔵 Calling trpc.child.createNote.mutate...');
                                       
-                                      const result = await trpc.child.createNote.mutate({
-                                        highlightedText: selectedText,
-                                        questionId: response.questionId,
-                                        subject,
+                                      const apiResponse = await fetch('/api/notes', {
+                                        method: 'POST',
+                                        headers: {
+                                          'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                          highlightedText: selectedText,
+                                          questionId: response.questionId,
+                                          subject,
+                                        }),
                                       });
                                       
+                                      if (!apiResponse.ok) {
+                                        const error = await apiResponse.json();
+                                        throw new Error(error.error || 'Failed to save note');
+                                      }
+                                      
+                                      const result = await apiResponse.json();
                                       console.log('✅ Note saved successfully!', result);
                                       
                                       toast.success(

@@ -477,22 +477,14 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   }, []);
 
   const handleSaveNote = () => {
-    alert('Save to Notes button clicked!');
-    console.log('🟡 [TTSPlayer] handleSaveNote called');
     const selection = window.getSelection();
     const text = selection?.toString().trim() || '';
-    console.log('🟡 [TTSPlayer] Selected text:', text);
-    console.log('🟡 [TTSPlayer] Text length:', text.length);
-    console.log('🟡 [TTSPlayer] onSaveNote callback exists:', !!onSaveNote);
     
     if (onSaveNote) {
-      console.log('🟡 [TTSPlayer] Calling onSaveNote callback...');
       onSaveNote(text);
       if (text) {
         window.getSelection()?.removeAllRanges();
       }
-    } else {
-      console.error('🔴 [TTSPlayer] onSaveNote callback is undefined!');
     }
   };
 
@@ -621,7 +613,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
         <div className="ml-auto flex items-center gap-2">
           {onSaveNote && (
             <button
-              onClick={() => alert('Button clicked! onSaveNote exists: ' + (!!onSaveNote))}
+              onClick={handleSaveNote}
               className="inline-flex items-center h-8 rounded-md gap-1.5 px-3 border border-pink-300 text-pink-700 hover:bg-pink-50 text-sm"
               title="Save selected text to your notes"
             >

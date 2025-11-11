@@ -69,6 +69,41 @@ async function startServer() {
   app.use('/api', googleAuthRoutes);
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  
+  // Simple REST API for saving notes
+  app.post('/api/notes', async (req, res) => {
+    try {
+      const { highlightedText, questionId, subject } = req.body;
+      const session = (req as any).session;
+      
+      if (!session?.user?.id) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      if (!highlightedText || highlightedText.trim().length < 10) {
+        return res.status(400).json({ error: 'Note text must be at least 10 characters' });
+      }
+      
+      // Import db dynamically to avoid circular dependencies
+      const { db } = await import('../db');
+      const { notes } = await import('../db-schema-notes');
+      
+      const newNote = await db.insert(notes).values({
+        userId: session.user.id,
+        highlightedText,
+        questionId,
+        subject,
+        createdAt: new Date(),
+      }).returning();
+      
+      console.log('\u2705 Note saved successfully:', newNote[0]);
+      res.json({ success: true, note: newNote[0] });
+    } catch (error) {
+      console.error('\u274c Error saving note:', error);
+      res.status(500).json({ error: 'Failed to save note' });
+    }
+  });
+  
   // tRPC API
   app.use(
     "/api/trpc",
