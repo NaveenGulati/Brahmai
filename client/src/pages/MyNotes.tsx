@@ -75,7 +75,7 @@ export function MyNotes() {
       }
 
       const data = await response.json();
-      setNotes(data || []);
+      setNotes(data.notes || []);
     } catch (error) {
       console.error('Error fetching notes:', error);
       toast.error('Failed to load notes. Please try again.');
