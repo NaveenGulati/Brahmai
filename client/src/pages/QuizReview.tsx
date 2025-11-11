@@ -653,6 +653,7 @@ export default function QuizReview() {
                                     try {
                                       const subject = session.subjectName || 'General';
                                       
+                                      // Force rebuild to pick up new tRPC types
                                       await trpc.child.createNote.mutate({
                                         highlightedText: selectedText,
                                         questionId: response.questionId,
