@@ -477,6 +477,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   }, []);
 
   const handleSaveNote = () => {
+    alert('Save to Notes button clicked!');
     console.log('🟡 [TTSPlayer] handleSaveNote called');
     const selection = window.getSelection();
     const text = selection?.toString().trim() || '';
