@@ -123,6 +123,99 @@ async function startServer() {
       res.status(500).json({ error: 'Failed to save note' });
     }
   });
+
+  // Get all notes for the logged-in user
+  app.get('/api/notes', async (req, res) => {
+    try {
+      const { COOKIE_NAME } = await import('@shared/const');
+      const sessionCookie = req.cookies[COOKIE_NAME];
+      
+      if (!sessionCookie) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      let session;
+      try {
+        session = JSON.parse(sessionCookie);
+      } catch (e) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+      
+      if (!session?.userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      const { getDb } = await import('../db');
+      const { notes } = await import('../db-schema-notes');
+      const { eq, desc } = await import('drizzle-orm');
+      
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+      
+      const userNotes = await db
+        .select()
+        .from(notes)
+        .where(eq(notes.userId, session.userId))
+        .orderBy(desc(notes.createdAt));
+      
+      res.json({ notes: userNotes });
+    } catch (error) {
+      console.error('\u274c Error fetching notes:', error);
+      res.status(500).json({ error: 'Failed to fetch notes' });
+    }
+  });
+
+  // Delete a note
+  app.delete('/api/notes/:id', async (req, res) => {
+    try {
+      const { COOKIE_NAME } = await import('@shared/const');
+      const sessionCookie = req.cookies[COOKIE_NAME];
+      
+      if (!sessionCookie) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      let session;
+      try {
+        session = JSON.parse(sessionCookie);
+      } catch (e) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+      
+      if (!session?.userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      const noteId = parseInt(req.params.id);
+      if (isNaN(noteId)) {
+        return res.status(400).json({ error: 'Invalid note ID' });
+      }
+      
+      const { getDb } = await import('../db');
+      const { notes } = await import('../db-schema-notes');
+      const { eq, and } = await import('drizzle-orm');
+      
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+      
+      // Delete only if the note belongs to the user
+      await db
+        .delete(notes)
+        .where(and(
+          eq(notes.id, noteId),
+          eq(notes.userId, session.userId)
+        ));
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('\u274c Error deleting note:', error);
+      res.status(500).json({ error: 'Failed to delete note' });
+    }
+  });
   
   // tRPC API
   app.use(
