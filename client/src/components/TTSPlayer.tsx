@@ -477,14 +477,21 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
   }, []);
 
   const handleSaveNote = () => {
+    console.log('🟡 [TTSPlayer] handleSaveNote called');
     const selection = window.getSelection();
     const text = selection?.toString().trim() || '';
+    console.log('🟡 [TTSPlayer] Selected text:', text);
+    console.log('🟡 [TTSPlayer] Text length:', text.length);
+    console.log('🟡 [TTSPlayer] onSaveNote callback exists:', !!onSaveNote);
     
     if (onSaveNote) {
+      console.log('🟡 [TTSPlayer] Calling onSaveNote callback...');
       onSaveNote(text);
       if (text) {
         window.getSelection()?.removeAllRanges();
       }
+    } else {
+      console.error('🔴 [TTSPlayer] onSaveNote callback is undefined!');
     }
   };
 

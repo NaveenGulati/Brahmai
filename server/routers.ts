@@ -1204,8 +1204,15 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
         subject: z.string(),
       }))
       .mutation(async ({ input, ctx }) => {
+        console.log('🟢 [createNote] Mutation called!');
+        console.log('🟢 [createNote] Input:', JSON.stringify(input, null, 2));
+        console.log('🟢 [createNote] User ID:', ctx.user.id);
+        
         const db = await getDb();
-        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+        if (!db) {
+          console.error('🔴 [createNote] Database not available!');
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+        }
 
         const userId = ctx.user.id;
 

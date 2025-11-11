@@ -645,20 +645,29 @@ export default function QuizReview() {
                                     setHighlightIndex(index);
                                   }}
                                   onSaveNote={async (selectedText) => {
+                                    console.log('🔵 onSaveNote called!');
+                                    console.log('🔵 Selected text:', selectedText);
+                                    console.log('🔵 Selected text length:', selectedText?.length);
+                                    
                                     if (!selectedText || selectedText.length < 10) {
+                                      console.log('🔴 Text too short or empty');
                                       toast.error('Please select the section you want to add to your notes (at least 10 characters)');
                                       return;
                                     }
                                     
                                     try {
                                       const subject = session.subjectName || 'General';
+                                      console.log('🔵 Subject:', subject);
+                                      console.log('🔵 Question ID:', response.questionId);
+                                      console.log('🔵 Calling trpc.child.createNote.mutate...');
                                       
-                                      // Force rebuild to pick up new tRPC types
-                                      await trpc.child.createNote.mutate({
+                                      const result = await trpc.child.createNote.mutate({
                                         highlightedText: selectedText,
                                         questionId: response.questionId,
                                         subject,
                                       });
+                                      
+                                      console.log('✅ Note saved successfully!', result);
                                       
                                       toast.success(
                                         `Note saved to your ${subject} notes! 🚀`,
@@ -670,8 +679,9 @@ export default function QuizReview() {
                                         }
                                       );
                                     } catch (error) {
+                                      console.error('❌ Error saving note:', error);
+                                      console.error('❌ Error details:', JSON.stringify(error, null, 2));
                                       toast.error('Failed to save note. Please try again.');
-                                      console.error('Error saving note:', error);
                                     }
                                   }}
                                 />
