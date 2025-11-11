@@ -74,9 +74,26 @@ async function startServer() {
   app.post('/api/notes', async (req, res) => {
     try {
       const { highlightedText, questionId, subject } = req.body;
-      const session = (req as any).session;
       
-      if (!session?.user?.id) {
+      // Get session from cookie (same as tRPC context)
+      const { COOKIE_NAME } = await import('@shared/const');
+      const sessionCookie = req.cookies[COOKIE_NAME];
+      
+      if (!sessionCookie) {
+        console.error('❌ No session cookie found');
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      let session;
+      try {
+        session = JSON.parse(sessionCookie);
+      } catch (e) {
+        console.error('❌ Failed to parse session cookie:', e);
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+      
+      if (!session?.userId) {
+        console.error('❌ No userId in session:', session);
         return res.status(401).json({ error: 'Not authenticated' });
       }
       
@@ -89,7 +106,7 @@ async function startServer() {
       const { notes } = await import('../db-schema-notes');
       
       const newNote = await db.insert(notes).values({
-        userId: session.user.id,
+        userId: session.userId,
         highlightedText,
         questionId,
         subject,
