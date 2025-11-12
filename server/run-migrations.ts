@@ -1,4 +1,4 @@
-import { db } from './db';
+import { getDb } from './db';
 import { sql } from 'drizzle-orm';
 
 /**
@@ -9,6 +9,11 @@ export async function runMigrations() {
   console.log('🔄 Running database migrations...');
   
   try {
+    const db = await getDb();
+    if (!db) {
+      throw new Error('Database not available');
+    }
+    
     // Add headline column to notes table
     await db.execute(sql`
       ALTER TABLE notes 
