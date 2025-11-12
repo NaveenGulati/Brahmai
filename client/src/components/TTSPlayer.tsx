@@ -12,6 +12,7 @@ interface TTSPlayerProps {
   simplificationLevel?: number;
   onHighlightChange?: (paragraphIndex: number) => void;
   onSaveNote?: (selectedText: string) => void;
+  isSavingNote?: boolean;
 }
 
 const PLAYBACK_SPEEDS = [
@@ -27,7 +28,7 @@ const STORAGE_KEY = 'tts-playback-speed';
  * TTSPlayer component for playing audio explanations
  * Supports playback speed control and text highlighting sync
  */
-export function TTSPlayer({ questionId, isChild, explanationText, simplificationLevel, onHighlightChange, onSaveNote }: TTSPlayerProps) {
+export function TTSPlayer({ questionId, isChild, explanationText, simplificationLevel, onHighlightChange, onSaveNote, isSavingNote }: TTSPlayerProps) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(() => {
@@ -614,11 +615,21 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
                 e.preventDefault();
                 handleSaveNote();
               }}
-              className="inline-flex items-center h-8 rounded-md gap-1.5 px-2.5 border border-pink-300 text-pink-700 hover:bg-pink-50 text-xs font-medium whitespace-nowrap"
+              disabled={isSavingNote}
+              className="inline-flex items-center h-8 rounded-md gap-1.5 px-2.5 border border-pink-300 text-pink-700 hover:bg-pink-50 text-xs font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               title="Save selected text to your notes"
             >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Save to Notes</span>
+              {isSavingNote ? (
+                <>
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-pink-700"></div>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Save to Notes</span>
+                </>
+              )}
             </button>
           )}
           <Button

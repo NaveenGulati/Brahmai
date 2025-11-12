@@ -94,6 +94,7 @@ export default function QuizReview() {
   const [explanationHistory, setExplanationHistory] = useState<Record<number, string[]>>({});
   const [highlightedQuestionId, setHighlightedQuestionId] = useState<number | null>(null);
   const [highlightIndex, setHighlightIndex] = useState<number>(-1);
+  const [isSavingNote, setIsSavingNote] = useState(false);
   const explanationScrollRefs = useRef<Record<number, HTMLDivElement | null>>({});
   
   // Practice Similar Questions state
@@ -640,6 +641,7 @@ export default function QuizReview() {
                                   isChild={isChild}
                                   explanationText={expandedExplanations[response.questionId]}
                                   simplificationLevel={simplificationLevels[response.questionId] ?? 0}
+                                  isSavingNote={isSavingNote}
                                   onHighlightChange={(index) => {
                                     setHighlightedQuestionId(response.questionId);
                                     setHighlightIndex(index);
@@ -650,6 +652,7 @@ export default function QuizReview() {
                                       return;
                                     }
                                     
+                                    setIsSavingNote(true);
                                     try {
                                       const subject = session.subjectName || 'General';
                                       
@@ -687,6 +690,8 @@ export default function QuizReview() {
                                       console.error('❌ Error saving note:', error);
                                       console.error('❌ Error details:', JSON.stringify(error, null, 2));
                                       toast.error('Failed to save note. Please try again.');
+                                    } finally {
+                                      setIsSavingNote(false);
                                     }
                                   }}
                                 />
