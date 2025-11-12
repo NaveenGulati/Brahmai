@@ -20,6 +20,7 @@ interface Note {
   id: number;
   userId: number;
   content: string;
+  headline?: string;
   questionId?: number;
   subject?: string;
   topic?: string;
@@ -48,6 +49,7 @@ export function MyNotes() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isGeneratingTags, setIsGeneratingTags] = useState(false);
+  const [expandedNoteId, setExpandedNoteId] = useState<number | null>(null);
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -511,7 +513,7 @@ export function MyNotes() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setLocation('/child/dashboard')}
+                onClick={() => setLocation('/child')}
                 className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />

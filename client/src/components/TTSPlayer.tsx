@@ -558,10 +558,7 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
                 Generating...
               </>
             ) : (
-              <>
-                <Volume2 className="w-3 h-3 mr-2" />
-                Generate Audio Explanation
-              </>
+              <Volume2 className="w-4 h-4" title="Generate Audio Explanation" />
             )}
           </Button>
         ) : (
@@ -617,11 +614,11 @@ export function TTSPlayer({ questionId, isChild, explanationText, simplification
                 e.preventDefault();
                 handleSaveNote();
               }}
-              className="inline-flex items-center h-8 rounded-md gap-1.5 px-3 border border-pink-300 text-pink-700 hover:bg-pink-50 text-sm"
+              className="inline-flex items-center h-8 rounded-md gap-1.5 px-2.5 border border-pink-300 text-pink-700 hover:bg-pink-50 text-xs font-medium whitespace-nowrap"
               title="Save selected text to your notes"
             >
-              <BookOpen className="w-3 h-3 mr-1" />
-              Save to Notes
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>Save to Notes</span>
             </button>
           )}
           <Button
