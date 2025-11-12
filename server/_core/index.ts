@@ -376,6 +376,223 @@ async function startServer() {
     }
   });
 
+  // Delete a tag from a note
+  app.delete('/api/notes/:noteId/tags/:tagId', async (req, res) => {
+    try {
+      const { COOKIE_NAME } = await import('@shared/const');
+      const sessionCookie = req.cookies[COOKIE_NAME];
+      
+      if (!sessionCookie) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      let session;
+      try {
+        session = JSON.parse(sessionCookie);
+      } catch (e) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+      
+      if (!session?.userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      const noteId = parseInt(req.params.noteId);
+      const tagId = parseInt(req.params.tagId);
+      
+      if (isNaN(noteId) || isNaN(tagId)) {
+        return res.status(400).json({ error: 'Invalid note ID or tag ID' });
+      }
+      
+      const { getDb } = await import('../db');
+      const { notes, noteTags } = await import('../db-schema-notes');
+      const { eq, and } = await import('drizzle-orm');
+      
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+      
+      // Verify note belongs to user
+      const [note] = await db
+        .select()
+        .from(notes)
+        .where(and(eq(notes.id, noteId), eq(notes.userId, session.userId)));
+      
+      if (!note) {
+        return res.status(404).json({ error: 'Note not found' });
+      }
+      
+      // Delete the tag association
+      await db
+        .delete(noteTags)
+        .where(and(eq(noteTags.noteId, noteId), eq(noteTags.tagId, tagId)));
+      
+      res.json({ success: true, message: 'Tag removed from note' });
+    } catch (error) {
+      console.error('❌ Error deleting tag from note:', error);
+      res.status(500).json({ error: 'Failed to delete tag' });
+    }
+  });
+
+  // Update a tag (name and/or type)
+  app.put('/api/tags/:tagId', async (req, res) => {
+    try {
+      const { COOKIE_NAME } = await import('@shared/const');
+      const sessionCookie = req.cookies[COOKIE_NAME];
+      
+      if (!sessionCookie) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      let session;
+      try {
+        session = JSON.parse(sessionCookie);
+      } catch (e) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+      
+      if (!session?.userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      const tagId = parseInt(req.params.tagId);
+      if (isNaN(tagId)) {
+        return res.status(400).json({ error: 'Invalid tag ID' });
+      }
+      
+      const { name, type } = req.body;
+      
+      if (!name || !type) {
+        return res.status(400).json({ error: 'Name and type are required' });
+      }
+      
+      if (!['subject', 'topic', 'subTopic'].includes(type)) {
+        return res.status(400).json({ error: 'Invalid tag type' });
+      }
+      
+      const { getDb } = await import('../db');
+      const { tags } = await import('../db-schema-notes');
+      const { eq } = await import('drizzle-orm');
+      
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+      
+      // Update the tag
+      const [updatedTag] = await db
+        .update(tags)
+        .set({ name: name.trim(), type })
+        .where(eq(tags.id, tagId))
+        .returning();
+      
+      if (!updatedTag) {
+        return res.status(404).json({ error: 'Tag not found' });
+      }
+      
+      res.json({ success: true, tag: updatedTag });
+    } catch (error) {
+      console.error('❌ Error updating tag:', error);
+      res.status(500).json({ error: 'Failed to update tag' });
+    }
+  });
+
+  // Add a tag to a note (manual tagging)
+  app.post('/api/notes/:noteId/tags', async (req, res) => {
+    try {
+      const { COOKIE_NAME } = await import('@shared/const');
+      const sessionCookie = req.cookies[COOKIE_NAME];
+      
+      if (!sessionCookie) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      let session;
+      try {
+        session = JSON.parse(sessionCookie);
+      } catch (e) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+      
+      if (!session?.userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      
+      const noteId = parseInt(req.params.noteId);
+      if (isNaN(noteId)) {
+        return res.status(400).json({ error: 'Invalid note ID' });
+      }
+      
+      const { name, type } = req.body;
+      
+      if (!name || !type) {
+        return res.status(400).json({ error: 'Name and type are required' });
+      }
+      
+      if (!['subject', 'topic', 'subTopic'].includes(type)) {
+        return res.status(400).json({ error: 'Invalid tag type' });
+      }
+      
+      const { getDb } = await import('../db');
+      const { notes, tags, noteTags } = await import('../db-schema-notes');
+      const { eq, and } = await import('drizzle-orm');
+      
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+      
+      // Verify note belongs to user
+      const [note] = await db
+        .select()
+        .from(notes)
+        .where(and(eq(notes.id, noteId), eq(notes.userId, session.userId)));
+      
+      if (!note) {
+        return res.status(404).json({ error: 'Note not found' });
+      }
+      
+      // Find or create the tag
+      const [existingTag] = await db
+        .select()
+        .from(tags)
+        .where(and(eq(tags.name, name.trim()), eq(tags.type, type)));
+      
+      let tagId;
+      let tag;
+      if (existingTag) {
+        tagId = existingTag.id;
+        tag = existingTag;
+      } else {
+        const [newTag] = await db
+          .insert(tags)
+          .values({ name: name.trim(), type })
+          .returning();
+        tagId = newTag.id;
+        tag = newTag;
+      }
+      
+      // Check if association already exists
+      const [existing] = await db
+        .select()
+        .from(noteTags)
+        .where(and(eq(noteTags.noteId, noteId), eq(noteTags.tagId, tagId)));
+      
+      if (existing) {
+        return res.status(400).json({ error: 'Tag already added to this note' });
+      }
+      
+      // Create the association
+      await db.insert(noteTags).values({ noteId, tagId });
+      
+      res.json({ success: true, tag });
+    } catch (error) {
+      console.error('❌ Error adding tag to note:', error);
+      res.status(500).json({ error: 'Failed to add tag' });
+    }
+  });
+
   // AI-powered quiz generation
   app.post('/api/notes/:id/generate-quiz', async (req, res) => {
     try {

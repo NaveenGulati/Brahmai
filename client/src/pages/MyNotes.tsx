@@ -53,11 +53,19 @@ export function MyNotes() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false);
+  const [isEditTagDialogOpen, setIsEditTagDialogOpen] = useState(false);
+  const [isAddTagDialogOpen, setIsAddTagDialogOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [deletingNote, setDeletingNote] = useState<Note | null>(null);
   const [quizNote, setQuizNote] = useState<Note | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [noteContent, setNoteContent] = useState('');
+  const [editingTag, setEditingTag] = useState<NoteTag | null>(null);
+  const [editingTagNote, setEditingTagNote] = useState<Note | null>(null);
+  const [addingTagNote, setAddingTagNote] = useState<Note | null>(null);
+  const [tagName, setTagName] = useState('');
+  const [tagType, setTagType] = useState<'subject' | 'topic' | 'subTopic'>('topic');
+  const [isManagingTag, setIsManagingTag] = useState(false);
 
   useEffect(() => {
     fetchNotes();
@@ -259,6 +267,136 @@ export function MyNotes() {
     setIsDeleteDialogOpen(true);
   };
 
+  const openEditTagDialog = (tag: NoteTag, note: Note) => {
+    setEditingTag(tag);
+    setEditingTagNote(note);
+    setTagName(tag.name);
+    setTagType(tag.type);
+    setIsEditTagDialogOpen(true);
+  };
+
+  const openAddTagDialog = (note: Note) => {
+    setAddingTagNote(note);
+    setTagName('');
+    setTagType('topic');
+    setIsAddTagDialogOpen(true);
+  };
+
+  const handleDeleteTag = async (noteId: number, tagId: number) => {
+    try {
+      const response = await fetch(`/api/notes/${noteId}/tags/${tagId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete tag');
+      }
+
+      // Update the note by removing the tag
+      setNotes(notes.map((n) => 
+        n.id === noteId 
+          ? { ...n, tags: n.tags?.filter(t => t.id !== tagId) }
+          : n
+      ));
+      
+      toast.success('Tag removed successfully!');
+    } catch (error) {
+      console.error('Error deleting tag:', error);
+      toast.error('Failed to delete tag. Please try again.');
+    }
+  };
+
+  const handleUpdateTag = async () => {
+    if (!editingTag || !editingTagNote) return;
+
+    if (!tagName.trim()) {
+      toast.error('Please enter a tag name');
+      return;
+    }
+
+    try {
+      setIsManagingTag(true);
+      const response = await fetch(`/api/tags/${editingTag.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: tagName.trim(),
+          type: tagType,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update tag');
+      }
+
+      const data = await response.json();
+      
+      // Update all notes that have this tag
+      setNotes(notes.map((n) => ({
+        ...n,
+        tags: n.tags?.map(t => t.id === editingTag.id ? data.tag : t)
+      })));
+      
+      setIsEditTagDialogOpen(false);
+      toast.success('Tag updated successfully!');
+    } catch (error) {
+      console.error('Error updating tag:', error);
+      toast.error('Failed to update tag. Please try again.');
+    } finally {
+      setIsManagingTag(false);
+    }
+  };
+
+  const handleAddTag = async () => {
+    if (!addingTagNote) return;
+
+    if (!tagName.trim()) {
+      toast.error('Please enter a tag name');
+      return;
+    }
+
+    try {
+      setIsManagingTag(true);
+      const response = await fetch(`/api/notes/${addingTagNote.id}/tags`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: tagName.trim(),
+          type: tagType,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add tag');
+      }
+
+      const data = await response.json();
+      
+      // Update the note with the new tag
+      setNotes(notes.map((n) => 
+        n.id === addingTagNote.id
+          ? { ...n, tags: [...(n.tags || []), data.tag] }
+          : n
+      ));
+      
+      setIsAddTagDialogOpen(false);
+      toast.success('Tag added successfully!');
+    } catch (error: any) {
+      console.error('Error adding tag:', error);
+      toast.error(error.message || 'Failed to add tag. Please try again.');
+    } finally {
+      setIsManagingTag(false);
+    }
+  };
+
   const stripHtml = (html: string) => {
     return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   };
@@ -419,24 +557,45 @@ export function MyNotes() {
                   />
 
                   {/* Tags */}
-                  {note.tags && note.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {note.tags.map((tag) => (
-                        <span
-                          key={tag.id}
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            tag.type === 'subject'
-                              ? 'bg-blue-100 text-blue-700'
-                              : tag.type === 'topic'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-purple-100 text-purple-700'
-                          }`}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {note.tags && note.tags.length > 0 && note.tags.map((tag) => (
+                      <div
+                        key={tag.id}
+                        className={`group relative flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                          tag.type === 'subject'
+                            ? 'bg-blue-100 text-blue-700'
+                            : tag.type === 'topic'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-purple-100 text-purple-700'
+                        }`}
+                      >
+                        <span 
+                          onClick={() => openEditTagDialog(tag, note)}
+                          className="cursor-pointer hover:underline"
                         >
                           {tag.name}
                         </span>
-                      ))}
-                    </div>
-                  )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTag(note.id, tag.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-600"
+                          title="Remove tag"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => openAddTagDialog(note)}
+                      className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                      title="Add tag"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Add Tag
+                    </button>
+                  </div>
 
                   {/* Action Buttons */}
                   <div className="space-y-2">
@@ -629,6 +788,179 @@ export function MyNotes() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Tag Dialog */}
+      <Dialog open={isEditTagDialogOpen} onOpenChange={setIsEditTagDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Tag className="w-5 h-5 text-purple-600" />
+              Edit Tag
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Tag Name
+              </label>
+              <Input
+                type="text"
+                value={tagName}
+                onChange={(e) => setTagName(e.target.value)}
+                placeholder="Enter tag name..."
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Tag Type
+              </label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={tagType === 'subject' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTagType('subject')}
+                  className={tagType === 'subject' ? 'bg-blue-600' : ''}
+                >
+                  Subject
+                </Button>
+                <Button
+                  type="button"
+                  variant={tagType === 'topic' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTagType('topic')}
+                  className={tagType === 'topic' ? 'bg-green-600' : ''}
+                >
+                  Topic
+                </Button>
+                <Button
+                  type="button"
+                  variant={tagType === 'subTopic' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTagType('subTopic')}
+                  className={tagType === 'subTopic' ? 'bg-purple-600' : ''}
+                >
+                  Sub-Topic
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditTagDialogOpen(false);
+                setEditingTag(null);
+                setEditingTagNote(null);
+              }}
+              disabled={isManagingTag}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateTag}
+              disabled={isManagingTag || !tagName.trim()}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {isManagingTag ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Tag Dialog */}
+      <Dialog open={isAddTagDialogOpen} onOpenChange={setIsAddTagDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Plus className="w-5 h-5 text-purple-600" />
+              Add Tag
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Tag Name
+              </label>
+              <Input
+                type="text"
+                value={tagName}
+                onChange={(e) => setTagName(e.target.value)}
+                placeholder="Enter tag name..."
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Tag Type
+              </label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={tagType === 'subject' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTagType('subject')}
+                  className={tagType === 'subject' ? 'bg-blue-600' : ''}
+                >
+                  Subject
+                </Button>
+                <Button
+                  type="button"
+                  variant={tagType === 'topic' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTagType('topic')}
+                  className={tagType === 'topic' ? 'bg-green-600' : ''}
+                >
+                  Topic
+                </Button>
+                <Button
+                  type="button"
+                  variant={tagType === 'subTopic' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTagType('subTopic')}
+                  className={tagType === 'subTopic' ? 'bg-purple-600' : ''}
+                >
+                  Sub-Topic
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAddTagDialogOpen(false);
+                setAddingTagNote(null);
+              }}
+              disabled={isManagingTag}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddTag}
+              disabled={isManagingTag || !tagName.trim()}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {isManagingTag ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                'Add Tag'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Quiz Dialog */}
       <Dialog open={isQuizDialogOpen} onOpenChange={setIsQuizDialogOpen}>
