@@ -148,7 +148,7 @@ async function startServer() {
         const { generateTags, stripHtml } = await import('../ai-notes-service');
         const { normalizeTagName } = await import('../tag-utils');
         const { tags, noteTags } = await import('../db-schema-notes');
-        const { and } = await import('drizzle-orm');
+        const { and, eq } = await import('drizzle-orm');
         
         const plainText = stripHtml(highlightedText);
         const generatedTags = await generateTags(plainText);
