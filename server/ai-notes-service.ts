@@ -1,8 +1,4 @@
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { invokeLLM } from './_core/llm';
 
 export interface GeneratedTag {
   name: string;
@@ -21,8 +17,7 @@ export interface GeneratedQuizQuestion {
  */
 export async function generateTags(noteContent: string): Promise<GeneratedTag[]> {
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4.1-mini',
+    const response = await invokeLLM({
       messages: [
         {
           role: 'system',
@@ -41,8 +36,7 @@ Example: [{"name": "Physics", "type": "subject"}, {"name": "Energy", "type": "to
           content: `Generate tags for this note:\n\n${noteContent}`,
         },
       ],
-      temperature: 0.7,
-      max_tokens: 200,
+      responseFormat: { type: 'json_object' },
     });
 
     const content = response.choices[0]?.message?.content;
@@ -51,8 +45,12 @@ Example: [{"name": "Physics", "type": "subject"}, {"name": "Energy", "type": "to
     }
 
     // Parse JSON response
-    const tags = JSON.parse(content) as GeneratedTag[];
-    return tags;
+    const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+    
+    // Handle both array response and object with tags property
+    const tags = Array.isArray(parsed) ? parsed : (parsed.tags || []);
+    
+    return tags as GeneratedTag[];
   } catch (error) {
     console.error('Error generating tags:', error);
     throw new Error('Failed to generate tags');
@@ -67,8 +65,7 @@ export async function generateQuizQuestions(
   numQuestions: number = 5
 ): Promise<GeneratedQuizQuestion[]> {
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4.1-mini',
+    const response = await invokeLLM({
       messages: [
         {
           role: 'system',
@@ -93,8 +90,7 @@ Example: [{"questionText": "What is...?", "options": ["A", "B", "C", "D"], "corr
           content: `Generate ${numQuestions} quiz questions from this note:\n\n${noteContent}`,
         },
       ],
-      temperature: 0.8,
-      max_tokens: 1500,
+      responseFormat: { type: 'json_object' },
     });
 
     const content = response.choices[0]?.message?.content;
@@ -103,8 +99,12 @@ Example: [{"questionText": "What is...?", "options": ["A", "B", "C", "D"], "corr
     }
 
     // Parse JSON response
-    const questions = JSON.parse(content) as GeneratedQuizQuestion[];
-    return questions;
+    const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+    
+    // Handle both array response and object with questions property
+    const questions = Array.isArray(parsed) ? parsed : (parsed.questions || []);
+    
+    return questions as GeneratedQuizQuestion[];
   } catch (error) {
     console.error('Error generating quiz questions:', error);
     throw new Error('Failed to generate quiz questions');
