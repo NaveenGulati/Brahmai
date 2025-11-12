@@ -1310,9 +1310,8 @@ export function MyNotes() {
             >
               {isCreating ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating... AI generating headline and tags
-                </>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating...
               ) : (
                 <>
                   <Plus className="w-4 h-4 mr-2" />
