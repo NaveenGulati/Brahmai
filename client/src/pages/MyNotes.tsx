@@ -36,6 +36,7 @@ interface QuizQuestion {
   options: string[];
   correctAnswerIndex: number;
   explanation: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
   createdAt: string;
 }
 
@@ -61,6 +62,9 @@ export function MyNotes() {
   const [deletingNote, setDeletingNote] = useState<Note | null>(null);
   const [quizNote, setQuizNote] = useState<Note | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [answeredQuestions, setAnsweredQuestions] = useState<Set<number>>(new Set());
   const [noteContent, setNoteContent] = useState('');
   const [editingTag, setEditingTag] = useState<NoteTag | null>(null);
   const [editingTagNote, setEditingTagNote] = useState<Note | null>(null);
@@ -706,7 +710,7 @@ export function MyNotes() {
               </div>
               <p className="text-sm text-gray-600">Notes with ALL selected tags</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {perfectMatches.map((note) => (
                 <Card key={note.id} className="hover:shadow-xl transition-all border-4 border-yellow-400 bg-gradient-to-br from-yellow-50 to-amber-50">
                   <CardContent className="p-6">
@@ -829,7 +833,7 @@ export function MyNotes() {
               </div>
               <p className="text-sm text-gray-600">Notes with SOME selected tags</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {partialMatches.map((note) => (
                 <Card key={note.id} className="hover:shadow-lg transition-shadow border-2 border-gray-200">
                   <CardContent className="p-6">
@@ -950,24 +954,50 @@ export function MyNotes() {
 
         {/* All Notes (when no search tags) */}
         {!isLoading && !hasSearchTags && allNotes.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {allNotes.map((note) => (
-              <Card key={note.id} className="hover:shadow-lg transition-shadow border-2 border-gray-100">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        {formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}
-                      </span>
-                    </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {allNotes.map((note) => {
+              const isExpanded = expandedNoteId === note.id;
+              return (
+              <Card 
+                key={note.id} 
+                className="hover:shadow-lg transition-all border-2 border-gray-100 cursor-pointer"
+                onClick={() => setExpandedNoteId(isExpanded ? null : note.id)}
+              >
+                <CardContent className="p-4">
+                  {/* Headline */}
+                  {note.headline && (
+                    <h3 className="text-sm font-bold text-gray-900 mb-2 line-clamp-2">
+                      {note.headline}
+                    </h3>
+                  )}
+                  
+                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+                    <Calendar className="w-3 h-3" />
+                    <span>
+                      {formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}
+                    </span>
                   </div>
 
-                  {/* Note Content */}
+                  {/* Note Content - Compact or Expanded */}
                   <div 
-                    className="text-gray-700 mb-4 line-clamp-6 prose prose-sm max-w-none"
+                    className={`text-gray-700 mb-3 prose prose-sm max-w-none ${
+                      isExpanded ? '' : 'line-clamp-2'
+                    }`}
                     dangerouslySetInnerHTML={{ __html: note.content }}
+                    onClick={(e) => e.stopPropagation()}
                   />
+                  
+                  {!isExpanded && (
+                    <button 
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedNoteId(note.id);
+                      }}
+                    >
+                      Read more →
+                    </button>
+                  )}
 
                   {/* Tags */}
                   <div className="flex flex-wrap gap-2 mb-4">
@@ -1010,62 +1040,63 @@ export function MyNotes() {
                     </button>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        onClick={() => openEditDialog(note)}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50"
-                      >
-                        <Edit className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        onClick={() => openDeleteDialog(note)}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-red-300 text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4 mr-1" />
-                        Delete
-                      </Button>
+                  {/* Action Buttons - Only show when expanded */}
+                  {isExpanded && (
+                    <div className="space-y-2 mt-4" onClick={(e) => e.stopPropagation()}>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          onClick={(e) => { e.stopPropagation(); openEditDialog(note); }}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                        >
+                          <Edit className="w-3 h-3 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          onClick={(e) => { e.stopPropagation(); openDeleteDialog(note); }}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs text-red-600"
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" />
+                          Delete
+                        </Button>
+                        <Button
+                          onClick={(e) => { e.stopPropagation(); handleGenerateTags(note.id); }}
+                          disabled={isGeneratingTags}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                        >
+                          {isGeneratingTags ? (
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          ) : (
+                            <Sparkles className="w-3 h-3 mr-1" />
+                          )}
+                          AI Tags
+                        </Button>
+                        <Button
+                          onClick={(e) => { e.stopPropagation(); handleGenerateQuiz(note); }}
+                          disabled={isGeneratingQuiz}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                        >
+                          {isGeneratingQuiz ? (
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          ) : (
+                            <Brain className="w-3 h-3 mr-1" />
+                          )}
+                          AI Quiz
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        onClick={() => handleGenerateTags(note.id)}
-                        disabled={isGeneratingTags}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-purple-300 text-purple-700 hover:bg-purple-50"
-                      >
-                        {isGeneratingTags ? (
-                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                        ) : (
-                          <Sparkles className="w-4 h-4 mr-1" />
-                        )}
-                        AI Tags
-                      </Button>
-                      <Button
-                        onClick={() => handleGenerateQuiz(note)}
-                        disabled={isGeneratingQuiz}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-green-300 text-green-700 hover:bg-green-50"
-                      >
-                        {isGeneratingQuiz ? (
-                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                        ) : (
-                          <Brain className="w-4 h-4 mr-1" />
-                        )}
-                        AI Quiz
-                      </Button>
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
-            ))}
+            )})
+          )}
           </div>
         )}
       </div>
@@ -1375,60 +1406,147 @@ export function MyNotes() {
         </DialogContent>
       </Dialog>
 
-      {/* Quiz Dialog */}
-      <Dialog open={isQuizDialogOpen} onOpenChange={setIsQuizDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+      {/* Interactive Quiz Dialog */}
+      <Dialog open={isQuizDialogOpen} onOpenChange={(open) => {
+        setIsQuizDialogOpen(open);
+        if (!open) {
+          setQuizNote(null);
+          setQuizQuestions([]);
+          setCurrentQuestionIndex(0);
+          setSelectedAnswer(null);
+          setAnsweredQuestions(new Set());
+        }
+      }}>
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl">
-              <Brain className="w-6 h-6 text-green-600" />
-              AI-Generated Quiz
+            <DialogTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Brain className="w-6 h-6 text-green-600" />
+                AI-Generated Quiz
+              </div>
+              <span className="text-sm font-normal text-gray-500">
+                Question {currentQuestionIndex + 1} of {quizQuestions.length}
+              </span>
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 py-4">
-            {quizQuestions.map((q, idx) => (
-              <Card key={q.id} className="border-2 border-gray-200">
-                <CardContent className="p-6">
-                  <h3 className="font-semibold text-lg mb-4">
-                    Question {idx + 1}: {q.questionText}
-                  </h3>
-                  <div className="space-y-2 mb-4">
-                    {q.options.map((option, optIdx) => (
-                      <div
-                        key={optIdx}
-                        className={`p-3 rounded-lg border-2 ${
-                          optIdx === q.correctAnswerIndex
-                            ? 'bg-green-50 border-green-500'
-                            : 'bg-gray-50 border-gray-200'
-                        }`}
-                      >
-                        <span className="font-medium mr-2">
-                          {String.fromCharCode(65 + optIdx)}.
-                        </span>
-                        {option}
-                        {optIdx === q.correctAnswerIndex && (
-                          <span className="ml-2 text-green-600 font-semibold">✓ Correct</span>
+          
+          {quizQuestions.length > 0 && quizQuestions[currentQuestionIndex] && (
+            <div className="py-4">
+              {/* Difficulty Badge */}
+              {quizQuestions[currentQuestionIndex].difficulty && (
+                <div className="mb-4">
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                    quizQuestions[currentQuestionIndex].difficulty === 'easy'
+                      ? 'bg-green-100 text-green-700'
+                      : quizQuestions[currentQuestionIndex].difficulty === 'medium'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : 'bg-red-100 text-red-700'
+                  }`}>
+                    {quizQuestions[currentQuestionIndex].difficulty?.toUpperCase()}
+                  </span>
+                </div>
+              )}
+              
+              {/* Question */}
+              <h3 className="text-lg font-semibold mb-6">
+                {quizQuestions[currentQuestionIndex].questionText}
+              </h3>
+              
+              {/* Options */}
+              <div className="space-y-3 mb-6">
+                {quizQuestions[currentQuestionIndex].options.map((option, optIdx) => {
+                  const isSelected = selectedAnswer === optIdx;
+                  const isCorrect = optIdx === quizQuestions[currentQuestionIndex].correctAnswerIndex;
+                  const showResult = answeredQuestions.has(currentQuestionIndex);
+                  
+                  return (
+                    <button
+                      key={optIdx}
+                      onClick={() => {
+                        if (!showResult) {
+                          setSelectedAnswer(optIdx);
+                          setAnsweredQuestions(new Set([...answeredQuestions, currentQuestionIndex]));
+                        }
+                      }}
+                      disabled={showResult}
+                      className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+                        !showResult
+                          ? 'hover:border-blue-400 hover:bg-blue-50 border-gray-200'
+                          : showResult && isSelected && isCorrect
+                          ? 'bg-green-50 border-green-500'
+                          : showResult && isSelected && !isCorrect
+                          ? 'bg-red-50 border-red-500'
+                          : showResult && isCorrect
+                          ? 'bg-green-50 border-green-500'
+                          : 'bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-gray-700">
+                            {String.fromCharCode(65 + optIdx)}.
+                          </span>
+                          <span>{option}</span>
+                        </div>
+                        {showResult && isCorrect && (
+                          <span className="text-green-600 font-semibold">✓ Correct</span>
+                        )}
+                        {showResult && isSelected && !isCorrect && (
+                          <span className="text-red-600 font-semibold">✗ Wrong</span>
                         )}
                       </div>
-                    ))}
-                  </div>
-                  <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-                    <p className="text-sm font-semibold text-blue-900 mb-2">Explanation:</p>
-                    <p className="text-sm text-blue-800">{q.explanation}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <DialogFooter>
+                    </button>
+                  );
+                })}
+              </div>
+              
+              {/* Explanation (shown after answering) */}
+              {answeredQuestions.has(currentQuestionIndex) && (
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm font-semibold text-blue-900 mb-2">Explanation:</p>
+                  <p className="text-sm text-blue-800">{quizQuestions[currentQuestionIndex].explanation}</p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter className="flex justify-between">
             <Button
+              variant="outline"
               onClick={() => {
-                setIsQuizDialogOpen(false);
-                setQuizNote(null);
-                setQuizQuestions([]);
+                if (currentQuestionIndex > 0) {
+                  setCurrentQuestionIndex(currentQuestionIndex - 1);
+                  setSelectedAnswer(null);
+                }
               }}
+              disabled={currentQuestionIndex === 0}
             >
-              Close
+              Previous
             </Button>
+            
+            {currentQuestionIndex < quizQuestions.length - 1 ? (
+              <Button
+                onClick={() => {
+                  setCurrentQuestionIndex(currentQuestionIndex + 1);
+                  setSelectedAnswer(null);
+                }}
+              >
+                Next
+              </Button>
+            ) : (
+              <Button
+                onClick={() => {
+                  setIsQuizDialogOpen(false);
+                  setQuizNote(null);
+                  setQuizQuestions([]);
+                  setCurrentQuestionIndex(0);
+                  setSelectedAnswer(null);
+                  setAnsweredQuestions(new Set());
+                }}
+              >
+                Finish
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

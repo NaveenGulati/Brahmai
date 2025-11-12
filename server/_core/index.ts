@@ -347,15 +347,20 @@ async function startServer() {
       }
       
       const { generateTags, stripHtml } = await import('../ai-notes-service');
+      const { normalizeTagName } = await import('../tag-utils');
       const plainText = stripHtml(note.content);
       const generatedTags = await generateTags(plainText);
       
       const tagIds = [];
       for (const tag of generatedTags) {
+        // Normalize each AI-generated tag
+        const normalizedName = await normalizeTagName(tag.name);
+        console.log(`✅ AI tag normalized: "${tag.name}" -> "${normalizedName}"`);
+        
         const [existingTag] = await db
           .select()
           .from(tags)
-          .where(and(eq(tags.name, tag.name), eq(tags.type, tag.type)));
+          .where(and(eq(tags.name, normalizedName), eq(tags.type, tag.type)));
         
         let tagId;
         if (existingTag) {
@@ -363,7 +368,7 @@ async function startServer() {
         } else {
           const [newTag] = await db
             .insert(tags)
-            .values({ name: tag.name, type: tag.type })
+            .values({ name: normalizedName, type: tag.type })
             .returning();
           tagId = newTag.id;
         }
@@ -555,6 +560,11 @@ async function startServer() {
         return res.status(400).json({ error: 'Invalid tag type' });
       }
       
+      // Normalize tag name (spell check + title case)
+      const { normalizeTagName } = await import('../tag-utils');
+      const normalizedName = await normalizeTagName(name);
+      console.log(`✅ Tag normalized: "${name}" -> "${normalizedName}"`);
+      
       const { getDb } = await import('../db');
       const { notes, tags, noteTags } = await import('../db-schema-notes');
       const { eq, and } = await import('drizzle-orm');
@@ -574,11 +584,11 @@ async function startServer() {
         return res.status(404).json({ error: 'Note not found' });
       }
       
-      // Find or create the tag
+      // Find or create the tag (using normalized name)
       const [existingTag] = await db
         .select()
         .from(tags)
-        .where(and(eq(tags.name, name.trim()), eq(tags.type, type)));
+        .where(and(eq(tags.name, normalizedName), eq(tags.type, type)));
       
       let tagId;
       let tag;
@@ -588,7 +598,7 @@ async function startServer() {
       } else {
         const [newTag] = await db
           .insert(tags)
-          .values({ name: name.trim(), type })
+          .values({ name: normalizedName, type })
           .returning();
         tagId = newTag.id;
         tag = newTag;
