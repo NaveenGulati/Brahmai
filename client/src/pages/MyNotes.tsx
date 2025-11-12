@@ -1095,8 +1095,8 @@ export function MyNotes() {
                   )}
                 </CardContent>
               </Card>
-            )})
-          )}
+            );
+            })}
           </div>
         )}
       </div>
