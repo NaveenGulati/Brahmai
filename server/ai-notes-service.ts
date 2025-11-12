@@ -29,8 +29,8 @@ Each tag should be categorized as:
 - "topic": Specific topic within the subject (e.g., Mechanics, Algebra, Cell Biology)
 - "subTopic": More specific concept (e.g., Newton's Laws, Quadratic Equations, Mitosis)
 
-Return ONLY a JSON array of objects with "name" and "type" properties.
-Example: [{"name": "Physics", "type": "subject"}, {"name": "Energy", "type": "topic"}]`,
+Return a JSON object with a "tags" array containing objects with "name" and "type" properties.
+Example: {"tags": [{"name": "Physics", "type": "subject"}, {"name": "Energy", "type": "topic"}]}`,
         },
         {
           role: 'user',
@@ -53,8 +53,9 @@ Example: [{"name": "Physics", "type": "subject"}, {"name": "Energy", "type": "to
     
     return tags as GeneratedTag[];
   } catch (error) {
-    console.error('Error generating tags:', error);
-    throw new Error('Failed to generate tags');
+    console.error('❌ Error generating tags:', error);
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
+    throw error;
   }
 }
 

@@ -171,3 +171,12 @@
     }
   }
 }
+/* Fix for TipTap: Preserve inline color when bold is applied */
+.prose strong[style*="color"],
+.prose strong span[style*="color"],
+.prose span[style*="color"] strong,
+.ProseMirror strong[style*="color"],
+.ProseMirror strong span[style*="color"],
+.ProseMirror span[style*="color"] strong {
+  color: inherit !important;
+}
