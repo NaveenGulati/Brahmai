@@ -1417,7 +1417,7 @@ export function MyNotes() {
           setAnsweredQuestions(new Set());
         }
       }}>
-        <DialogContent className="sm:max-w-[700px]">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
