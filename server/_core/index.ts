@@ -137,7 +137,54 @@ async function startServer() {
         questionId,
       }).returning();
       
-      console.log('\u2705 Note saved successfully:', newNote[0]);
+      console.log('✅ Note saved successfully:', newNote[0]);
+      
+      // Auto-generate tags for the new note
+      try {
+        const { generateTags, stripHtml } = await import('../ai-notes-service');
+        const { normalizeTagName } = await import('../tag-utils');
+        const { tags, noteTags } = await import('../db-schema-notes');
+        const { and } = await import('drizzle-orm');
+        
+        const plainText = stripHtml(highlightedText);
+        const generatedTags = await generateTags(plainText);
+        
+        for (const tag of generatedTags) {
+          const normalizedName = await normalizeTagName(tag.name);
+          console.log(`✅ Auto-tag normalized: "${tag.name}" -> "${normalizedName}"`);
+          
+          const [existingTag] = await db
+            .select()
+            .from(tags)
+            .where(and(eq(tags.name, normalizedName), eq(tags.type, tag.type)));
+          
+          let tagId;
+          if (existingTag) {
+            tagId = existingTag.id;
+          } else {
+            const [newTag] = await db
+              .insert(tags)
+              .values({ name: normalizedName, type: tag.type })
+              .returning();
+            tagId = newTag.id;
+          }
+          
+          const [existing] = await db
+            .select()
+            .from(noteTags)
+            .where(and(eq(noteTags.noteId, newNote[0].id), eq(noteTags.tagId, tagId)));
+          
+          if (!existing) {
+            await db.insert(noteTags).values({ noteId: newNote[0].id, tagId });
+          }
+        }
+        
+        console.log(`✅ Auto-generated ${generatedTags.length} tags for note ${newNote[0].id}`);
+      } catch (tagError) {
+        console.error('⚠️ Failed to auto-generate tags:', tagError);
+        // Continue without tags - note is still saved
+      }
+      
       res.json({ success: true, note: newNote[0] });
     } catch (error) {
       console.error('\u274c Error saving note:', error);
