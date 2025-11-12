@@ -171,6 +171,9 @@ export function MyNotes() {
       return;
     }
 
+    // Show loading toast
+    const loadingToast = toast.loading('Creating your note... AI is generating headline and tags');
+
     try {
       setIsCreating(true);
       const response = await fetch('/api/notes', {
@@ -193,9 +196,13 @@ export function MyNotes() {
       setNotes([newNote, ...notes]);
       setNoteContent('');
       setIsCreateDialogOpen(false);
-      toast.success('Note created successfully!');
+      
+      // Dismiss loading toast and show success
+      toast.dismiss(loadingToast);
+      toast.success('Note created successfully with AI-generated headline and tags! 🎉');
     } catch (error) {
       console.error('Error creating note:', error);
+      toast.dismiss(loadingToast);
       toast.error('Failed to create note. Please try again.');
     } finally {
       setIsCreating(false);
