@@ -56,17 +56,18 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
   
   const editor = useEditor({
     extensions: [
+      // TextStyle and Color MUST come before StarterKit to preserve color when applying bold/italic
+      TextStyle,
+      Color,
+      Highlight.configure({
+        multicolor: true,
+      }),
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3],
         },
       }),
       Underline,
-      TextStyle,
-      Color,
-      Highlight.configure({
-        multicolor: true,
-      }),
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),

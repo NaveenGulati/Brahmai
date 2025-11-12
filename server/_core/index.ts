@@ -218,7 +218,7 @@ async function startServer() {
       }
       
       const { getDb } = await import('../db');
-      const { notes } = await import('../db-schema-notes');
+      const { notes, tags, noteTags } = await import('../db-schema-notes');
       const { eq, desc } = await import('drizzle-orm');
       
       const db = await getDb();
@@ -232,7 +232,27 @@ async function startServer() {
         .where(eq(notes.userId, session.userId))
         .orderBy(desc(notes.createdAt));
       
-      res.json({ notes: userNotes });
+      // Fetch tags for each note
+      const notesWithTags = await Promise.all(
+        userNotes.map(async (note) => {
+          const noteTags_list = await db
+            .select({
+              id: tags.id,
+              name: tags.name,
+              type: tags.type,
+            })
+            .from(noteTags)
+            .innerJoin(tags, eq(noteTags.tagId, tags.id))
+            .where(eq(noteTags.noteId, note.id));
+          
+          return {
+            ...note,
+            tags: noteTags_list,
+          };
+        })
+      );
+      
+      res.json({ notes: notesWithTags });
     } catch (error) {
       console.error('\u274c Error fetching notes:', error);
       res.status(500).json({ error: 'Failed to fetch notes' });
