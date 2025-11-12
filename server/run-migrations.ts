@@ -35,6 +35,39 @@ export async function runMigrations() {
     `);
     console.log('✅ Created index on difficulty column');
     
+    // Add grade and board to subjects table
+    await db.execute(sql`
+      ALTER TABLE subjects ADD COLUMN IF NOT EXISTS grade INTEGER DEFAULT 7
+    `);
+    await db.execute(sql`
+      ALTER TABLE subjects ADD COLUMN IF NOT EXISTS board VARCHAR(50) DEFAULT 'ICSE'
+    `);
+    await db.execute(sql`
+      ALTER TABLE subjects ADD COLUMN IF NOT EXISTS display_sequence INTEGER DEFAULT 0
+    `);
+    console.log('✅ Added grade, board, and display_sequence to subjects table');
+    
+    // Add grade and board to children table
+    await db.execute(sql`
+      ALTER TABLE children ADD COLUMN IF NOT EXISTS grade INTEGER DEFAULT 7
+    `);
+    await db.execute(sql`
+      ALTER TABLE children ADD COLUMN IF NOT EXISTS board VARCHAR(50) DEFAULT 'ICSE'
+    `);
+    console.log('✅ Added grade and board to children table');
+    
+    // Create child_subjects mapping table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS child_subjects (
+        id SERIAL PRIMARY KEY,
+        child_id INTEGER REFERENCES children(id) ON DELETE CASCADE,
+        subject_id INTEGER REFERENCES subjects(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(child_id, subject_id)
+      )
+    `);
+    console.log('✅ Created child_subjects mapping table');
+    
     console.log('✅ All migrations completed successfully');
   } catch (error) {
     console.error('❌ Migration failed:', error);

@@ -78,6 +78,10 @@ async function startServer() {
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   
+  // Subject-based notes navigation API
+  const { registerSubjectNotesRoutes } = await import('../api-subjects-notes');
+  registerSubjectNotesRoutes(app);
+  
   // Simple REST API for saving notes
   app.post('/api/notes', async (req, res) => {
     try {

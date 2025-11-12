@@ -78,6 +78,11 @@ export function MyNotes() {
   const [tagSearchQuery, setTagSearchQuery] = useState('');
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [viewingNoteId, setViewingNoteId] = useState<number | null>(null);
+  
+  // Sidebar navigation state
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchNotes();
