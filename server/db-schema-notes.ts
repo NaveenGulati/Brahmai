@@ -9,6 +9,7 @@ export const notes = pgTable('notes', {
   userId: integer('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
   questionId: integer('questionId').references(() => questions.id, { onDelete: 'set null' }),
   content: text('content').notNull(),
+  headline: varchar('headline', { length: 255 }), // AI-generated short headline
   createdAt: timestamp('createdAt').defaultNow(),
   updatedAt: timestamp('updatedAt').defaultNow(),
 }, (table) => ({
@@ -60,6 +61,7 @@ export const generatedQuestions = pgTable('generated_questions', {
   options: jsonb('options').notNull(), // Array of strings
   correctAnswerIndex: integer('correctAnswerIndex').notNull(),
   explanation: text('explanation'),
+  difficulty: varchar('difficulty', { length: 20 }).default('medium'), // 'easy', 'medium', 'hard'
   createdAt: timestamp('createdAt').defaultNow(),
 }, (table) => ({
   noteIdIdx: index('idx_generated_questions_note_id').on(table.noteId),

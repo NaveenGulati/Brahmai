@@ -10,6 +10,7 @@ export interface GeneratedQuizQuestion {
   options: string[];
   correctAnswerIndex: number;
   explanation: string;
+  difficulty: 'easy' | 'medium' | 'hard';
 }
 
 /**
@@ -58,7 +59,43 @@ Example: [{"name": "Physics", "type": "subject"}, {"name": "Energy", "type": "to
 }
 
 /**
- * Generate quiz questions from a note using AI
+ * Generate a concise headline for a note using AI
+ */
+export async function generateHeadline(noteContent: string): Promise<string> {
+  try {
+    const plainText = stripHtml(noteContent);
+    const response = await invokeLLM({
+      messages: [
+        {
+          role: 'system',
+          content: `You are an educational AI that creates concise headlines for student notes.
+Generate a short, descriptive headline (max 60 characters) that captures the main topic.
+Return ONLY the headline text, nothing else.`,
+        },
+        {
+          role: 'user',
+          content: `Generate a headline for this note:\n\n${plainText.substring(0, 500)}`,
+        },
+      ],
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      // Fallback: use first 60 chars
+      return plainText.substring(0, 60) + (plainText.length > 60 ? '...' : '');
+    }
+
+    return typeof content === 'string' ? content.trim() : content;
+  } catch (error) {
+    console.error('Error generating headline:', error);
+    // Fallback: use first 60 chars
+    const plainText = stripHtml(noteContent);
+    return plainText.substring(0, 60) + (plainText.length > 60 ? '...' : '');
+  }
+}
+
+/**
+ * Generate quiz questions from a note using AI with difficulty levels
  */
 export async function generateQuizQuestions(
   noteContent: string,
@@ -71,19 +108,27 @@ export async function generateQuizQuestions(
           role: 'system',
           content: `You are an educational AI that creates practice quiz questions from student notes.
 Generate ${numQuestions} multiple-choice questions based on the note content.
+
+Difficulty distribution:
+- 2 EASY questions (basic recall and recognition)
+- 2 MEDIUM questions (application and understanding)
+- 1 HARD question (analysis and synthesis)
+
 Each question should:
 - Test understanding of key concepts
 - Have 4 options (A, B, C, D)
 - Have exactly one correct answer
 - Include a brief explanation of why the answer is correct
+- Specify difficulty level
 
 Return ONLY a JSON array of objects with these properties:
 - questionText: string
 - options: string[] (array of 4 options)
 - correctAnswerIndex: number (0-3)
 - explanation: string
+- difficulty: "easy" | "medium" | "hard"
 
-Example: [{"questionText": "What is...?", "options": ["A", "B", "C", "D"], "correctAnswerIndex": 2, "explanation": "..."}]`,
+Example: [{"questionText": "What is...?", "options": ["A", "B", "C", "D"], "correctAnswerIndex": 2, "explanation": "...", "difficulty": "easy"}]`,
         },
         {
           role: 'user',

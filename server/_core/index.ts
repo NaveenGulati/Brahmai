@@ -13,6 +13,7 @@ import { serveStatic, setupVite } from "./vite";
 import { initializeGoogleAuth } from "./googleAuth";
 import googleAuthRoutes from "./googleAuthRoutes";
 import { ENV } from "./env";
+import { runMigrations } from "../run-migrations";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -34,6 +35,13 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // Run database migrations first
+  try {
+    await runMigrations();
+  } catch (error) {
+    console.error('Failed to run migrations, continuing anyway:', error);
+  }
+  
   const app = express();
   const server = createServer(app);
   
@@ -110,9 +118,22 @@ async function startServer() {
         console.error('❌ Database not available');
         return res.status(500).json({ error: 'Database not available' });
       }
+      
+      // Generate headline for the note
+      const { generateHeadline } = await import('../ai-notes-service');
+      let headline: string | undefined;
+      try {
+        headline = await generateHeadline(highlightedText);
+        console.log('✅ Generated headline:', headline);
+      } catch (error) {
+        console.error('⚠️ Failed to generate headline:', error);
+        // Continue without headline
+      }
+      
       const newNote = await db.insert(notes).values({
         userId: session.userId,
         content: highlightedText,
+        headline,
         questionId,
       }).returning();
       
@@ -653,6 +674,7 @@ async function startServer() {
             options: q.options,
             correctAnswerIndex: q.correctAnswerIndex,
             explanation: q.explanation,
+            difficulty: q.difficulty || 'medium', // Default to medium if not specified
           })
           .returning();
         savedQuestions.push(saved);
