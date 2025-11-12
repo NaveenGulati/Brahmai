@@ -220,6 +220,17 @@ export default function ChildDashboard() {
                 </CardHeader>
               </Card>
             ))}
+            {/* My Notes Card */}
+            <Card 
+              className="hover:shadow-lg transition-all cursor-pointer border-2 hover:border-purple-300 bg-gradient-to-br from-purple-50 to-pink-50"
+              onClick={() => setLocation('/child/notes')}
+            >
+              <CardHeader className="text-center">
+                <div className="text-5xl mb-2">📝</div>
+                <CardTitle className="text-lg">My Smart Notes</CardTitle>
+                <CardDescription className="text-xs">View and manage your notes</CardDescription>
+              </CardHeader>
+            </Card>
           </div>
         </div>
 
