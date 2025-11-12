@@ -70,7 +70,7 @@ export async function generateHeadline(noteContent: string): Promise<string> {
           role: 'system',
           content: `You are an educational AI that creates concise headlines for student notes.
 Generate a short, descriptive headline (max 60 characters) that captures the main topic.
-Return ONLY the headline text, nothing else.`,
+Return ONLY the headline text. Do NOT include character count, parentheses, or any metadata.`,
         },
         {
           role: 'user',
@@ -85,7 +85,9 @@ Return ONLY the headline text, nothing else.`,
       return plainText.substring(0, 60) + (plainText.length > 60 ? '...' : '');
     }
 
-    return typeof content === 'string' ? content.trim() : content;
+    // Clean up the headline - remove any character count like "(36 chars)"
+    const cleanedContent = typeof content === 'string' ? content.trim() : content;
+    return cleanedContent.replace(/\s*\(\d+\s*chars?\)\s*$/i, '');
   } catch (error) {
     console.error('Error generating headline:', error);
     // Fallback: use first 60 chars
