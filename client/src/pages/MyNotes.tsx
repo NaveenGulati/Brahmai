@@ -1278,28 +1278,7 @@ export function MyNotes() {
 
       {/* Create Note Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto relative">
-          {/* Loading Overlay */}
-          {isCreating && (
-            <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
-              <div className="flex flex-col items-center gap-4 p-8">
-                <div className="relative">
-                  <Loader2 className="w-12 h-12 text-purple-600 animate-spin" />
-                  <Sparkles className="w-6 h-6 text-pink-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                </div>
-                <div className="text-center space-y-2">
-                  <h3 className="text-lg font-bold text-gray-900">{loadingProgress || 'Creating your note...'}</h3>
-                  <p className="text-sm text-gray-500">AI is generating headline and tags</p>
-                </div>
-                <div className="w-64 bg-gray-200 rounded-full h-2 overflow-hidden">
-                  <div 
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 h-full rounded-full transition-all duration-500" 
-                    style={{width: loadingProgress.includes('Creating') ? '33%' : loadingProgress.includes('headline') ? '66%' : '90%'}}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          )}
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-2xl">
               <Sparkles className="w-6 h-6 text-purple-600" />
@@ -1332,7 +1311,7 @@ export function MyNotes() {
               {isCreating ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
+                  Creating... AI generating headline and tags
                 </>
               ) : (
                 <>
