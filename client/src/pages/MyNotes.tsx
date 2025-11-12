@@ -9,6 +9,7 @@ import { Search, BookOpen, Calendar, Trash2, Sparkles, ArrowLeft, Plus, Edit, Lo
 import { toast } from 'sonner';
 import { useLocation } from 'wouter';
 import { formatDistanceToNow } from 'date-fns';
+import Highlighter from 'react-highlight-words';
 
 interface NoteTag {
   id: number;
@@ -1259,11 +1260,10 @@ export function MyNotes() {
                 </CardContent>
               </Card>
             );
-            })}
+          })}
           </div>
         )}
         </div>
-      </div>
       </div>
 
       {/* Create Note Dialog */}
