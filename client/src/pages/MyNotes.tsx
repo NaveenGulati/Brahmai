@@ -66,10 +66,31 @@ export function MyNotes() {
   const [tagName, setTagName] = useState('');
   const [tagType, setTagType] = useState<'subject' | 'topic' | 'subTopic'>('topic');
   const [isManagingTag, setIsManagingTag] = useState(false);
+  
+  // Multi-tag search state
+  const [selectedSearchTags, setSelectedSearchTags] = useState<NoteTag[]>([]);
+  const [tagSearchQuery, setTagSearchQuery] = useState('');
+  const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
+  const [viewingNoteId, setViewingNoteId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchNotes();
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.tag-search-container')) {
+        setIsTagDropdownOpen(false);
+      }
+    };
+
+    if (isTagDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isTagDropdownOpen]);
 
   const fetchNotes = async () => {
     try {
@@ -401,16 +422,86 @@ export function MyNotes() {
     return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   };
 
-  const filteredNotes = notes.filter((note) => {
-    const matchesSearch = stripHtml(note.content).toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTag = !selectedTagFilter || note.tags?.some(t => t.name === selectedTagFilter);
-    return matchesSearch && matchesTag;
-  });
-
   // Get all unique tags from all notes
+  const allUniqueTags = Array.from(
+    new Map(notes.flatMap(n => n.tags || []).map(t => [t.id, t])).values()
+  );
+
+  // Filter tags for autocomplete
+  const filteredTagsForSearch = allUniqueTags.filter(tag =>
+    !selectedSearchTags.some(st => st.id === tag.id) &&
+    tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
+  );
+
+  // Categorize notes based on multi-tag search
+  const categorizeNotes = () => {
+    if (selectedSearchTags.length === 0) {
+      // No tags selected - show all notes with text search
+      const filtered = notes.filter((note) => {
+        const matchesSearch = stripHtml(note.content).toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesSearch;
+      });
+      return { perfectMatches: [], partialMatches: [], allNotes: filtered };
+    }
+
+    const perfectMatches: Note[] = [];
+    const partialMatches: Array<Note & { matchCount: number; matchedTags: NoteTag[] }> = [];
+
+    for (const note of notes) {
+      // Apply text search filter first
+      const matchesSearch = stripHtml(note.content).toLowerCase().includes(searchQuery.toLowerCase());
+      if (!matchesSearch) continue;
+
+      const noteTags = note.tags || [];
+      const matchedTags = noteTags.filter(tag =>
+        selectedSearchTags.some(st => st.id === tag.id)
+      );
+
+      if (matchedTags.length === selectedSearchTags.length) {
+        // Has ALL selected tags
+        perfectMatches.push(note);
+      } else if (matchedTags.length > 0) {
+        // Has SOME selected tags
+        partialMatches.push({
+          ...note,
+          matchCount: matchedTags.length,
+          matchedTags
+        });
+      }
+    }
+
+    // Sort partial matches by match count (descending)
+    partialMatches.sort((a, b) => b.matchCount - a.matchCount);
+
+    return { perfectMatches, partialMatches, allNotes: [] };
+  };
+
+  const { perfectMatches, partialMatches, allNotes } = categorizeNotes();
+  const hasSearchTags = selectedSearchTags.length > 0;
+
+  // Get all unique tags for old filter (backward compatibility)
   const allTags = Array.from(
     new Set(notes.flatMap(n => n.tags || []).map(t => t.name))
   );
+
+  // Handler to add tag to search
+  const handleAddSearchTag = (tag: NoteTag) => {
+    if (!selectedSearchTags.some(st => st.id === tag.id)) {
+      setSelectedSearchTags([...selectedSearchTags, tag]);
+    }
+    setTagSearchQuery('');
+    setIsTagDropdownOpen(false);
+  };
+
+  // Handler to remove tag from search
+  const handleRemoveSearchTag = (tagId: number) => {
+    setSelectedSearchTags(selectedSearchTags.filter(t => t.id !== tagId));
+  };
+
+  // Handler to clear all search tags
+  const handleClearSearchTags = () => {
+    setSelectedSearchTags([]);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
@@ -460,32 +551,97 @@ export function MyNotes() {
             />
           </div>
           
-          {/* Tag Filter */}
-          {allTags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              <span className="text-sm font-medium text-gray-700 flex items-center">
-                <Tag className="w-4 h-4 mr-2" />
-                Filter by tag:
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedTagFilter(null)}
-                className={!selectedTagFilter ? 'bg-purple-100 border-purple-300' : ''}
-              >
-                All
-              </Button>
-              {allTags.map((tag) => (
-                <Button
-                  key={tag}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedTagFilter(tag)}
-                  className={selectedTagFilter === tag ? 'bg-purple-100 border-purple-300' : ''}
-                >
-                  {tag}
-                </Button>
-              ))}
+          {/* Multi-Tag Search */}
+          {allUniqueTags.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Tag className="w-5 h-5 text-purple-600" />
+                <span className="text-sm font-semibold text-gray-700">Search by Tags:</span>
+              </div>
+              
+              {/* Autocomplete Tag Selector */}
+              <div className="relative tag-search-container">
+                <Input
+                  type="text"
+                  placeholder="Type to search tags..."
+                  value={tagSearchQuery}
+                  onChange={(e) => {
+                    setTagSearchQuery(e.target.value);
+                    setIsTagDropdownOpen(true);
+                  }}
+                  onFocus={() => setIsTagDropdownOpen(true)}
+                  className="h-10 border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                />
+                
+                {/* Dropdown */}
+                {isTagDropdownOpen && filteredTagsForSearch.length > 0 && (
+                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {filteredTagsForSearch.map((tag) => (
+                      <button
+                        key={tag.id}
+                        onClick={() => handleAddSearchTag(tag)}
+                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center justify-between group"
+                      >
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              tag.type === 'subject'
+                                ? 'bg-blue-100 text-blue-700'
+                                : tag.type === 'topic'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-purple-100 text-purple-700'
+                            }`}
+                          >
+                            {tag.name}
+                          </span>
+                        </span>
+                        <span className="text-xs text-gray-500 capitalize">
+                          {tag.type === 'subTopic' ? 'Sub-Topic' : tag.type}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Selected Tags */}
+              {selectedSearchTags.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">Selected Tags:</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearSearchTags}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      Clear All
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSearchTags.map((tag) => (
+                      <span
+                        key={tag.id}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+                          tag.type === 'subject'
+                            ? 'bg-blue-500 text-white'
+                            : tag.type === 'topic'
+                            ? 'bg-green-500 text-white'
+                            : 'bg-purple-500 text-white'
+                        }`}
+                      >
+                        {tag.name}
+                        <button
+                          onClick={() => handleRemoveSearchTag(tag.id)}
+                          className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -499,7 +655,7 @@ export function MyNotes() {
         )}
 
         {/* Empty State */}
-        {!isLoading && filteredNotes.length === 0 && !searchQuery && !selectedTagFilter && (
+        {!isLoading && !hasSearchTags && allNotes.length === 0 && !searchQuery && (
           <div className="flex flex-col items-center justify-center py-20">
             <BookOpen className="w-20 h-20 text-gray-300 mb-4" />
             <h3 className="text-2xl font-semibold text-gray-700 mb-2">No notes yet</h3>
@@ -518,7 +674,7 @@ export function MyNotes() {
         )}
 
         {/* No Search Results */}
-        {!isLoading && filteredNotes.length === 0 && (searchQuery || selectedTagFilter) && (
+        {!isLoading && hasSearchTags && perfectMatches.length === 0 && partialMatches.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20">
             <Search className="w-20 h-20 text-gray-300 mb-4" />
             <h3 className="text-2xl font-semibold text-gray-700 mb-2">No notes found</h3>
@@ -527,7 +683,7 @@ export function MyNotes() {
               variant="outline"
               onClick={() => {
                 setSearchQuery('');
-                setSelectedTagFilter(null);
+                handleClearSearchTags();
               }}
             >
               Clear Filters
@@ -535,10 +691,265 @@ export function MyNotes() {
           </div>
         )}
 
-        {/* Notes Grid */}
-        {!isLoading && filteredNotes.length > 0 && (
+        {/* Perfect Matches Section */}
+        {!isLoading && hasSearchTags && perfectMatches.length > 0 && (
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-100 to-amber-100 border-2 border-yellow-400 rounded-lg">
+                <span className="text-2xl">⭐</span>
+                <h2 className="text-xl font-bold text-gray-900">Perfect Matches</h2>
+                <span className="ml-2 px-2 py-0.5 bg-yellow-500 text-white text-sm font-semibold rounded-full">
+                  {perfectMatches.length}
+                </span>
+              </div>
+              <p className="text-sm text-gray-600">Notes with ALL selected tags</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {perfectMatches.map((note) => (
+                <Card key={note.id} className="hover:shadow-xl transition-all border-4 border-yellow-400 bg-gradient-to-br from-yellow-50 to-amber-50">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          {formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <span className="px-2 py-1 bg-yellow-500 text-white text-xs font-bold rounded-full">
+                        ALL TAGS
+                      </span>
+                    </div>
+
+                    {/* Note Content */}
+                    <div 
+                      className="text-gray-700 mb-4 line-clamp-6 prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: note.content }}
+                    />
+
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {note.tags && note.tags.length > 0 && note.tags.map((tag) => (
+                        <div
+                          key={tag.id}
+                          className={`group relative flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                            tag.type === 'subject'
+                              ? 'bg-blue-100 text-blue-700'
+                              : tag.type === 'topic'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-purple-100 text-purple-700'
+                          }`}
+                        >
+                          <span 
+                            onClick={() => openEditTagDialog(tag, note)}
+                            className="cursor-pointer hover:underline"
+                          >
+                            {tag.name}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveTag(note.id, tag.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100 rounded-full p-0.5"
+                            title="Remove tag"
+                          >
+                            <X className="w-3 h-3 text-red-600" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => openAddTagDialog(note)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Add Tag
+                      </button>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(note)}
+                        className="w-full"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openDeleteDialog(note)}
+                        className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleGenerateTags(note.id)}
+                        disabled={isGeneratingTags}
+                        className="w-full"
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        AI Tags
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleGenerateQuiz(note.id)}
+                        disabled={isGeneratingQuiz}
+                        className="w-full"
+                      >
+                        <Brain className="w-4 h-4 mr-2" />
+                        AI Quiz
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Partial Matches Section */}
+        {!isLoading && hasSearchTags && partialMatches.length > 0 && (
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 border-2 border-gray-300 rounded-lg">
+                <span className="text-2xl">📋</span>
+                <h2 className="text-xl font-bold text-gray-900">Partial Matches</h2>
+                <span className="ml-2 px-2 py-0.5 bg-gray-500 text-white text-sm font-semibold rounded-full">
+                  {partialMatches.length}
+                </span>
+              </div>
+              <p className="text-sm text-gray-600">Notes with SOME selected tags</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {partialMatches.map((note) => (
+                <Card key={note.id} className="hover:shadow-lg transition-shadow border-2 border-gray-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          {formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <span className="px-2 py-1 bg-gray-500 text-white text-xs font-semibold rounded-full">
+                        {note.matchCount}/{selectedSearchTags.length} tags
+                      </span>
+                    </div>
+
+                    {/* Note Content */}
+                    <div 
+                      className="text-gray-700 mb-4 line-clamp-6 prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: note.content }}
+                    />
+
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {note.tags && note.tags.length > 0 && note.tags.map((tag) => {
+                        const isMatched = note.matchedTags.some(mt => mt.id === tag.id);
+                        return (
+                          <div
+                            key={tag.id}
+                            className={`group relative flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                              isMatched
+                                ? tag.type === 'subject'
+                                  ? 'bg-blue-500 text-white ring-2 ring-blue-300'
+                                  : tag.type === 'topic'
+                                  ? 'bg-green-500 text-white ring-2 ring-green-300'
+                                  : 'bg-purple-500 text-white ring-2 ring-purple-300'
+                                : tag.type === 'subject'
+                                ? 'bg-blue-100 text-blue-700'
+                                : tag.type === 'topic'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-purple-100 text-purple-700'
+                            }`}
+                          >
+                            <span 
+                              onClick={() => openEditTagDialog(tag, note)}
+                              className="cursor-pointer hover:underline"
+                            >
+                              {tag.name}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveTag(note.id, tag.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100 rounded-full p-0.5"
+                              title="Remove tag"
+                            >
+                              <X className="w-3 h-3 text-red-600" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                      <button
+                        onClick={() => openAddTagDialog(note)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Add Tag
+                      </button>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(note)}
+                        className="w-full"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openDeleteDialog(note)}
+                        className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleGenerateTags(note.id)}
+                        disabled={isGeneratingTags}
+                        className="w-full"
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        AI Tags
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleGenerateQuiz(note.id)}
+                        disabled={isGeneratingQuiz}
+                        className="w-full"
+                      >
+                        <Brain className="w-4 h-4 mr-2" />
+                        AI Quiz
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* All Notes (when no search tags) */}
+        {!isLoading && !hasSearchTags && allNotes.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredNotes.map((note) => (
+            {allNotes.map((note) => (
               <Card key={note.id} className="hover:shadow-lg transition-shadow border-2 border-gray-100">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
