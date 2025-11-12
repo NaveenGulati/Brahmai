@@ -83,9 +83,12 @@ export function MyNotes() {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [subjectTopics, setSubjectTopics] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
     fetchNotes();
+    fetchSubjects();
   }, []);
 
   // Close dropdown when clicking outside
@@ -121,6 +124,43 @@ export function MyNotes() {
       toast.error('Failed to load notes. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchSubjects = async () => {
+    try {
+      const response = await fetch('/api/notes/subjects', {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch subjects');
+      }
+
+      const data = await response.json();
+      setSubjects(data.subjects || []);
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+    }
+  };
+
+  const fetchTopicsForSubject = async (subjectName: string) => {
+    try {
+      const response = await fetch(`/api/notes/subjects/${encodeURIComponent(subjectName)}/topics`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch topics');
+      }
+
+      const data = await response.json();
+      setSubjectTopics(prev => ({
+        ...prev,
+        [subjectName]: data.topics || []
+      }));
+    } catch (error) {
+      console.error('Error fetching topics:', error);
     }
   };
 
@@ -444,11 +484,28 @@ export function MyNotes() {
     tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
   );
 
-  // Categorize notes based on multi-tag search
+  // Categorize notes based on multi-tag search AND sidebar filtering
   const categorizeNotes = () => {
+    // First apply sidebar filtering
+    let filteredByNav = notes;
+    
+    if (selectedSubject) {
+      filteredByNav = notes.filter(note => {
+        const noteTags = note.tags || [];
+        const hasSubject = noteTags.some(tag => tag.type === 'subject' && tag.name === selectedSubject);
+        
+        if (selectedTopic) {
+          const hasTopic = noteTags.some(tag => tag.name === selectedTopic);
+          return hasSubject && hasTopic;
+        }
+        
+        return hasSubject;
+      });
+    }
+    
     if (selectedSearchTags.length === 0) {
       // No tags selected - show all notes with text search
-      const filtered = notes.filter((note) => {
+      const filtered = filteredByNav.filter((note) => {
         const matchesSearch = stripHtml(note.content).toLowerCase().includes(searchQuery.toLowerCase());
         return matchesSearch;
       });
@@ -458,7 +515,7 @@ export function MyNotes() {
     const perfectMatches: Note[] = [];
     const partialMatches: Array<Note & { matchCount: number; matchedTags: NoteTag[] }> = [];
 
-    for (const note of notes) {
+    for (const note of filteredByNav) {
       // Apply text search filter first
       const matchesSearch = stripHtml(note.content).toLowerCase().includes(searchQuery.toLowerCase());
       if (!matchesSearch) continue;
@@ -547,8 +604,109 @@ export function MyNotes() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content with Sidebar */}
+      <div className="flex max-w-7xl mx-auto">
+        {/* Left Sidebar - Subject Navigation */}
+        <div className="w-64 bg-white border-r border-gray-200 min-h-screen p-4 sticky top-16 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
+          {/* All Notes */}
+          <button
+            onClick={() => {
+              setSelectedSubject(null);
+              setSelectedTopic(null);
+            }}
+            className={`w-full text-left px-4 py-3 rounded-lg mb-2 transition-colors ${
+              !selectedSubject
+                ? 'bg-purple-100 text-purple-900 font-semibold'
+                : 'hover:bg-gray-100 text-gray-700'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span>All Notes</span>
+              <span className="px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
+                {notes.length}
+              </span>
+            </div>
+          </button>
+          
+          <div className="border-t border-gray-200 my-4"></div>
+          
+          {/* Subjects List */}
+          <div className="space-y-1">
+            {subjects.map((subject) => {
+              const isExpanded = expandedSubjects.has(subject.name);
+              const isSelected = selectedSubject === subject.name;
+              const topics = subjectTopics[subject.name] || [];
+              
+              return (
+                <div key={subject.id}>
+                  <button
+                    onClick={() => {
+                      if (isExpanded) {
+                        const newExpanded = new Set(expandedSubjects);
+                        newExpanded.delete(subject.name);
+                        setExpandedSubjects(newExpanded);
+                      } else {
+                        const newExpanded = new Set(expandedSubjects);
+                        newExpanded.add(subject.name);
+                        setExpandedSubjects(newExpanded);
+                        if (topics.length === 0) {
+                          fetchTopicsForSubject(subject.name);
+                        }
+                      }
+                      setSelectedSubject(subject.name);
+                      setSelectedTopic(null);
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                      isSelected
+                        ? 'bg-blue-100 text-blue-900 font-semibold'
+                        : 'hover:bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">{subject.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
+                          {subject.note_count}
+                        </span>
+                        <span className="text-xs">{isExpanded ? '▼' : '▶'}</span>
+                      </div>
+                    </div>
+                  </button>
+                  
+                  {/* Topics */}
+                  {isExpanded && topics.length > 0 && (
+                    <div className="ml-4 mt-1 space-y-1">
+                      {topics.map((topic: any) => (
+                        <button
+                          key={topic.id}
+                          onClick={() => {
+                            setSelectedSubject(subject.name);
+                            setSelectedTopic(topic.name);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors text-sm ${
+                            selectedTopic === topic.name
+                              ? 'bg-green-100 text-green-900 font-semibold'
+                              : 'hover:bg-gray-50 text-gray-600'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span>{topic.name}</span>
+                            <span className="px-1.5 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
+                              {topic.note_count}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        
+        {/* Main Content Area */}
+        <div className="flex-1 px-4 sm:px-6 lg:px-8 py-8">
         {/* Search and Filter Bar */}
         <div className="mb-8 space-y-4">
           <div className="relative">
@@ -1104,6 +1262,8 @@ export function MyNotes() {
             })}
           </div>
         )}
+        </div>
+      </div>
       </div>
 
       {/* Create Note Dialog */}
