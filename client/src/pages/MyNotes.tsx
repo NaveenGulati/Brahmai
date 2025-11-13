@@ -713,8 +713,12 @@ export function MyNotes() {
                           }}
                           className={`w-full text-left px-3 py-2 rounded-lg transition-colors text-sm ${
                             selectedTopic === topic.name
-                              ? 'bg-green-100 text-green-900 font-semibold'
-                              : 'hover:bg-gray-50 text-gray-600'
+                              ? topic.type === 'topic'
+                                ? 'bg-green-100 text-green-900 font-semibold'
+                                : 'bg-purple-100 text-purple-900 font-semibold'
+                              : topic.type === 'topic'
+                              ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                              : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
                           }`}
                         >
                           <div className="flex items-center justify-between">
