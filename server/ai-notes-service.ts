@@ -98,6 +98,41 @@ Return ONLY the headline text. Do NOT include character count, parentheses, or a
 }
 
 /**
+ * Generate subject for a note using AI
+ */
+export async function generateSubject(noteContent: string): Promise<string | null> {
+  try {
+    const response = await invokeLLM({
+      messages: [
+        {
+          role: 'system',
+          content: `You are an educational AI that identifies the primary academic subject of student notes.
+Analyze the note content and determine the main subject.
+Return ONLY the subject name (e.g., "Physics", "Mathematics", "Biology", "Chemistry", "History", etc.).
+DO NOT include any explanation or additional text.`,
+        },
+        {
+          role: 'user',
+          content: `What is the primary academic subject of this note?\n\n${noteContent}`,
+        },
+      ],
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      return null;
+    }
+
+    // Clean up the response (remove quotes, trim whitespace)
+    const subject = content.trim().replace(/^["']|["']$/g, '');
+    return subject;
+  } catch (error) {
+    console.error('⚠️ Failed to generate subject:', error);
+    return null;
+  }
+}
+
+/**
  * Generate quiz questions from a note using AI with difficulty levels
  */
 export async function generateQuizQuestions(

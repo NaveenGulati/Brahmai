@@ -115,7 +115,8 @@ async function startServer() {
       
       // Import db dynamically to avoid circular dependencies
       const { getDb } = await import('../db');
-      const { notes } = await import('../db-schema-notes');
+      const { notes, tags, noteTags } = await import('../db-schema-notes');
+      const { eq } = await import('drizzle-orm');
       
       const db = await getDb();
       if (!db) {
@@ -145,10 +146,8 @@ async function startServer() {
       
       // Auto-generate tags for the new note
       try {
-        const { generateTags, stripHtml } = await import('../ai-notes-service');
-        const { normalizeTagName } = await import('../tag-utils');
-        const { tags, noteTags } = await import('../db-schema-notes');
-        const { and, eq } = await import('drizzle-orm');
+            const { generateTags, stripHtml } = await import('../ai-notes-service');
+        const { normalizeTagName } = await import('../tag-utils');;
         
         const plainText = stripHtml(highlightedText);
         const generatedTags = await generateTags(plainText);
@@ -189,15 +188,32 @@ async function startServer() {
         // Continue without tags - note is still saved
       }
       
-      // Add subject tag if provided
-      if (subject) {
+      // Add subject tag - either user-selected or AI-generated
+      let finalSubject = subject;
+      
+      // If user didn't select subject, generate it with AI
+      if (!finalSubject) {
+        try {
+          const { generateSubject, stripHtml } = await import('../ai-notes-service');
+          const plainText = stripHtml(highlightedText);
+          const aiSubject = await generateSubject(plainText);
+          if (aiSubject) {
+            finalSubject = aiSubject;
+            console.log(`✅ AI-generated subject: "${aiSubject}"`);
+          }
+        } catch (aiError) {
+          console.error('⚠️ Failed to AI-generate subject:', aiError);
+          // Continue without subject
+        }
+      }
+      
+      if (finalSubject) {
         try {
           const { normalizeTagName } = await import('../tag-utils');
-          const { tags, noteTags } = await import('../db-schema-notes');
-          const { and, eq } = await import('drizzle-orm');
+          const { and } = await import('drizzle-orm');
           
-          const normalizedSubject = await normalizeTagName(subject);
-          console.log(`✅ Adding subject tag: "${subject}" -> "${normalizedSubject}"`);
+          const normalizedSubject = await normalizeTagName(finalSubject);
+          console.log(`✅ Adding subject tag: "${finalSubject}" -> "${normalizedSubject}"`);
           
           // Check if subject tag exists
           const [existingTag] = await db
@@ -908,7 +924,15 @@ async function startServer() {
   // Get all subjects
   app.get('/api/subjects', async (req, res) => {
     try {
+      const { getDb } = await import('../db');
       const { subjects } = await import('../drizzle/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ error: 'Database not available' });
+      }
+      
       const allSubjects = await db
         .select({
           id: subjects.id,
