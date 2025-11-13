@@ -131,7 +131,7 @@ export function MyNotes() {
 
   const fetchSubjects = async () => {
     try {
-      const response = await fetch('/api/notes/subjects', {
+      const response = await fetch('/api/subjects', {
         credentials: 'include',
       });
 
@@ -188,6 +188,7 @@ export function MyNotes() {
         credentials: 'include',
         body: JSON.stringify({
           highlightedText: noteContent,
+          subject: selectedSubject,
         }),
       });
 
@@ -1237,20 +1238,6 @@ export function MyNotes() {
                           Delete
                         </Button>
                         <Button
-                          onClick={(e) => { e.stopPropagation(); handleGenerateTags(note.id); }}
-                          disabled={isGeneratingTags}
-                          variant="outline"
-                          size="sm"
-                          className="text-xs"
-                        >
-                          {isGeneratingTags ? (
-                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                          ) : (
-                            <Sparkles className="w-3 h-3 mr-1" />
-                          )}
-                          AI Tags
-                        </Button>
-                        <Button
                           onClick={(e) => { e.stopPropagation(); handleGenerateQuiz(note); }}
                           disabled={isGeneratingQuiz}
                           variant="outline"
@@ -1286,6 +1273,26 @@ export function MyNotes() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Subject (optional)
+              </label>
+              <select
+                value={selectedSubject || ''}
+                onChange={(e) => setSelectedSubject(e.target.value || null)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">Select a subject...</option>
+                {subjects.map((subject) => (
+                  <option key={subject.id} value={subject.name}>
+                    {subject.icon} {subject.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Subject will be added as a blue tag to help organize your notes
+              </p>
+            </div>
             <RichTextEditor
               content={noteContent}
               onChange={setNoteContent}

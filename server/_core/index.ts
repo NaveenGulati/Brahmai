@@ -189,7 +189,88 @@ async function startServer() {
         // Continue without tags - note is still saved
       }
       
-      res.json({ success: true, note: newNote[0] });
+      // Add subject tag if provided
+      if (subject) {
+        try {
+          const { normalizeTagName } = await import('../tag-utils');
+          const { tags, noteTags } = await import('../db-schema-notes');
+          const { and, eq } = await import('drizzle-orm');
+          
+          const normalizedSubject = await normalizeTagName(subject);
+          console.log(`✅ Adding subject tag: "${subject}" -> "${normalizedSubject}"`);
+          
+          // Check if subject tag exists
+          const [existingTag] = await db
+            .select()
+            .from(tags)
+            .where(and(eq(tags.name, normalizedSubject), eq(tags.type, 'subject')));
+          
+          let tagId;
+          if (existingTag) {
+            tagId = existingTag.id;
+          } else {
+            const [newTag] = await db
+              .insert(tags)
+              .values({ name: normalizedSubject, type: 'subject' })
+              .returning();
+            tagId = newTag.id;
+          }
+          
+          // Link tag to note
+          const [existing] = await db
+            .select()
+            .from(noteTags)
+            .where(and(eq(noteTags.noteId, newNote[0].id), eq(noteTags.tagId, tagId)));
+          
+          if (!existing) {
+            await db.insert(noteTags).values({ noteId: newNote[0].id, tagId });
+          }
+          
+          console.log(`✅ Subject tag added: ${normalizedSubject}`);
+        } catch (subjectError) {
+          console.error('⚠️ Failed to add subject tag:', subjectError);
+          // Continue without subject tag
+        }
+      }
+      
+      // Fetch the note with tags to return in response
+      const noteWithTags = await db
+        .select({
+          id: notes.id,
+          highlightedText: notes.highlightedText,
+          headline: notes.headline,
+          userId: notes.userId,
+          createdAt: notes.createdAt,
+          tags: {
+            id: tags.id,
+            name: tags.name,
+            type: tags.type,
+          },
+        })
+        .from(notes)
+        .leftJoin(noteTags, eq(notes.id, noteTags.noteId))
+        .leftJoin(tags, eq(noteTags.tagId, tags.id))
+        .where(eq(notes.id, newNote[0].id));
+      
+      // Group tags by note
+      const noteData = noteWithTags.reduce((acc: any, row) => {
+        if (!acc) {
+          acc = {
+            id: row.id,
+            highlightedText: row.highlightedText,
+            headline: row.headline,
+            userId: row.userId,
+            createdAt: row.createdAt,
+            tags: [],
+          };
+        }
+        if (row.tags.id) {
+          acc.tags.push(row.tags);
+        }
+        return acc;
+      }, null);
+      
+      res.json({ success: true, note: noteData || newNote[0] });
     } catch (error) {
       console.error('\u274c Error saving note:', error);
       res.status(500).json({ error: 'Failed to save note' });
@@ -821,6 +902,29 @@ async function startServer() {
     } catch (error) {
       console.error('\u274c Error fetching quiz:', error);
       res.status(500).json({ error: 'Failed to fetch quiz' });
+    }
+  });
+  
+  // Get all subjects
+  app.get('/api/subjects', async (req, res) => {
+    try {
+      const { subjects } = await import('../drizzle/schema');
+      const allSubjects = await db
+        .select({
+          id: subjects.id,
+          name: subjects.name,
+          code: subjects.code,
+          icon: subjects.icon,
+          color: subjects.color,
+        })
+        .from(subjects)
+        .where(eq(subjects.isActive, true))
+        .orderBy(subjects.displayOrder);
+      
+      res.json({ subjects: allSubjects });
+    } catch (error) {
+      console.error('❌ Error fetching subjects:', error);
+      res.status(500).json({ error: 'Failed to fetch subjects' });
     }
   });
   
