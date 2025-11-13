@@ -918,9 +918,23 @@ async function startServer() {
   // Get all subjects
   app.get('/api/subjects', async (req, res) => {
     try {
+      const { COOKIE_NAME } = await import('@shared/const');
+      const sessionCookie = req.cookies[COOKIE_NAME];
+      
+      let userId = null;
+      if (sessionCookie) {
+        try {
+          const session = JSON.parse(sessionCookie);
+          userId = session?.userId;
+        } catch (e) {
+          // Invalid session, continue without userId
+        }
+      }
+      
       const { getDb } = await import('../db');
       const { subjects } = await import('../../drizzle/schema');
-      const { eq } = await import('drizzle-orm');
+      const { notes, tags, noteTags } = await import('../db-schema-notes');
+      const { eq, and, sql } = await import('drizzle-orm');
       
       const db = await getDb();
       if (!db) {
@@ -939,7 +953,34 @@ async function startServer() {
         .where(eq(subjects.isActive, true))
         .orderBy(subjects.displayOrder);
       
-      res.json({ subjects: allSubjects });
+      // If user is logged in, get note counts per subject
+      let subjectsWithCounts = allSubjects;
+      if (userId) {
+        const noteCounts = await db
+          .select({
+            subjectName: tags.name,
+            count: sql<number>`count(distinct ${notes.id})`.as('count'),
+          })
+          .from(notes)
+          .innerJoin(noteTags, eq(noteTags.noteId, notes.id))
+          .innerJoin(tags, and(eq(tags.id, noteTags.tagId), eq(tags.type, 'subject')))
+          .where(eq(notes.userId, userId))
+          .groupBy(tags.name);
+        
+        const countMap = new Map(noteCounts.map(nc => [nc.subjectName, Number(nc.count)]));
+        
+        subjectsWithCounts = allSubjects.map(subject => ({
+          ...subject,
+          note_count: countMap.get(subject.name) || 0,
+        }));
+      } else {
+        subjectsWithCounts = allSubjects.map(subject => ({
+          ...subject,
+          note_count: 0,
+        }));
+      }
+      
+      res.json({ subjects: subjectsWithCounts });
     } catch (error) {
       console.error('❌ Error fetching subjects:', error);
       res.status(500).json({ error: 'Failed to fetch subjects' });
