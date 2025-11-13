@@ -44,8 +44,8 @@ export function registerSubjectNotesRoutes(app: Express) {
           COUNT(DISTINCT n.id) as note_count
         FROM subjects s
         LEFT JOIN tags t ON t.name = s.name AND t.type = 'subject'
-        LEFT JOIN note_tags nt ON nt.tag_id = t.id
-        LEFT JOIN notes n ON n.id = nt.note_id AND n.user_id = ${session.userId}
+        LEFT JOIN note_tags nt ON nt."tagId" = t.id
+        LEFT JOIN notes n ON n.id = nt."noteId" AND n."userId" = ${session.userId}
         GROUP BY s.id, s.name, s.grade, s.board, s.display_sequence
         ORDER BY s.display_sequence, s.name
       `);
@@ -93,13 +93,13 @@ export function registerSubjectNotesRoutes(app: Express) {
           t.type,
           COUNT(DISTINCT n.id) as note_count
         FROM tags t
-        INNER JOIN note_tags nt ON nt.tag_id = t.id
-        INNER JOIN notes n ON n.id = nt.note_id AND n.user_id = ${session.userId}
+        INNER JOIN note_tags nt ON nt."tagId" = t.id
+        INNER JOIN notes n ON n.id = nt."noteId" AND n."userId" = ${session.userId}
         WHERE t.type IN ('topic', 'subTopic')
         AND EXISTS (
           SELECT 1 FROM note_tags nt2
-          INNER JOIN tags t2 ON t2.id = nt2.tag_id
-          WHERE nt2.note_id = n.id
+          INNER JOIN tags t2 ON t2.id = nt2."tagId"
+          WHERE nt2."noteId" = n.id
           AND t2.name = ${subjectName}
           AND t2.type = 'subject'
         )
