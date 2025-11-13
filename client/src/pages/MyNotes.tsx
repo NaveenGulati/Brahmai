@@ -481,6 +481,22 @@ export function MyNotes() {
     }
   };
 
+  const handleDeleteTagFromDialog = async () => {
+    if (!editingTag || !editingTagNote) return;
+
+    // Confirm deletion
+    if (!window.confirm(`Are you sure you want to delete the tag "${editingTag.name}"? This will remove it from this note.`)) {
+      return;
+    }
+
+    setIsManagingTag(true);
+    await handleDeleteTag(editingTagNote.id, editingTag.id);
+    setIsManagingTag(false);
+    setIsEditTagDialogOpen(false);
+    setEditingTag(null);
+    setEditingTagNote(null);
+  };
+
   const stripHtml = (html: string) => {
     return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   };
@@ -1472,32 +1488,52 @@ export function MyNotes() {
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex justify-between">
             <Button
-              variant="outline"
-              onClick={() => {
-                setIsEditTagDialogOpen(false);
-                setEditingTag(null);
-                setEditingTagNote(null);
-              }}
+              variant="destructive"
+              onClick={handleDeleteTagFromDialog}
               disabled={isManagingTag}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleUpdateTag}
-              disabled={isManagingTag || !tagName.trim()}
-              className="bg-purple-600 hover:bg-purple-700"
+              className="mr-auto"
             >
               {isManagingTag ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
+                  Deleting...
                 </>
               ) : (
-                'Save Changes'
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Tag
+                </>
               )}
             </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditTagDialogOpen(false);
+                  setEditingTag(null);
+                  setEditingTagNote(null);
+                }}
+                disabled={isManagingTag}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateTag}
+                disabled={isManagingTag || !tagName.trim()}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                {isManagingTag ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
