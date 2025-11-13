@@ -252,16 +252,14 @@ async function startServer() {
       // Fetch the note with tags to return in response
       const noteWithTags = await db
         .select({
-          id: notes.id,
+          noteId: notes.id,
           highlightedText: notes.highlightedText,
           headline: notes.headline,
           userId: notes.userId,
           createdAt: notes.createdAt,
-          tags: {
-            id: tags.id,
-            name: tags.name,
-            type: tags.type,
-          },
+          tagId: tags.id,
+          tagName: tags.name,
+          tagType: tags.type,
         })
         .from(notes)
         .leftJoin(noteTags, eq(notes.id, noteTags.noteId))
@@ -272,7 +270,7 @@ async function startServer() {
       const noteData = noteWithTags.reduce((acc: any, row) => {
         if (!acc) {
           acc = {
-            id: row.id,
+            id: row.noteId,
             highlightedText: row.highlightedText,
             headline: row.headline,
             userId: row.userId,
@@ -280,8 +278,8 @@ async function startServer() {
             tags: [],
           };
         }
-        if (row.tags.id) {
-          acc.tags.push(row.tags);
+        if (row.tagId) {
+          acc.tags.push({ id: row.tagId, name: row.tagName, type: row.tagType });
         }
         return acc;
       }, null);
