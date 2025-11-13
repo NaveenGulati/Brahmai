@@ -933,7 +933,7 @@ async function startServer() {
   app.get('/api/subjects', async (req, res) => {
     try {
       const { getDb } = await import('../db');
-      const { subjects } = await import('../drizzle/schema');
+      const { subjects } = await import('../../drizzle/schema');
       const { eq } = await import('drizzle-orm');
       
       const db = await getDb();
