@@ -240,7 +240,8 @@ export function MyNotes() {
 
       const data = await response.json();
       const updatedNote = data.note || data;
-      setNotes(notes.map((n) => (n.id === updatedNote.id ? updatedNote : n)));
+      // Preserve existing tags when updating the note
+      setNotes(notes.map((n) => (n.id === updatedNote.id ? { ...updatedNote, tags: n.tags } : n)));
       setEditingNote(null);
       setNoteContent('');
       setIsEditDialogOpen(false);
