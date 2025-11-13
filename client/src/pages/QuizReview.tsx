@@ -983,7 +983,16 @@ export default function QuizReview() {
                   <div className="bg-gradient-to-br from-pink-50 to-purple-50 border-2 border-pink-200 rounded-lg p-6">
                     {/* Question text */}
                     <div className="mb-4">
-                      <h3 className="font-semibold text-lg mb-3">Question {idx + 1}</h3>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-lg">Question {idx + 1}</h3>
+                        <span className={`px-2 py-1 rounded text-xs font-medium uppercase ${
+                          question.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
+                          question.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {question.difficulty}
+                        </span>
+                      </div>
                       <ReactMarkdown
                         remarkPlugins={[remarkMath]}
                         rehypePlugins={[rehypeKatex]}
@@ -1117,7 +1126,7 @@ export default function QuizReview() {
                     <Button
                       variant="outline"
                       onClick={() => setCurrentPracticeIndex(Math.min(practiceQuestions.length - 1, currentPracticeIndex + 1))}
-                      disabled={currentPracticeIndex === practiceQuestions.length - 1}
+                      disabled={currentPracticeIndex === practiceQuestions.length - 1 || !practiceSubmitted[idx]}
                     >
                       Next →
                     </Button>

@@ -131,6 +131,7 @@ export async function generateSimilarQuestionsFromOriginal(input: {
   optionD?: string;
   correctAnswer: string;
   explanation: string;
+  difficulty: 'easy' | 'medium' | 'hard';
 }>> {
   const { getModuleById, getSubjectById, getQuestionById } = await import('./db');
   
@@ -164,7 +165,12 @@ ${syllabusContext}
 REQUIREMENTS:
 1. Generate exactly 5 questions that test the SAME CONCEPT as the original
 2. Questions must stay within the syllabus boundaries (Grade 7, ${subject?.name || 'same subject'})
-3. Match the difficulty level: ${originalQuestion?.difficulty || 'medium'}
+3. DIFFICULTY DISTRIBUTION (in this exact order):
+   - Question 1: EASY
+   - Question 2: EASY
+   - Question 3: MEDIUM
+   - Question 4: MEDIUM
+   - Question 5: HARD
 4. Use the same question type: ${originalQuestion?.questionType === 'true_false' ? 'True/False' : 'Multiple Choice (MCQ)'}
 5. Each question should test understanding from a slightly different angle
 6. Provide clear, educational explanations for each answer
@@ -176,6 +182,7 @@ OUTPUT FORMAT (JSON array):
   {
     "questionText": "Question text here (use LaTeX notation for math: $x^2$ for inline, $$equation$$ for display)",
     "type": "MCQ" or "T/F",
+    "difficulty": "easy" or "medium" or "hard",
     "optionA": "Option A text (only for MCQ)",
     "optionB": "Option B text (only for MCQ)",
     "optionC": "Option C text (only for MCQ)",
@@ -229,7 +236,7 @@ IMPORTANT:
     
     // Validate each question has required fields
     questions.forEach((q: any, index: number) => {
-      if (!q.questionText || !q.type || !q.correctAnswer || !q.explanation) {
+      if (!q.questionText || !q.type || !q.correctAnswer || !q.explanation || !q.difficulty) {
         throw new Error(`Question ${index + 1} is missing required fields`);
       }
       
