@@ -116,7 +116,7 @@ async function startServer() {
       // Import db dynamically to avoid circular dependencies
       const { getDb } = await import('../db');
       const { notes, tags, noteTags } = await import('../db-schema-notes');
-      const { eq, and } = await import('drizzle-orm');
+      const { eq, and, inArray } = await import('drizzle-orm');
       
       const db = await getDb();
       if (!db) {
@@ -249,42 +249,30 @@ async function startServer() {
         }
       }
       
-      // Fetch the note with tags to return in response
-      const noteWithTags = await db
+      // Fetch tags separately to avoid Drizzle ORM select issues
+      const noteTagsRows = await db
         .select({
-          noteId: notes.id,
-          highlightedText: notes.highlightedText,
-          headline: notes.headline,
-          userId: notes.userId,
-          createdAt: notes.createdAt,
-          tagId: tags.id,
-          tagName: tags.name,
-          tagType: tags.type,
+          tagId: noteTags.tagId,
         })
-        .from(notes)
-        .leftJoin(noteTags, eq(notes.id, noteTags.noteId))
-        .leftJoin(tags, eq(noteTags.tagId, tags.id))
-        .where(eq(notes.id, newNote[0].id));
+        .from(noteTags)
+        .where(eq(noteTags.noteId, newNote[0].id));
       
-      // Group tags by note
-      const noteData = noteWithTags.reduce((acc: any, row) => {
-        if (!acc) {
-          acc = {
-            id: row.noteId,
-            highlightedText: row.highlightedText,
-            headline: row.headline,
-            userId: row.userId,
-            createdAt: row.createdAt,
-            tags: [],
-          };
-        }
-        if (row.tagId) {
-          acc.tags.push({ id: row.tagId, name: row.tagName, type: row.tagType });
-        }
-        return acc;
-      }, null);
+      const tagIds = noteTagsRows.map(nt => nt.tagId);
+      const noteTagsData = tagIds.length > 0 ? await db
+        .select({
+          id: tags.id,
+          name: tags.name,
+          type: tags.type,
+        })
+        .from(tags)
+        .where(inArray(tags.id, tagIds)) : [];
       
-      res.json({ success: true, note: noteData || newNote[0] });
+      const noteData = {
+        ...newNote[0],
+        tags: noteTagsData,
+      };
+      
+      res.json({ success: true, note: noteData });
     } catch (error) {
       console.error('\u274c Error saving note:', error);
       res.status(500).json({ error: 'Failed to save note' });
@@ -390,7 +378,7 @@ async function startServer() {
       
       const { getDb } = await import('../db');
       const { notes } = await import('../db-schema-notes');
-      const { eq, and } = await import('drizzle-orm');
+      const { eq, and, inArray } = await import('drizzle-orm');
       
       const db = await getDb();
       if (!db) {
@@ -445,7 +433,7 @@ async function startServer() {
       
       const { getDb } = await import('../db');
       const { notes } = await import('../db-schema-notes');
-      const { eq, and } = await import('drizzle-orm');
+      const { eq, and, inArray } = await import('drizzle-orm');
       
       const db = await getDb();
       if (!db) {
@@ -504,7 +492,7 @@ async function startServer() {
       
       const { getDb } = await import('../db');
       const { notes, tags, noteTags } = await import('../db-schema-notes');
-      const { eq, and } = await import('drizzle-orm');
+      const { eq, and, inArray } = await import('drizzle-orm');
       
       const db = await getDb();
       if (!db) {
@@ -606,7 +594,7 @@ async function startServer() {
       
       const { getDb } = await import('../db');
       const { notes, noteTags } = await import('../db-schema-notes');
-      const { eq, and } = await import('drizzle-orm');
+      const { eq, and, inArray } = await import('drizzle-orm');
       
       const db = await getDb();
       if (!db) {
@@ -741,7 +729,7 @@ async function startServer() {
       
       const { getDb } = await import('../db');
       const { notes, tags, noteTags } = await import('../db-schema-notes');
-      const { eq, and } = await import('drizzle-orm');
+      const { eq, and, inArray } = await import('drizzle-orm');
       
       const db = await getDb();
       if (!db) {
@@ -828,7 +816,7 @@ async function startServer() {
       
       const { getDb } = await import('../db');
       const { notes, generatedQuestions } = await import('../db-schema-notes');
-      const { eq, and } = await import('drizzle-orm');
+      const { eq, and, inArray } = await import('drizzle-orm');
       
       const db = await getDb();
       if (!db) {
@@ -899,7 +887,7 @@ async function startServer() {
       
       const { getDb } = await import('../db');
       const { notes, generatedQuestions } = await import('../db-schema-notes');
-      const { eq, and } = await import('drizzle-orm');
+      const { eq, and, inArray } = await import('drizzle-orm');
       
       const db = await getDb();
       if (!db) {
