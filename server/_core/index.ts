@@ -321,7 +321,7 @@ async function startServer() {
         })
         .from(notes)
         .where(eq(notes.userId, session.userId))
-        .orderBy(desc(notes.createdAt));
+        .orderBy(desc(notes.updatedAt));
       
       // Fetch tags for each note
       const notesWithTags = await Promise.all(
