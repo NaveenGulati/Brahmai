@@ -157,7 +157,7 @@ async function startServer() {
           console.log(`✅ Auto-tag normalized: "${tag.name}" -> "${normalizedName}"`);
           
           const [existingTag] = await db
-            .select()
+            .select({ id: tags.id, name: tags.name, type: tags.type })
             .from(tags)
             .where(and(eq(tags.name, normalizedName), eq(tags.type, tag.type)));
           
@@ -173,7 +173,7 @@ async function startServer() {
           }
           
           const [existing] = await db
-            .select()
+            .select({ noteId: noteTags.noteId, tagId: noteTags.tagId })
             .from(noteTags)
             .where(and(eq(noteTags.noteId, newNote[0].id), eq(noteTags.tagId, tagId)));
           
