@@ -49,7 +49,7 @@ export const smartNotesRouter = router({
           const tagIds: number[] = [];
           for (const tagData of tagNames) {
             // Try to find existing tag
-            const existing = await db.select().from(tags)
+            const existing = await db.select({ id: tags.id, name: tags.name, type: tags.type }).from(tags)
               .where(and(eq(tags.name, tagData.name), eq(tags.type, tagData.type)))
               .limit(1);
 
@@ -243,7 +243,7 @@ export const smartNotesRouter = router({
       const { note, question } = noteData[0];
 
       // Get subject from tags
-      const subjectTag = await db.select()
+      const subjectTag = await db.select({ tags: tags })
         .from(tags)
         .innerJoin(noteTags, eq(tags.id, noteTags.tagId))
         .where(and(eq(noteTags.noteId, note.id), eq(tags.type, 'subject')))
@@ -291,7 +291,7 @@ export const smartNotesRouter = router({
       const userId = ctx.user.id;
 
       // Verify note ownership
-      const note = await db.select()
+      const note = await db.select({ id: notes.id, userId: notes.userId })
         .from(notes)
         .where(and(eq(notes.id, input.noteId), eq(notes.userId, userId)))
         .limit(1);
@@ -301,7 +301,14 @@ export const smartNotesRouter = router({
       }
 
       // Fetch questions
-      const questions = await db.select()
+      const questions = await db.select({
+        id: generatedQuestions.id,
+        noteId: generatedQuestions.noteId,
+        questionText: generatedQuestions.questionText,
+        correctAnswer: generatedQuestions.correctAnswer,
+        explanation: generatedQuestions.explanation,
+        createdAt: generatedQuestions.createdAt
+      })
         .from(generatedQuestions)
         .where(eq(generatedQuestions.noteId, input.noteId))
         .orderBy(desc(generatedQuestions.createdAt))
