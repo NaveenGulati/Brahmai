@@ -116,7 +116,7 @@ async function startServer() {
       // Import db dynamically to avoid circular dependencies
       const { getDb } = await import('../db');
       const { notes, tags, noteTags } = await import('../db-schema-notes');
-      const { eq } = await import('drizzle-orm');
+      const { eq, and } = await import('drizzle-orm');
       
       const db = await getDb();
       if (!db) {
@@ -324,7 +324,15 @@ async function startServer() {
       }
       
       const userNotes = await db
-        .select()
+        .select({
+          id: notes.id,
+          userId: notes.userId,
+          content: notes.content,
+          headline: notes.headline,
+          questionId: notes.questionId,
+          createdAt: notes.createdAt,
+          updatedAt: notes.updatedAt,
+        })
         .from(notes)
         .where(eq(notes.userId, session.userId))
         .orderBy(desc(notes.createdAt));
@@ -925,7 +933,7 @@ async function startServer() {
   app.get('/api/subjects', async (req, res) => {
     try {
       const { getDb } = await import('../db');
-      const { subjects } = await import('../drizzle/schema');
+      const { subjects } = await import('../drizzle/schema.js');
       const { eq } = await import('drizzle-orm');
       
       const db = await getDb();
