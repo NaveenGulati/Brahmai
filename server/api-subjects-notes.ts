@@ -86,7 +86,7 @@ export function registerSubjectNotesRoutes(app: Express) {
       }
       
       // Get all topic tags that appear in notes with this subject
-      const topics = await db.execute(sql`
+      const result = await db.execute(sql`
         SELECT 
           t.id,
           t.name,
@@ -107,7 +107,15 @@ export function registerSubjectNotesRoutes(app: Express) {
         ORDER BY t.name
       `);
       
-      res.json({ success: true, topics: topics.rows });
+      // Convert count to number and format the response
+      const topics = result.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        type: row.type,
+        note_count: Number(row.note_count)
+      }));
+      
+      res.json({ success: true, topics });
     } catch (error) {
       console.error('❌ Error fetching topics:', error);
       res.status(500).json({ error: 'Failed to fetch topics' });
