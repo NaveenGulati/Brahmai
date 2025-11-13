@@ -402,6 +402,7 @@ async function startServer() {
 
   // Update a note
   app.put('/api/notes/:id', async (req, res) => {
+    console.log('🔄 PUT /api/notes/:id called with ID:', req.params.id);
     try {
       const { COOKIE_NAME } = await import('@shared/const');
       const sessionCookie = req.cookies[COOKIE_NAME];
@@ -441,6 +442,7 @@ async function startServer() {
       }
       
       // Update only if the note belongs to the user
+      console.log('💾 Updating note ID:', noteId, 'for user:', session.userId);
       const updatedNote = await db
         .update(notes)
         .set({ 
@@ -453,10 +455,14 @@ async function startServer() {
         ))
         .returning();
       
+      console.log('✅ Update result:', updatedNote.length > 0 ? 'Success' : 'Not found');
+      
       if (updatedNote.length === 0) {
+        console.error('❌ Note not found or user mismatch. Note ID:', noteId, 'User ID:', session.userId);
         return res.status(404).json({ error: 'Note not found' });
       }
       
+      console.log('📤 Sending updated note:', updatedNote[0].id);
       res.json({ success: true, note: updatedNote[0] });
     } catch (error) {
       console.error('\u274c Error updating note:', error);

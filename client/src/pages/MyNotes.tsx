@@ -214,7 +214,12 @@ export function MyNotes() {
   };
 
   const handleUpdateNote = async () => {
-    if (!editingNote) return;
+    if (!editingNote) {
+      console.error('❌ handleUpdateNote: editingNote is null');
+      return;
+    }
+
+    console.log('📝 handleUpdateNote called with note ID:', editingNote.id);
 
     if (!noteContent.trim()) {
       toast.error('Please enter some content for your note');
@@ -223,6 +228,7 @@ export function MyNotes() {
 
     try {
       setIsUpdating(true);
+      console.log('🔄 Sending PUT request to /api/notes/' + editingNote.id);
       const response = await fetch(`/api/notes/${editingNote.id}`, {
         method: 'PUT',
         headers: {
@@ -235,13 +241,21 @@ export function MyNotes() {
       });
 
       if (!response.ok) {
+        console.error('❌ PUT request failed with status:', response.status);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
         throw new Error('Failed to update note');
       }
 
       const data = await response.json();
+      console.log('✅ PUT response data:', data);
       const updatedNote = data.note || data;
+      console.log('📌 Updated note ID:', updatedNote.id, 'Original note ID:', editingNote.id);
       // Preserve existing tags when updating the note
-      setNotes(notes.map((n) => (n.id === updatedNote.id ? { ...updatedNote, tags: n.tags } : n)));
+      // Use == instead of === to handle string/number comparison
+      const updatedNotes = notes.map((n) => (n.id == updatedNote.id ? { ...updatedNote, tags: n.tags } : n));
+      console.log('📋 Notes before update:', notes.length, 'Notes after update:', updatedNotes.length);
+      setNotes(updatedNotes);
       setEditingNote(null);
       setNoteContent('');
       setIsEditDialogOpen(false);
