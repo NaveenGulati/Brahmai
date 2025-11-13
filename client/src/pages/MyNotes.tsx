@@ -1639,136 +1639,176 @@ export function MyNotes() {
           setAnsweredQuestions(new Set());
         }
       }}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Brain className="w-6 h-6 text-green-600" />
-                AI-Generated Quiz
-              </div>
-              <span className="text-sm font-normal text-gray-500">
-                Question {currentQuestionIndex + 1} of {quizQuestions.length}
-              </span>
-            </DialogTitle>
+            <div className="flex items-center gap-2">
+              <Brain className="w-5 h-5 text-green-600" />
+              <DialogTitle>AI-Generated Quiz</DialogTitle>
+            </div>
           </DialogHeader>
           
           {quizQuestions.length > 0 && quizQuestions[currentQuestionIndex] && (
-            <div className="py-4">
-              {/* Difficulty Badge */}
-              {quizQuestions[currentQuestionIndex].difficulty && (
+            <div className="space-y-6 py-4">
+              {/* Progress indicator */}
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <span>Question {currentQuestionIndex + 1} of {quizQuestions.length}</span>
+                <span className="text-green-600 font-medium">Quiz Mode</span>
+              </div>
+              
+              {/* Question card */}
+              <div className="bg-gradient-to-br from-green-50 to-blue-50 border-2 border-green-200 rounded-lg p-6">
+                {/* Difficulty Badge */}
+                {quizQuestions[currentQuestionIndex].difficulty && (
+                  <div className="mb-4">
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                      quizQuestions[currentQuestionIndex].difficulty === 'easy'
+                        ? 'bg-green-100 text-green-700'
+                        : quizQuestions[currentQuestionIndex].difficulty === 'medium'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-red-100 text-red-700'
+                    }`}>
+                      {quizQuestions[currentQuestionIndex].difficulty?.toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Question */}
                 <div className="mb-4">
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                    quizQuestions[currentQuestionIndex].difficulty === 'easy'
-                      ? 'bg-green-100 text-green-700'
-                      : quizQuestions[currentQuestionIndex].difficulty === 'medium'
-                      ? 'bg-yellow-100 text-yellow-700'
-                      : 'bg-red-100 text-red-700'
-                  }`}>
-                    {quizQuestions[currentQuestionIndex].difficulty?.toUpperCase()}
-                  </span>
+                  <h3 className="font-semibold text-lg mb-3">Question {currentQuestionIndex + 1}</h3>
+                  <p className="text-gray-800">{quizQuestions[currentQuestionIndex].questionText}</p>
                 </div>
-              )}
-              
-              {/* Question */}
-              <h3 className="text-lg font-semibold mb-6">
-                {quizQuestions[currentQuestionIndex].questionText}
-              </h3>
-              
-              {/* Options */}
-              <div className="space-y-3 mb-6">
-                {quizQuestions[currentQuestionIndex].options.map((option, optIdx) => {
-                  const isSelected = selectedAnswer === optIdx;
-                  const isCorrect = optIdx === quizQuestions[currentQuestionIndex].correctAnswerIndex;
-                  const showResult = answeredQuestions.has(currentQuestionIndex);
-                  
-                  return (
-                    <button
-                      key={optIdx}
-                      onClick={() => {
-                        if (!showResult) {
-                          setSelectedAnswer(optIdx);
-                          setAnsweredQuestions(new Set([...answeredQuestions, currentQuestionIndex]));
-                        }
-                      }}
-                      disabled={showResult}
-                      className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
-                        !showResult
-                          ? 'hover:border-blue-400 hover:bg-blue-50 border-gray-200'
-                          : showResult && isSelected && isCorrect
-                          ? 'bg-green-50 border-green-500'
-                          : showResult && isSelected && !isCorrect
-                          ? 'bg-red-50 border-red-500'
-                          : showResult && isCorrect
-                          ? 'bg-green-50 border-green-500'
-                          : 'bg-gray-50 border-gray-200'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
+                
+                {/* Options */}
+                <div className="space-y-2 mb-4">
+                  {quizQuestions[currentQuestionIndex].options.map((option, optIdx) => {
+                    const isSelected = selectedAnswer === optIdx;
+                    const isCorrect = optIdx === quizQuestions[currentQuestionIndex].correctAnswerIndex;
+                    const showResult = answeredQuestions.has(currentQuestionIndex);
+                    
+                    return (
+                      <button
+                        key={optIdx}
+                        onClick={() => {
+                          if (!showResult) {
+                            setSelectedAnswer(optIdx);
+                          }
+                        }}
+                        disabled={showResult}
+                        className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                          isSelected
+                            ? 'border-green-500 bg-green-100'
+                            : 'border-gray-300 hover:border-green-300 bg-white'
+                        } ${
+                          showResult
+                            ? isCorrect
+                              ? 'border-green-500 bg-green-100'
+                              : isSelected
+                              ? 'border-red-500 bg-red-100'
+                              : 'opacity-50'
+                            : ''
+                        }`}
+                      >
                         <div className="flex items-center gap-3">
                           <span className="font-semibold text-gray-700">
                             {String.fromCharCode(65 + optIdx)}.
                           </span>
                           <span>{option}</span>
                         </div>
-                        {showResult && isCorrect && (
-                          <span className="text-green-600 font-semibold">✓ Correct</span>
-                        )}
-                        {showResult && isSelected && !isCorrect && (
-                          <span className="text-red-600 font-semibold">✗ Wrong</span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
+                      </button>
+                    );
+                  })}
+                </div>
+                
+                {/* Submit button */}
+                {!answeredQuestions.has(currentQuestionIndex) && selectedAnswer !== null && (
+                  <Button
+                    onClick={() => {
+                      setAnsweredQuestions(new Set([...answeredQuestions, currentQuestionIndex]));
+                    }}
+                    className="w-full bg-green-600 hover:bg-green-700"
+                  >
+                    Submit Answer
+                  </Button>
+                )}
+                
+                {/* Feedback after submission */}
+                {answeredQuestions.has(currentQuestionIndex) && (
+                  <div className="mt-4 space-y-3">
+                    {/* Correct/Incorrect indicator */}
+                    <div className={`p-3 rounded-lg ${
+                      selectedAnswer === quizQuestions[currentQuestionIndex].correctAnswerIndex
+                        ? 'bg-green-100 border-2 border-green-500'
+                        : 'bg-red-100 border-2 border-red-500'
+                    }`}>
+                      {selectedAnswer === quizQuestions[currentQuestionIndex].correctAnswerIndex ? (
+                        <div className="flex items-center gap-2 text-green-700">
+                          <span className="font-semibold">✓ Correct!</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-red-700">
+                            <span className="font-semibold">✗ Incorrect</span>
+                          </div>
+                          <p className="text-sm text-red-700">
+                            Correct answer: <strong>{String.fromCharCode(65 + quizQuestions[currentQuestionIndex].correctAnswerIndex)}. {quizQuestions[currentQuestionIndex].options[quizQuestions[currentQuestionIndex].correctAnswerIndex]}</strong>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Explanation */}
+                    <div className="bg-white border-2 border-blue-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                        <Brain className="w-4 h-4" />
+                        Explanation
+                      </h4>
+                      <p className="text-sm text-gray-700">{quizQuestions[currentQuestionIndex].explanation}</p>
+                    </div>
+                  </div>
+                )}
               </div>
               
-              {/* Explanation (shown after answering) */}
-              {answeredQuestions.has(currentQuestionIndex) && (
-                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4">
-                  <p className="text-sm font-semibold text-blue-900 mb-2">Explanation:</p>
-                  <p className="text-sm text-blue-800">{quizQuestions[currentQuestionIndex].explanation}</p>
-                </div>
-              )}
+              {/* Navigation buttons */}
+              <div className="flex justify-between">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (currentQuestionIndex > 0) {
+                      setCurrentQuestionIndex(currentQuestionIndex - 1);
+                      setSelectedAnswer(null);
+                    }
+                  }}
+                  disabled={currentQuestionIndex === 0}
+                >
+                  ← Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (currentQuestionIndex < quizQuestions.length - 1) {
+                      setCurrentQuestionIndex(currentQuestionIndex + 1);
+                      setSelectedAnswer(null);
+                    }
+                  }}
+                  disabled={currentQuestionIndex === quizQuestions.length - 1 || !answeredQuestions.has(currentQuestionIndex)}
+                >
+                  Next →
+                </Button>
+              </div>
             </div>
           )}
           
-          <DialogFooter className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (currentQuestionIndex > 0) {
-                  setCurrentQuestionIndex(currentQuestionIndex - 1);
-                  setSelectedAnswer(null);
-                }
-              }}
-              disabled={currentQuestionIndex === 0}
-            >
-              Previous
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsQuizDialogOpen(false);
+              setQuizNote(null);
+              setQuizQuestions([]);
+              setCurrentQuestionIndex(0);
+              setSelectedAnswer(null);
+              setAnsweredQuestions(new Set());
+            }}>
+              Close Quiz
             </Button>
-            
-            {currentQuestionIndex < quizQuestions.length - 1 ? (
-              <Button
-                onClick={() => {
-                  setCurrentQuestionIndex(currentQuestionIndex + 1);
-                  setSelectedAnswer(null);
-                }}
-              >
-                Next
-              </Button>
-            ) : (
-              <Button
-                onClick={() => {
-                  setIsQuizDialogOpen(false);
-                  setQuizNote(null);
-                  setQuizQuestions([]);
-                  setCurrentQuestionIndex(0);
-                  setSelectedAnswer(null);
-                  setAnsweredQuestions(new Set());
-                }}
-              >
-                Finish
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
