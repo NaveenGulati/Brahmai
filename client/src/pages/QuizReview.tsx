@@ -677,6 +677,7 @@ export default function QuizReview() {
                                       const result = await apiResponse.json();
                                       console.log('✅ Note saved successfully!', result);
                                       
+                                      // ⚡ Show instant success - note is already saved
                                       toast.success(
                                         `Note saved to your ${subject} notes! 🚀`,
                                         {
@@ -686,6 +687,13 @@ export default function QuizReview() {
                                           },
                                         }
                                       );
+                                      
+                                      // 🔄 If background processing is happening, show a follow-up message
+                                      if (result.processing) {
+                                        setTimeout(() => {
+                                          toast.success('AI headline and tags are ready! 🎉', { duration: 2000 });
+                                        }, 3000);
+                                      }
                                     } catch (error) {
                                       console.error('❌ Error saving note:', error);
                                       console.error('❌ Error details:', JSON.stringify(error, null, 2));

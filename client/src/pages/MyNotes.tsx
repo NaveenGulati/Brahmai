@@ -174,11 +174,7 @@ export function MyNotes() {
 
     try {
       setIsCreating(true);
-      setLoadingProgress('Creating your note...');
-      
-      // Simulate progress stages
-      setTimeout(() => setLoadingProgress('AI is generating headline...'), 500);
-      setTimeout(() => setLoadingProgress('AI is generating tags...'), 2000);
+      setLoadingProgress('Saving your note...');
       
       const response = await fetch('/api/notes', {
         method: 'POST',
@@ -198,12 +194,24 @@ export function MyNotes() {
 
       const data = await response.json();
       const newNote = data.note || data;
+      
+      // ⚡ Note is saved instantly - add to list immediately
       setNotes([newNote, ...notes]);
       setNoteContent('');
       setIsCreateDialogOpen(false);
       setLoadingProgress('');
       
-      toast.success('Note created successfully with AI-generated headline and tags! 🎉');
+      // Show instant success message
+      toast.success('Note saved! AI is generating headline and tags in the background... 🚀');
+      
+      // 🔄 Poll for updates if background processing is happening
+      if (data.processing) {
+        console.log('🔄 Background processing active, will refresh notes in 3 seconds');
+        setTimeout(() => {
+          fetchNotes(); // Refresh to get updated headline and tags
+          toast.success('Headline and tags are ready! 🎉', { duration: 2000 });
+        }, 3000);
+      }
     } catch (error) {
       console.error('Error creating note:', error);
       setLoadingProgress('');
