@@ -82,12 +82,12 @@ async function startServer() {
   const { registerSubjectNotesRoutes } = await import('../api-subjects-notes');
   registerSubjectNotesRoutes(app);
   
-  // Simple REST API for saving notes
+  // Simple REST API for saving notes - ASYNC VERSION (Fast response)
   app.post('/api/notes', async (req, res) => {
     try {
       const { highlightedText, questionId, subject } = req.body;
       
-      // Get session from cookie (same as tRPC context)
+      // Get session from cookie
       const { COOKIE_NAME } = await import('@shared/const');
       const sessionCookie = req.cookies[COOKIE_NAME];
       
@@ -113,10 +113,9 @@ async function startServer() {
         return res.status(400).json({ error: 'Note text must be at least 10 characters' });
       }
       
-      // Import db dynamically to avoid circular dependencies
+      // Import db dynamically
       const { getDb } = await import('../db');
-      const { notes, tags, noteTags } = await import('../db-schema-notes');
-      const { eq, and, inArray } = await import('drizzle-orm');
+      const { notes } = await import('../db-schema-notes');
       
       const db = await getDb();
       if (!db) {
@@ -124,157 +123,42 @@ async function startServer() {
         return res.status(500).json({ error: 'Database not available' });
       }
       
-      // Generate headline for the note
-      const { generateHeadline } = await import('../ai-notes-service');
-      let headline: string | undefined;
-      try {
-        headline = await generateHeadline(highlightedText);
-        console.log('✅ Generated headline:', headline);
-      } catch (error) {
-        console.error('⚠️ Failed to generate headline:', error);
-        // Continue without headline
-      }
-      
+      // ⚡ STEP 1: Save note IMMEDIATELY without AI processing
       const newNote = await db.insert(notes).values({
         userId: session.userId,
         content: highlightedText,
-        headline,
+        headline: null, // Will be generated asynchronously
         questionId,
       }).returning();
       
-      console.log('✅ Note saved successfully:', newNote[0]);
+      console.log('✅ Note saved immediately:', newNote[0].id);
       
-      // Auto-generate tags for the new note
-      try {
-            const { generateTags, stripHtml } = await import('../ai-notes-service');
-        const { normalizeTagName } = await import('../tag-utils');;
-        
-        const plainText = stripHtml(highlightedText);
-        const generatedTags = await generateTags(plainText);
-        
-        for (const tag of generatedTags) {
-          const normalizedName = await normalizeTagName(tag.name);
-          console.log(`✅ Auto-tag normalized: "${tag.name}" -> "${normalizedName}"`);
-          
-          const [existingTag] = await db
-            .select({ id: tags.id, name: tags.name, type: tags.type })
-            .from(tags)
-            .where(and(eq(tags.name, normalizedName), eq(tags.type, tag.type)));
-          
-          let tagId;
-          if (existingTag) {
-            tagId = existingTag.id;
-          } else {
-            const [newTag] = await db
-              .insert(tags)
-              .values({ name: normalizedName, type: tag.type })
-              .returning();
-            tagId = newTag.id;
-          }
-          
-          const [existing] = await db
-            .select({ noteId: noteTags.noteId, tagId: noteTags.tagId })
-            .from(noteTags)
-            .where(and(eq(noteTags.noteId, newNote[0].id), eq(noteTags.tagId, tagId)));
-          
-          if (!existing) {
-            await db.insert(noteTags).values({ noteId: newNote[0].id, tagId });
-          }
-        }
-        
-        console.log(`✅ Auto-generated ${generatedTags.length} tags for note ${newNote[0].id}`);
-      } catch (tagError) {
-        console.error('⚠️ Failed to auto-generate tags:', tagError);
-        // Continue without tags - note is still saved
-      }
-      
-      // Add subject tag - either user-selected or AI-generated
-      let finalSubject = subject;
-      
-      // If user didn't select subject, generate it with AI
-      if (!finalSubject) {
-        try {
-          const { generateSubject, stripHtml } = await import('../ai-notes-service');
-          const plainText = stripHtml(highlightedText);
-          const aiSubject = await generateSubject(plainText);
-          if (aiSubject) {
-            finalSubject = aiSubject;
-            console.log(`✅ AI-generated subject: "${aiSubject}"`);
-          }
-        } catch (aiError) {
-          console.error('⚠️ Failed to AI-generate subject:', aiError);
-          // Continue without subject
-        }
-      }
-      
-      if (finalSubject) {
-        try {
-          const { normalizeTagName } = await import('../tag-utils');
-          const { and } = await import('drizzle-orm');
-          
-          const normalizedSubject = await normalizeTagName(finalSubject);
-          console.log(`✅ Adding subject tag: "${finalSubject}" -> "${normalizedSubject}"`);
-          
-          // Check if subject tag exists
-          const [existingTag] = await db
-            .select({ id: tags.id, name: tags.name, type: tags.type })
-            .from(tags)
-            .where(and(eq(tags.name, normalizedSubject), eq(tags.type, 'subject')));
-          
-          let tagId;
-          if (existingTag) {
-            tagId = existingTag.id;
-          } else {
-            const [newTag] = await db
-              .insert(tags)
-              .values({ name: normalizedSubject, type: 'subject' })
-              .returning();
-            tagId = newTag.id;
-          }
-          
-          // Link tag to note
-          const [existing] = await db
-            .select({ noteId: noteTags.noteId, tagId: noteTags.tagId })
-            .from(noteTags)
-            .where(and(eq(noteTags.noteId, newNote[0].id), eq(noteTags.tagId, tagId)));
-          
-          if (!existing) {
-            await db.insert(noteTags).values({ noteId: newNote[0].id, tagId });
-          }
-          
-          console.log(`✅ Subject tag added: ${normalizedSubject}`);
-        } catch (subjectError) {
-          console.error('⚠️ Failed to add subject tag:', subjectError);
-          // Continue without subject tag
-        }
-      }
-      
-      // Fetch tags separately to avoid Drizzle ORM select issues
-      const noteTagsRows = await db
-        .select({
-          tagId: noteTags.tagId,
-        })
-        .from(noteTags)
-        .where(eq(noteTags.noteId, newNote[0].id));
-      
-      const tagIds = noteTagsRows.map(nt => nt.tagId);
-      const noteTagsData = tagIds.length > 0 ? await db
-        .select({
-          id: tags.id,
-          name: tags.name,
-          type: tags.type,
-        })
-        .from(tags)
-        .where(inArray(tags.id, tagIds)) : [];
-      
+      // ⚡ STEP 2: Return response to user RIGHT AWAY
       const noteData = {
         ...newNote[0],
-        tags: noteTagsData,
+        tags: [], // Tags will be added asynchronously
       };
       
-      res.json({ success: true, note: noteData });
+      res.json({ 
+        success: true, 
+        note: noteData,
+        processing: true, // Indicates background processing is happening
+      });
+      
+      // ⚡ STEP 3: Process AI features in the background (fire-and-forget)
+      // Import and run async processor after response is sent
+      const { processNoteAsync } = await import('../async-note-processor');
+      processNoteAsync({
+        noteId: newNote[0].id,
+        userId: session.userId,
+        content: highlightedText,
+        subject,
+      }).catch(error => {
+        console.error('⚠️ Background processing failed for note', newNote[0].id, error);
+      });
+      
     } catch (error) {
-      console.error('\u274c Error saving note:', error);
+      console.error('❌ Error saving note:', error);
       res.status(500).json({ error: 'Failed to save note' });
     }
   });
