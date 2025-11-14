@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { RichTextEditor } from '@/components/RichTextEditor';
 import { Search, BookOpen, Calendar, Trash2, Sparkles, ArrowLeft, Plus, Edit, Loader2, Tag, Brain, X } from 'lucide-react';
+import { NotesHierarchySidebar } from '@/components/NotesHierarchySidebar';
 import { toast } from 'sonner';
 import { useLocation } from 'wouter';
 import { formatDistanceToNow } from 'date-fns';
@@ -81,7 +82,14 @@ export function MyNotes() {
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [viewingNoteId, setViewingNoteId] = useState<number | null>(null);
   
-  // Sidebar navigation state
+  // Hierarchical navigation state (for new sidebar)
+  const [hierarchyFilter, setHierarchyFilter] = useState<{
+    subject: string | null;
+    topic: string | null;
+    subtopic: string | null;
+  }>({ subject: null, topic: null, subtopic: null });
+  
+  // Legacy sidebar state (will be removed)
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
@@ -535,18 +543,24 @@ export function MyNotes() {
     tag.name.toLowerCase().includes(tagSearchQuery.toLowerCase())
   );
 
-  // Categorize notes based on multi-tag search AND sidebar filtering
+  // Categorize notes based on multi-tag search AND hierarchical sidebar filtering
   const categorizeNotes = () => {
-    // First apply sidebar filtering
+    // First apply hierarchical sidebar filtering
     let filteredByNav = notes;
     
-    if (selectedSubject) {
+    if (hierarchyFilter.subject) {
       filteredByNav = notes.filter(note => {
         const noteTags = note.tags || [];
-        const hasSubject = noteTags.some(tag => tag.type === 'subject' && tag.name === selectedSubject);
+        const hasSubject = noteTags.some(tag => tag.type === 'subject' && tag.name === hierarchyFilter.subject);
         
-        if (selectedTopic) {
-          const hasTopic = noteTags.some(tag => tag.name === selectedTopic);
+        if (hierarchyFilter.topic) {
+          const hasTopic = noteTags.some(tag => tag.type === 'topic' && tag.name === hierarchyFilter.topic);
+          
+          if (hierarchyFilter.subtopic) {
+            const hasSubtopic = noteTags.some(tag => tag.type === 'subTopic' && tag.name === hierarchyFilter.subtopic);
+            return hasSubject && hasTopic && hasSubtopic;
+          }
+          
           return hasSubject && hasTopic;
         }
         
@@ -657,108 +671,12 @@ export function MyNotes() {
 
       {/* Main Content with Sidebar */}
       <div className="flex max-w-7xl mx-auto">
-        {/* Left Sidebar - Subject Navigation */}
-        <div className="w-64 bg-white border-r border-gray-200 min-h-screen p-4 sticky top-16 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
-          {/* All Notes */}
-          <button
-            onClick={() => {
-              setSelectedSubject(null);
-              setSelectedTopic(null);
-            }}
-            className={`w-full text-left px-4 py-3 rounded-lg mb-2 transition-colors ${
-              !selectedSubject
-                ? 'bg-purple-100 text-purple-900 font-semibold'
-                : 'hover:bg-gray-100 text-gray-700'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span>All Notes</span>
-              <span className="px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
-                {notes.length}
-              </span>
-            </div>
-          </button>
-          
-          <div className="border-t border-gray-200 my-4"></div>
-          
-          {/* Subjects List */}
-          <div className="space-y-1">
-            {subjects.map((subject) => {
-              const isExpanded = expandedSubjects.has(subject.name);
-              const isSelected = selectedSubject === subject.name;
-              const topics = subjectTopics[subject.name] || [];
-              
-              return (
-                <div key={subject.id}>
-                  <button
-                    onClick={() => {
-                      if (isExpanded) {
-                        const newExpanded = new Set(expandedSubjects);
-                        newExpanded.delete(subject.name);
-                        setExpandedSubjects(newExpanded);
-                      } else {
-                        const newExpanded = new Set(expandedSubjects);
-                        newExpanded.add(subject.name);
-                        setExpandedSubjects(newExpanded);
-                        if (topics.length === 0) {
-                          fetchTopicsForSubject(subject.name);
-                        }
-                      }
-                      setSelectedSubject(subject.name);
-                      setSelectedTopic(null);
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                      isSelected
-                        ? 'bg-blue-100 text-blue-900 font-semibold'
-                        : 'hover:bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">{subject.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="px-1.5 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
-                          {subject.note_count}
-                        </span>
-                        <span className="text-xs">{isExpanded ? '▼' : '▶'}</span>
-                      </div>
-                    </div>
-                  </button>
-                  
-                  {/* Topics */}
-                  {isExpanded && topics.length > 0 && (
-                    <div className="ml-4 mt-1 space-y-1">
-                      {topics.map((topic: any) => (
-                        <button
-                          key={topic.id}
-                          onClick={() => {
-                            setSelectedSubject(subject.name);
-                            setSelectedTopic(topic.name);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors text-sm ${
-                            selectedTopic === topic.name
-                              ? topic.type === 'topic'
-                                ? 'bg-green-100 text-green-900 font-semibold'
-                                : 'bg-purple-100 text-purple-900 font-semibold'
-                              : topic.type === 'topic'
-                              ? 'bg-green-50 text-green-700 hover:bg-green-100'
-                              : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span>{topic.name}</span>
-                            <span className="px-1.5 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
-                              {topic.note_count}
-                            </span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        {/* Left Sidebar - New Hierarchical Navigation */}
+        <NotesHierarchySidebar 
+          onFilterChange={(subject, topic, subtopic) => {
+            setHierarchyFilter({ subject, topic, subtopic });
+          }}
+        />
         
         {/* Main Content Area */}
         <div className="flex-1 px-4 sm:px-6 lg:px-8 py-8">

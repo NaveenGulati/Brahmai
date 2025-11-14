@@ -82,6 +82,10 @@ async function startServer() {
   const { registerSubjectNotesRoutes } = await import('../api-subjects-notes');
   registerSubjectNotesRoutes(app);
   
+  // Tag hierarchy API for optimized navigation
+  const { registerTagHierarchyRoutes } = await import('./index-tag-hierarchy');
+  registerTagHierarchyRoutes(app);
+  
   // Simple REST API for saving notes - ASYNC VERSION (Fast response)
   app.post('/api/notes', async (req, res) => {
     try {
