@@ -1626,7 +1626,8 @@ export async function generateDetailedExplanationForQuestion(
     
     let explanation = cached[0].detailedExplanation;
     
-    // Restore images from cache if available
+    // TEMPORARILY DISABLED: Image restoration from cache
+    /* COMMENTED OUT FOR PERFORMANCE
     if (cached[0].imageData) {
       try {
         const { restoreImagesIntoExplanation } = await import('./educational-images');
@@ -1638,6 +1639,7 @@ export async function generateDetailedExplanationForQuestion(
         // Continue with text-only explanation
       }
     }
+    */
     
     return { detailedExplanation: explanation, fromCache: true };
   }
@@ -1720,8 +1722,10 @@ Write in a natural, spoken style as if you're talking to the student. Be direct 
 
   let detailedExplanation = response.choices[0].message.content || 'Unable to generate explanation';
 
-  // Enhance with educational images (non-blocking)
+  // TEMPORARILY DISABLED: Image generation (not relevant enough, takes too long)
+  // TODO: Re-enable when we improve image relevance and speed
   let imageDataJson: string | null = null;
+  /* COMMENTED OUT FOR PERFORMANCE
   try {
     const { enhanceExplanationWithImages } = await import('./educational-images');
     const result = await enhanceExplanationWithImages(
@@ -1743,6 +1747,7 @@ Write in a natural, spoken style as if you're talking to the student. Be direct 
     console.error('[AI] Failed to enhance with images:', imageError);
     // Continue without images - not critical
   }
+  */
 
   // Cache the explanation with images (non-blocking - if it fails, still return the explanation)
   try {
