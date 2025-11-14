@@ -94,7 +94,8 @@ export async function getSimplifiedExplanation(
     
     let explanation = cached[0].explanationText;
     
-    // Restore images from cache if available
+    // TEMPORARILY DISABLED: Image restoration from cache
+    /* COMMENTED OUT FOR PERFORMANCE
     if (cached[0].imageData) {
       try {
         const { restoreImagesIntoExplanation } = await import('./educational-images');
@@ -106,6 +107,7 @@ export async function getSimplifiedExplanation(
         // Continue with text-only explanation
       }
     }
+    */
     
     return { 
       explanationText: explanation, 
@@ -202,8 +204,10 @@ Write as if you're talking to ${levelInfo.audience}. Be warm, patient, and make 
 
   let explanationText = response.choices[0].message.content || 'Unable to generate explanation';
 
-  // Enhance with educational images (non-blocking)
+  // TEMPORARILY DISABLED: Image generation (not relevant enough, takes too long)
+  // TODO: Re-enable when we improve image relevance and speed
   let imageDataJson: string | null = null;
+  /* COMMENTED OUT FOR PERFORMANCE
   try {
     const { enhanceExplanationWithImages } = await import('./educational-images');
     const result = await enhanceExplanationWithImages(
@@ -225,6 +229,7 @@ Write as if you're talking to ${levelInfo.audience}. Be warm, patient, and make 
     console.error('[Adaptive] Failed to enhance with images:', imageError);
     // Continue without images - not critical
   }
+  */
 
   // Cache the explanation with images
   try {
