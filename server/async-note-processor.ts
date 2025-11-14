@@ -61,12 +61,10 @@ async function checkAndCorrectSpelling(db: any, noteId: number, content: string)
     console.log(`🔍 [AsyncProcessor] Checking spelling for note ${noteId}`);
     const plainText = stripHtml(content);
     
-    // Use OpenAI to check and correct spelling
-    const { default: OpenAI } = await import('openai');
-    const openai = new OpenAI();
+    // Use Manus Forge API (gemini-2.5-flash) - same as detailed explanations
+    const { invokeLLM } = await import('./_core/llm');
     
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4.1-mini',
+    const response = await invokeLLM({
       messages: [
         {
           role: 'system',
@@ -83,9 +81,7 @@ Return ONLY the corrected text, nothing else.`
           role: 'user',
           content: plainText
         }
-      ],
-      temperature: 0.3,
-      max_tokens: 2000
+      ]
     });
     
     const correctedText = response.choices[0]?.message?.content?.trim();
