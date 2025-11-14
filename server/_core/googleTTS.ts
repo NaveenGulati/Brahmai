@@ -170,13 +170,15 @@ export async function generateSpeech(text: string): Promise<string> {
         input: { text: cleanedText },
         voice: {
           languageCode: 'en-IN',
-          name: 'en-IN-Neural2-D', // Indian English female voice (natural, human-like)
+          name: 'en-IN-Wavenet-D', // WaveNet voice - most natural and human-like
           ssmlGender: 'FEMALE',
         },
         audioConfig: {
           audioEncoding: 'MP3',
-          speakingRate: 1.0,
-          pitch: 0.0,
+          speakingRate: 0.92, // Slightly slower for clarity and warmth
+          pitch: -1.5, // Slightly lower pitch for softer, warmer tone
+          volumeGainDb: 2.0, // Slight volume boost for better clarity
+          effectsProfileId: ['headphone-class-device'], // Optimized for personal listening
         },
       }),
     }
