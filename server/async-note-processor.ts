@@ -33,19 +33,79 @@ export async function processNoteAsync(job: NoteProcessingJob): Promise<void> {
       return;
     }
 
+    // Step 0: Check and correct spelling (do this first to improve other AI tasks)
+    const correctedContent = await checkAndCorrectSpelling(db, job.noteId, job.content);
+    const finalContent = correctedContent || job.content;
+
     // Step 1: Generate and save headline
-    await generateAndSaveHeadline(db, job.noteId, job.content);
+    await generateAndSaveHeadline(db, job.noteId, finalContent);
 
     // Step 2: Generate and save tags
-    await generateAndSaveTags(db, job.noteId, job.content);
+    await generateAndSaveTags(db, job.noteId, finalContent);
 
     // Step 3: Add subject tag (either user-provided or AI-generated)
-    await addSubjectTag(db, job.noteId, job.content, job.subject);
+    await addSubjectTag(db, job.noteId, finalContent, job.subject);
 
     console.log(`✅ [AsyncProcessor] Completed background processing for note ${job.noteId}`);
   } catch (error) {
     console.error(`❌ [AsyncProcessor] Error processing note ${job.noteId}:`, error);
     // Don't throw - we don't want background jobs to crash the server
+  }
+}
+
+/**
+ * Check and correct spelling in note content
+ */
+async function checkAndCorrectSpelling(db: any, noteId: number, content: string): Promise<string | null> {
+  try {
+    console.log(`🔍 [AsyncProcessor] Checking spelling for note ${noteId}`);
+    const plainText = stripHtml(content);
+    
+    // Use OpenAI to check and correct spelling
+    const { default: OpenAI } = await import('openai');
+    const openai = new OpenAI();
+    
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4.1-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `You are a helpful spelling checker for student notes. Your task is to:
+1. Check for spelling errors in the text
+2. Correct any spelling mistakes
+3. Preserve the original formatting, capitalization, and punctuation as much as possible
+4. Do NOT change the meaning or rephrase the text
+5. If there are no spelling errors, return the text exactly as is
+
+Return ONLY the corrected text, nothing else.`
+        },
+        {
+          role: 'user',
+          content: plainText
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 2000
+    });
+    
+    const correctedText = response.choices[0]?.message?.content?.trim();
+    
+    if (!correctedText || correctedText === plainText) {
+      console.log(`✅ [AsyncProcessor] No spelling errors found in note ${noteId}`);
+      return null;
+    }
+    
+    // Update the note with corrected content
+    await db
+      .update(notes)
+      .set({ content: correctedText, updatedAt: new Date() })
+      .where(eq(notes.id, noteId));
+    
+    console.log(`✅ [AsyncProcessor] Spelling corrected for note ${noteId}`);
+    return correctedText;
+  } catch (error) {
+    console.error(`⚠️ [AsyncProcessor] Failed to check spelling for note ${noteId}:`, error);
+    return null;
   }
 }
 
