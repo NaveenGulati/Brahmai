@@ -1448,6 +1448,110 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
       .query(async ({ input }) => {
         return db.getUniqueTopicsForSubject(input.subject);
       }),
+
+    // ===== DASHBOARD STATS =====
+    getDashboardStats: qbAdminProcedure
+      .query(async () => {
+        return db.getQBAdminDashboardStats();
+      }),
+
+    // ===== TEXTBOOK MANAGEMENT =====
+    // Get all textbooks
+    getTextbooks: qbAdminProcedure
+      .query(async () => {
+        return db.getAllTextbooks();
+      }),
+
+    // Create textbook
+    createTextbook: qbAdminProcedure
+      .input(z.object({
+        name: z.string(),
+        author: z.string().optional(),
+        publisher: z.string().optional(),
+        isbn: z.string().optional(),
+        board: z.string().optional(),
+        grade: z.number().optional(),
+        subject: z.string().optional(),
+        coverImageUrl: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return db.createTextbook({ ...input, createdBy: ctx.user.id });
+      }),
+
+    // Update textbook
+    updateTextbook: qbAdminProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        author: z.string().optional(),
+        publisher: z.string().optional(),
+        isbn: z.string().optional(),
+        board: z.string().optional(),
+        grade: z.number().optional(),
+        subject: z.string().optional(),
+        coverImageUrl: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...updates } = input;
+        return db.updateTextbook(id, updates);
+      }),
+
+    // Delete textbook
+    deleteTextbook: qbAdminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteTextbook(input.id);
+      }),
+
+    // ===== CHAPTER MANAGEMENT =====
+    // Get chapters by textbook
+    getChapters: qbAdminProcedure
+      .input(z.object({ textbookId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getChaptersByTextbook(input.textbookId);
+      }),
+
+    // Create chapter
+    createChapter: qbAdminProcedure
+      .input(z.object({
+        textbookId: z.number(),
+        chapterNumber: z.number(),
+        title: z.string(),
+        pdfUrl: z.string().optional(),
+        extractedText: z.string().optional(),
+        topics: z.string().optional(),
+        pageStart: z.number().optional(),
+        pageEnd: z.number().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return db.createChapter({ ...input, uploadedBy: ctx.user.id });
+      }),
+
+    // Update chapter
+    updateChapter: qbAdminProcedure
+      .input(z.object({
+        id: z.number(),
+        textbookId: z.number().optional(),
+        chapterNumber: z.number().optional(),
+        title: z.string().optional(),
+        pdfUrl: z.string().optional(),
+        extractedText: z.string().optional(),
+        topics: z.string().optional(),
+        pageStart: z.number().optional(),
+        pageEnd: z.number().optional(),
+        status: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...updates } = input;
+        return db.updateChapter(id, updates);
+      }),
+
+    // Delete chapter
+    deleteChapter: qbAdminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteChapter(input.id);
+      }),
   }),
 
   // ============= TEACHER MODULE =============

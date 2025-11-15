@@ -1856,3 +1856,146 @@ async function updateCachedExplanationUsage(questionId: number): Promise<void> {
   }
 }
 
+
+// ============= QB ADMIN DASHBOARD & TEXTBOOK OPERATIONS =============
+
+export async function getQBAdminDashboardStats() {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  try {
+    // Get total questions count
+    const totalQuestionsResult = await db.execute(sql`
+      SELECT COUNT(*) as count FROM questions
+    `);
+    const totalQuestions = Number(totalQuestionsResult.rows[0]?.count || 0);
+
+    // Get questions by status
+    const statusResult = await db.execute(sql`
+      SELECT status, COUNT(*) as count 
+      FROM questions 
+      GROUP BY status
+    `);
+    const questionsByStatus = statusResult.rows.reduce((acc: any, row: any) => {
+      acc[row.status] = Number(row.count);
+      return acc;
+    }, {});
+
+    // Get questions by difficulty
+    const difficultyResult = await db.execute(sql`
+      SELECT difficulty, COUNT(*) as count 
+      FROM questions 
+      GROUP BY difficulty
+    `);
+    const questionsByDifficulty = difficultyResult.rows.reduce((acc: any, row: any) => {
+      acc[row.difficulty] = Number(row.count);
+      return acc;
+    }, {});
+
+    // Get questions by subject
+    const subjectResult = await db.execute(sql`
+      SELECT subject, COUNT(*) as count 
+      FROM questions 
+      GROUP BY subject 
+      ORDER BY count DESC 
+      LIMIT 10
+    `);
+    const questionsBySubject = subjectResult.rows.map((row: any) => ({
+      subject: row.subject,
+      count: Number(row.count)
+    }));
+
+    // Get recent questions (last 7 days)
+    const recentResult = await db.execute(sql`
+      SELECT COUNT(*) as count 
+      FROM questions 
+      WHERE "createdAt" >= NOW() - INTERVAL '7 days'
+    `);
+    const recentQuestions = Number(recentResult.rows[0]?.count || 0);
+
+    return {
+      totalQuestions,
+      questionsByStatus,
+      questionsByDifficulty,
+      questionsBySubject,
+      recentQuestions,
+    };
+  } catch (error) {
+    console.error('[DB] Error getting QB Admin dashboard stats:', error);
+    throw error;
+  }
+}
+
+// ===== TEXTBOOK OPERATIONS =====
+
+export async function getAllTextbooks() {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const { textbooks } = await import('../drizzle/schema');
+  return db.select().from(textbooks).orderBy(desc(textbooks.createdAt));
+}
+
+export async function createTextbook(data: any) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const { textbooks } = await import('../drizzle/schema');
+  const result = await db.insert(textbooks).values(data).returning();
+  return result[0];
+}
+
+export async function updateTextbook(id: number, data: any) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const { textbooks } = await import('../drizzle/schema');
+  const result = await db.update(textbooks).set(data).where(eq(textbooks.id, id)).returning();
+  return result[0];
+}
+
+export async function deleteTextbook(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const { textbooks } = await import('../drizzle/schema');
+  await db.delete(textbooks).where(eq(textbooks.id, id));
+  return { success: true };
+}
+
+// ===== CHAPTER OPERATIONS =====
+
+export async function getChaptersByTextbook(textbookId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const { chapters } = await import('../drizzle/schema');
+  return db.select().from(chapters).where(eq(chapters.textbookId, textbookId)).orderBy(chapters.chapterNumber);
+}
+
+export async function createChapter(data: any) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const { chapters } = await import('../drizzle/schema');
+  const result = await db.insert(chapters).values(data).returning();
+  return result[0];
+}
+
+export async function updateChapter(id: number, data: any) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const { chapters } = await import('../drizzle/schema');
+  const result = await db.update(chapters).set(data).where(eq(chapters.id, id)).returning();
+  return result[0];
+}
+
+export async function deleteChapter(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const { chapters } = await import('../drizzle/schema');
+  await db.delete(chapters).where(eq(chapters.id, id));
+  return { success: true };
+}

@@ -729,3 +729,83 @@ export type InsertGradeHistory = typeof gradeHistory.$inferInsert;
 export type StudentTopicPerformance = typeof studentTopicPerformance.$inferSelect;
 export type InsertStudentTopicPerformance = typeof studentTopicPerformance.$inferInsert;
 
+
+// ========== QB ADMIN TABLES ==========
+
+/**
+ * Textbooks - stores information about textbooks used for question generation
+ */
+export const textbooks = pgTable("textbooks", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 200 }).notNull(),
+  author: varchar("author", { length: 200 }),
+  publisher: varchar("publisher", { length: 200 }),
+  isbn: varchar("isbn", { length: 20 }).unique(),
+  board: varchar("board", { length: 50 }), // ICSE, CBSE, etc.
+  grade: integer("grade").default(7),
+  subject: varchar("subject", { length: 100 }), // Physics, Chemistry, etc.
+  coverImageUrl: text("coverImageUrl"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdBy: integer("createdBy"), // FK to users
+});
+
+/**
+ * Chapters - individual chapters from textbooks
+ */
+export const chapters = pgTable("chapters", {
+  id: serial("id").primaryKey(),
+  textbookId: integer("textbookId").notNull(), // FK to textbooks
+  chapterNumber: integer("chapterNumber").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  pdfUrl: text("pdfUrl"), // S3 URL of uploaded OCR PDF
+  extractedText: text("extractedText"), // Full chapter text
+  topics: text("topics"), // JSON array of topics
+  pageStart: integer("pageStart"),
+  pageEnd: integer("pageEnd"),
+  uploadedAt: timestamp("uploadedAt").defaultNow(),
+  uploadedBy: integer("uploadedBy"), // FK to users
+  processedAt: timestamp("processedAt"),
+  status: varchar("status", { length: 50 }).default("pending"), // pending, processing, completed, failed
+});
+
+/**
+ * Question Generation Jobs - tracks AI question generation tasks
+ */
+export const questionGenerationJobs = pgTable("questionGenerationJobs", {
+  id: serial("id").primaryKey(),
+  chapterId: integer("chapterId").notNull(), // FK to chapters
+  status: varchar("status", { length: 50 }).default("pending"), // pending, generating, reviewing, approved, published
+  totalQuestions: integer("totalQuestions").default(0),
+  approvedQuestions: integer("approvedQuestions").default(0),
+  rejectedQuestions: integer("rejectedQuestions").default(0),
+  startedAt: timestamp("startedAt"),
+  completedAt: timestamp("completedAt"),
+  error: text("error"),
+  createdBy: integer("createdBy"), // FK to users
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/**
+ * Generated Questions - links generated questions to their jobs
+ */
+export const generatedQuestions = pgTable("generatedQuestions", {
+  id: serial("id").primaryKey(),
+  jobId: integer("jobId").notNull(), // FK to questionGenerationJobs
+  questionId: integer("questionId").notNull(), // FK to questions
+  qualityScore: integer("qualityScore"), // 0-100
+  reviewStatus: varchar("reviewStatus", { length: 50 }).default("pending"), // pending, approved, rejected
+  reviewNotes: text("reviewNotes"),
+  reviewedAt: timestamp("reviewedAt"),
+  reviewedBy: integer("reviewedBy"), // FK to users
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// Type exports for QB Admin tables
+export type Textbook = typeof textbooks.$inferSelect;
+export type InsertTextbook = typeof textbooks.$inferInsert;
+export type Chapter = typeof chapters.$inferSelect;
+export type InsertChapter = typeof chapters.$inferInsert;
+export type QuestionGenerationJob = typeof questionGenerationJobs.$inferSelect;
+export type InsertQuestionGenerationJob = typeof questionGenerationJobs.$inferInsert;
+export type GeneratedQuestion = typeof generatedQuestions.$inferSelect;
+export type InsertGeneratedQuestion = typeof generatedQuestions.$inferInsert;
