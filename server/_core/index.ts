@@ -86,6 +86,10 @@ async function startServer() {
   const { registerTagHierarchyRoutes } = await import('./index-tag-hierarchy');
   registerTagHierarchyRoutes(app);
   
+  // Advanced Challenge API
+  const advancedChallengeRoutes = (await import('../advanced-challenge/api')).default;
+  app.use('/api/advanced-challenge', advancedChallengeRoutes);
+  
   // Simple REST API for saving notes - ASYNC VERSION (Fast response)
   app.post('/api/notes', async (req, res) => {
     try {

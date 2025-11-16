@@ -458,7 +458,9 @@ export const challenges = pgTable("challenges", {
   groupId: integer("groupId"), // FK to studentGroups (if group assignment)
   
   // Challenge details
-  moduleId: integer("moduleId").notNull(), // FK to modules
+  challengeType: varchar("challengeType", { length: 20 }).default("simple").notNull(), // 'simple' or 'advanced'
+  challengeScope: jsonb("challengeScope"), // For advanced challenges: topic selections and distribution
+  moduleId: integer("moduleId"), // FK to modules (nullable for advanced challenges)
   title: varchar("title", { length: 200 }).notNull(),
   message: text("message"),
   
@@ -491,6 +493,26 @@ export const challenges = pgTable("challenges", {
  * Tracks student performance per topic for adaptive challenge creation
  * Updated after each quiz completion (rolling window of last 5 quizzes)
  */
+/**
+ * Question Bank Shortfalls - tracks when question bank cannot fulfill requirements
+ * Used for monitoring and alerting QB admins to refill question banks
+ */
+export const questionBankShortfalls = pgTable("question_bank_shortfalls", {
+  id: serial("id").primaryKey(),
+  challengeId: integer("challengeId"), // FK to challenges (nullable - can be deleted)
+  subject: varchar("subject", { length: 100 }).notNull(),
+  topic: varchar("topic", { length: 200 }).notNull(),
+  subtopic: varchar("subtopic", { length: 200 }),
+  requestedCount: integer("requestedCount").notNull(),
+  availableCount: integer("availableCount").notNull(),
+  shortfall: integer("shortfall").notNull(), // requested - available
+  difficulty: varchar("difficulty", { length: 20 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  resolved: boolean("resolved").default(false).notNull(),
+  resolvedAt: timestamp("resolvedAt"),
+  notes: text("notes"),
+});
+
 export const studentTopicPerformance = pgTable("studentTopicPerformance", {
   id: serial("id").primaryKey(),
   childId: integer("childId").notNull(), // FK to childProfiles
@@ -728,4 +750,6 @@ export type GradeHistory = typeof gradeHistory.$inferSelect;
 export type InsertGradeHistory = typeof gradeHistory.$inferInsert;
 export type StudentTopicPerformance = typeof studentTopicPerformance.$inferSelect;
 export type InsertStudentTopicPerformance = typeof studentTopicPerformance.$inferInsert;
+export type QuestionBankShortfall = typeof questionBankShortfalls.$inferSelect;
+export type InsertQuestionBankShortfall = typeof questionBankShortfalls.$inferInsert;
 
