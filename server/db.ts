@@ -374,8 +374,7 @@ export async function getQuestionsByModule(moduleId: number, limit?: number) {
   const subjectName = subjectData[0].name;
   const topicName = moduleData[0].name;
   
-  // Now fetch questions by subject (and optionally topic if it matches)
-  // If topic name matches a question topic exactly, use it; otherwise just match by subject
+  // Fetch questions by subject AND topic (module name = topic name)
   let query = db.select({
     id: questions.id,
     questionType: questions.questionType,
@@ -393,6 +392,7 @@ export async function getQuestionsByModule(moduleId: number, limit?: number) {
     .from(questions)
     .where(and(
       eq(questions.subject, subjectName),
+      eq(questions.topic, topicName),
       eq(questions.status, 'approved'),
       eq(questions.isActive, true)
     ));
