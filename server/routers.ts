@@ -1406,6 +1406,7 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
           options: z.any(),
           correctAnswer: z.string(),
           explanation: z.string().optional(),
+          detailedExplanation: z.string().optional(),
           difficulty: z.enum(['easy', 'medium', 'hard']),
           points: z.number().default(10),
           timeLimit: z.number().default(60),

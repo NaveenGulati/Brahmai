@@ -1,5 +1,5 @@
 import { getDb } from './db';
-import { questions, modules, subjects } from '../drizzle/schema';
+import { questions, modules, subjects, aiExplanationCache } from '../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
 
 interface UserFriendlyQuestion {
@@ -15,6 +15,7 @@ interface UserFriendlyQuestion {
   options: any;
   correctAnswer: string;
   explanation?: string;
+  detailedExplanation?: string;
   difficulty: 'easy' | 'medium' | 'hard';
   points: number;
   timeLimit: number;
@@ -89,7 +90,7 @@ export async function bulkUploadQuestionsUserFriendly(
   for (const q of questionsData) {
     try {
       // Insert question directly with text fields
-      await db.insert(questions).values({
+      const result = await db.insert(questions).values({
         board: q.board,
         grade: q.grade,
         subject: q.subject,
@@ -108,7 +109,25 @@ export async function bulkUploadQuestionsUserFriendly(
         submittedBy,
         status: 'approved', // Auto-approve uploaded questions
         isActive: true,
-      });
+      }).returning({ id: questions.id });
+
+      const questionId = result[0].id;
+
+      // If detailedExplanation is provided, save it to aiExplanationCache
+      if (q.detailedExplanation) {
+        try {
+          await db.insert(aiExplanationCache).values({
+            questionId,
+            detailedExplanation: q.detailedExplanation,
+            audioUrl: null,
+            imageData: null,
+          });
+          console.log(`[Upload] Saved detailed explanation for question ${questionId}`);
+        } catch (cacheError: any) {
+          console.error(`[Upload] Failed to save detailed explanation for question ${questionId}:`, cacheError);
+          // Don't fail the entire import if cache save fails
+        }
+      }
 
       created++;
     } catch (error: any) {

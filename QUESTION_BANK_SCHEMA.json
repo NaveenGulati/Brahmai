@@ -1,0 +1,153 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BrahmAI Question Bank Schema",
+  "description": "JSON schema for generating question banks from chapter content",
+  "type": "object",
+  "required": ["metadata", "questions"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["board", "grade", "subject", "topic"],
+      "properties": {
+        "board": {
+          "type": "string",
+          "enum": ["ICSE", "CBSE", "IB", "State", "Other"],
+          "description": "Educational board"
+        },
+        "grade": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "Grade level (1-12)"
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject name (e.g., Physics, Chemistry, Biology, Mathematics)",
+          "examples": ["Physics", "Chemistry", "Biology", "Mathematics", "English", "History"]
+        },
+        "topic": {
+          "type": "string",
+          "description": "Main topic/chapter name",
+          "examples": ["Force and Motion", "Photosynthesis", "The French Revolution"]
+        },
+        "subTopic": {
+          "type": "string",
+          "description": "Optional sub-topic for more granular classification",
+          "examples": ["Newton's Laws", "Light-dependent Reactions", "Causes of Revolution"]
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["School", "Competitive", "Olympiad"],
+          "default": "School",
+          "description": "Question scope/difficulty level"
+        },
+        "chapterSummary": {
+          "type": "string",
+          "description": "Brief summary of the chapter content (optional)"
+        },
+        "generatedBy": {
+          "type": "string",
+          "description": "Name or identifier of the person/tool generating this bank",
+          "default": "ChatGPT"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of generation"
+        }
+      }
+    },
+    "questions": {
+      "type": "array",
+      "minItems": 10,
+      "description": "Array of questions for this chapter",
+      "items": {
+        "type": "object",
+        "required": ["questionType", "questionText", "correctAnswer", "explanation", "detailedExplanation", "difficulty"],
+        "properties": {
+          "questionType": {
+            "type": "string",
+            "enum": ["multiple_choice", "true_false"],
+            "description": "Type of question (only MCQ and True/False supported)"
+          },
+          "questionText": {
+            "type": "string",
+            "minLength": 10,
+            "description": "The question text (clear, concise, grammatically correct)"
+          },
+          "questionImage": {
+            "type": "string",
+            "format": "uri",
+            "description": "Optional URL to question image (if diagram/chart needed)"
+          },
+          "options": {
+            "type": "array",
+            "description": "Answer options (required for multiple_choice, optional for others)",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "maxItems": 6,
+            "examples": [
+              ["Option A", "Option B", "Option C", "Option D"],
+              ["True", "False"]
+            ]
+          },
+          "correctAnswer": {
+            "type": "string",
+            "description": "The correct answer (exact match for MCQ option, or expected answer text)"
+          },
+          "explanation": {
+            "type": "string",
+            "minLength": 20,
+            "description": "Brief explanation of why the answer is correct (2-3 sentences)"
+          },
+          "detailedExplanation": {
+            "type": "string",
+            "minLength": 100,
+            "description": "Detailed AI-generated explanation with rich Markdown formatting (headings, bold, emojis, bullets). This will be shown when student clicks 'Get Detailed Explanation'."
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": ["easy", "medium", "hard"],
+            "description": "Question difficulty level"
+          },
+          "points": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10,
+            "description": "Points awarded for correct answer"
+          },
+          "timeLimit": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 600,
+            "default": 60,
+            "description": "Time limit in seconds"
+          },
+          "tags": {
+            "type": "array",
+            "description": "Additional tags for searchability",
+            "items": {
+              "type": "string"
+            },
+            "examples": [
+              ["Newton's Laws", "Force", "Acceleration"],
+              ["Photosynthesis", "Chlorophyll", "Light Energy"]
+            ]
+          },
+          "bloomsLevel": {
+            "type": "string",
+            "enum": ["Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"],
+            "description": "Bloom's Taxonomy level (optional)"
+          },
+          "learningObjective": {
+            "type": "string",
+            "description": "What the student should learn from this question (optional)"
+          }
+        }
+      }
+    }
+  }
+}
