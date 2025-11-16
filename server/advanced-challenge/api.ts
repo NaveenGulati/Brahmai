@@ -74,17 +74,18 @@ router.get('/available-topics', async (req, res) => {
       return res.status(500).json({ error: 'Database not available' });
     }
     
-    // Get child's grade to filter relevant content
-    const child = await db.query.childProfiles.findFirst({
-      where: (childProfiles, { eq }) => eq(childProfiles.id, childId),
-      with: {
-        grade: true
-      }
-    });
+    // Get child's grade
+    const childResult = await db.select({
+      gradeId: sql<number>`${sql.identifier('child_profiles', 'grade_id')}`
+    })
+    .from(sql`child_profiles`)
+    .where(sql`id = ${childId}`);
     
-    if (!child) {
+    if (childResult.length === 0) {
       return res.status(404).json({ error: 'Child not found' });
     }
+    
+    const gradeId = childResult[0].gradeId;
     
     // Query all modules for this grade
     const availableModules = await db.select({
@@ -95,7 +96,7 @@ router.get('/available-topics', async (req, res) => {
     })
     .from(modules)
     .where(and(
-      eq(modules.gradeId, child.gradeId),
+      eq(modules.gradeId, gradeId),
       eq(modules.isActive, true)
     ));
     
