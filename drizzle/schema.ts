@@ -458,8 +458,8 @@ export const challenges = pgTable("challenges", {
   groupId: integer("groupId"), // FK to studentGroups (if group assignment)
   
   // Challenge details
-  challengeType: varchar("challengeType", { length: 20 }).default("simple").notNull(), // 'simple' or 'advanced'
-  challengeScope: jsonb("challengeScope"), // For advanced challenges: topic selections and distribution
+  challengeType: varchar("challenge_type", { length: 20 }).default("simple").notNull(), // 'simple' or 'advanced' - FIXED: snake_case
+  challengeScope: jsonb("challenge_scope"), // For advanced challenges: topic selections and distribution - FIXED: snake_case
   moduleId: integer("moduleId"), // FK to modules (nullable for advanced challenges)
   title: varchar("title", { length: 200 }).notNull(),
   message: text("message"),
@@ -499,17 +499,17 @@ export const challenges = pgTable("challenges", {
  */
 export const questionBankShortfalls = pgTable("question_bank_shortfalls", {
   id: serial("id").primaryKey(),
-  challengeId: integer("challengeId"), // FK to challenges (nullable - can be deleted)
+  challengeId: integer("challenge_id"), // FK to challenges (nullable - can be deleted) - FIXED: snake_case
   subject: varchar("subject", { length: 100 }).notNull(),
   topic: varchar("topic", { length: 200 }).notNull(),
   subtopic: varchar("subtopic", { length: 200 }),
-  requestedCount: integer("requestedCount").notNull(),
-  availableCount: integer("availableCount").notNull(),
+  requestedCount: integer("requested_count").notNull(), // FIXED: snake_case
+  availableCount: integer("available_count").notNull(), // FIXED: snake_case
   shortfall: integer("shortfall").notNull(), // requested - available
   difficulty: varchar("difficulty", { length: 20 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(), // FIXED: snake_case
   resolved: boolean("resolved").default(false).notNull(),
-  resolvedAt: timestamp("resolvedAt"),
+  resolvedAt: timestamp("resolved_at"), // FIXED: snake_case
   notes: text("notes"),
 });
 
