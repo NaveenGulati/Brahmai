@@ -70,6 +70,13 @@ export async function saveResponse(data: {
 }
 
 /**
+ * Child Profile Operations
+ */
+export async function getChildProfileByUserId(userId: number) {
+  return db.getChildProfile(userId);
+}
+
+/**
  * Challenge Operations
  */
 export async function getChallenge(challengeId: number) {

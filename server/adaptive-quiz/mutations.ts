@@ -26,7 +26,15 @@ export const startQuizInput = z.object({
 });
 
 export async function startQuizMutation(input: z.infer<typeof startQuizInput>, userId?: number) {
-  const childId = input.childId || userId;
+  let childId = input.childId;
+  
+  // If no childId provided, try to get it from OAuth user
+  if (!childId && userId) {
+    // Convert user ID to child profile ID
+    const childProfile = await dbAdapter.getChildProfileByUserId(userId);
+    childId = childProfile?.id;
+  }
+  
   if (!childId) {
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User ID required' });
   }
