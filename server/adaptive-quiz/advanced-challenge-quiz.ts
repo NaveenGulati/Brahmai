@@ -168,9 +168,22 @@ export async function startAdvancedChallengeQuiz(
 
   const focusArea = (challenge.focusArea as FocusArea) || 'balanced';
   const quizSize = challenge.questionCount || 20;
-  const challengeScope = challenge.challengeScope as ChallengeScope;
+  
+  // Handle both formats: direct array or {topics: array}
+  let challengeScope: ChallengeScope;
+  const rawScope = challenge.challengeScope as any;
+  
+  if (Array.isArray(rawScope)) {
+    // Direct array format from database
+    challengeScope = { topics: rawScope };
+  } else if (rawScope && rawScope.topics) {
+    // Wrapped format
+    challengeScope = rawScope as ChallengeScope;
+  } else {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid challenge scope' });
+  }
 
-  if (!challengeScope || !challengeScope.topics || challengeScope.topics.length === 0) {
+  if (!challengeScope.topics || challengeScope.topics.length === 0) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid challenge scope' });
   }
 
