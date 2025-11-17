@@ -13,12 +13,14 @@ import {
   selectBestQuestion,
 } from './engine';
 import type { FocusArea } from './types';
+import { startAdvancedChallengeQuiz } from './advanced-challenge-quiz';
+import { getNextAdvancedChallengeQuestion } from './advanced-challenge-next-question';
 
 /**
  * START QUIZ - Initialize adaptive quiz session
  */
 export const startQuizInput = z.object({
-  moduleId: z.number(),
+  moduleId: z.number().optional(), // Optional for advanced challenges
   childId: z.number().optional(),
   challengeId: z.number().optional(),
 });
@@ -29,10 +31,24 @@ export async function startQuizMutation(input: z.infer<typeof startQuizInput>, u
     throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User ID required' });
   }
 
+  // Check if this is an advanced challenge
+  if (input.challengeId) {
+    const challenge = await dbAdapter.getChallenge(input.challengeId);
+    if (challenge && challenge.challengeType === 'advanced') {
+      // Handle advanced challenge with multiple topics
+      return startAdvancedChallengeQuiz(input.challengeId, childId);
+    }
+  }
+
+  // Regular quiz flow (simple challenge or free practice)
+  if (!input.moduleId) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'moduleId is required for non-advanced challenges' });
+  }
+
   let focusArea: FocusArea = 'balanced';
   let quizSize = 20; // Default
 
-  // Check if this is from a challenge
+  // Check if this is from a simple challenge
   if (input.challengeId) {
     const challenge = await dbAdapter.getChallenge(input.challengeId);
     if (challenge) {
@@ -100,6 +116,15 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
   const session = await dbAdapter.getSession(input.sessionId);
   if (!session) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Quiz session not found' });
+  }
+
+  // Check if this is an advanced challenge
+  if (session.challengeId) {
+    const challenge = await dbAdapter.getChallenge(session.challengeId);
+    if (challenge && challenge.challengeType === 'advanced') {
+      // Handle advanced challenge question selection
+      return getNextAdvancedChallengeQuestion(input.sessionId);
+    }
   }
 
   // Get all responses so far

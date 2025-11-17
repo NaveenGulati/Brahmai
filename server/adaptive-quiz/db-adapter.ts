@@ -12,7 +12,7 @@ import * as db from '../db';
  */
 export async function createSession(data: {
   childId: number;
-  moduleId: number;
+  moduleId: number | null; // Nullable for advanced challenges
   totalQuestions: number;
   focusArea: string;
   challengeId?: number;

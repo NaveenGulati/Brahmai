@@ -146,8 +146,10 @@ export default function ChildDashboard() {
                       onClick={() => {
                         // Store challenge ID in localStorage for the quiz page to access
                         localStorage.setItem('currentChallengeId', challenge.id.toString());
-                        // Navigate to quiz with path parameter
-                        setLocation(encryptedRoutes.quiz(challenge.moduleId));
+                        // For advanced challenges, moduleId is null, so navigate with a placeholder
+                        // The quiz page will detect the challengeId and handle it appropriately
+                        const moduleIdToUse = challenge.moduleId || 1; // Use 1 as placeholder for advanced challenges
+                        setLocation(encryptedRoutes.quiz(moduleIdToUse));
                       }}
                       className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
                     >
