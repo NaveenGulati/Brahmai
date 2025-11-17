@@ -372,14 +372,14 @@ export default function AdvancedChallengeCreator({
                                         )}
                                         <span className="font-medium">{topicData.topic}</span>
                                         <Badge variant="outline" className="text-xs">
-                                          {topicData.totalQuestions} questions
+                                          {topicData.subtopics.length} subtopics
                                         </Badge>
                                       </div>
                                     </button>
                                   </div>
 
                                   {/* Subtopics */}
-                                  {isSelected && isExpanded && (
+                                  {isSelected && (
                                     <div className="bg-muted/20 p-3 space-y-2">
                                       <RadioGroup
                                         value={selection?.subtopics === 'all' ? 'all' : 'specific'}
@@ -403,7 +403,7 @@ export default function AdvancedChallengeCreator({
                                         </div>
                                       </RadioGroup>
 
-                                      {selection?.subtopics !== 'all' && (
+                                      {selection?.subtopics !== 'all' && selection?.subtopics !== undefined && (
                                         <div className="ml-6 space-y-1 mt-2">
                                           {topicData.subtopics.map((subtopic) => {
                                             const selectedSubtopics = selection?.subtopics === 'all' ? [] : (selection?.subtopics || []);
