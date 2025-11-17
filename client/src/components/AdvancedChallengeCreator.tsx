@@ -8,7 +8,6 @@
  * - Select up to 10 topics across multiple subjects
  * - Choose all subtopics or specific ones
  * - Smart question count suggestions
- * - Real-time distribution preview
  * - Adaptive question mixing (not sequential)
  * - Graceful degradation for insufficient questions
  */
@@ -58,19 +57,6 @@ interface AvailableTopic {
   }>;
 }
 
-interface DistributionItem {
-  subject: string;
-  topic: string;
-  subtopics: string[] | 'all';
-  allocated: number;
-  percentage: number;
-  byDifficulty: {
-    easy: number;
-    medium: number;
-    hard: number;
-  };
-}
-
 interface AdvancedChallengeCreatorProps {
   childId: number;
   childName: string;
@@ -97,24 +83,18 @@ export default function AdvancedChallengeCreator({
   // Configuration state
   const [totalQuestions, setTotalQuestions] = useState(30);
   const [focusArea, setFocusArea] = useState<'strengthen' | 'balanced' | 'improve'>('balanced');
-  const [suggestion, setSuggestion] = useState<any>(null);
-  const [distribution, setDistribution] = useState<DistributionItem[]>([]);
-  const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Challenge creation state
   const [creating, setCreating] = useState(false);
+
+  // Calculate dynamic min/max for slider
+  const minQuestions = Math.max(selections.length * 3, 9); // 3 per topic, minimum 9
+  const maxQuestions = 100;
 
   // Fetch available topics on mount
   useEffect(() => {
     fetchAvailableTopics();
   }, [childId]);
-
-  // Fetch preview when selections or config changes
-  useEffect(() => {
-    if (selections.length > 0 && step === 2) {
-      fetchPreview();
-    }
-  }, [selections, totalQuestions, focusArea, step]);
 
   const fetchAvailableTopics = async () => {
     try {
@@ -135,128 +115,14 @@ export default function AdvancedChallengeCreator({
     }
   };
 
-  const fetchPreview = async () => {
-    try {
-      setLoadingPreview(true);
-      const response = await fetch('/api/advanced-challenge/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          selections,
-          totalQuestions,
-          focusArea,
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setSuggestion({
-          recommended: data.suggestedTotal,
-          minimum: Math.ceil(selections.length * 3),
-          maximum: data.actualTotal
-        });
-        setDistribution(data.distribution);
-        
-        // Auto-adjust to recommended if first time
-        if (!totalQuestions && data.suggestedTotal) {
-          setTotalQuestions(data.suggestedTotal);
-        }
-      } else {
-        toast.error('Failed to preview distribution');
-      }
-    } catch (error) {
-      console.error('Error fetching preview:', error);
-      toast.error('Failed to preview distribution');
-    } finally {
-      setLoadingPreview(false);
-    }
-  };
-
-  const handleCreateChallenge = async () => {
-    try {
-      setCreating(true);
-      const response = await fetch('/api/advanced-challenge/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          childId,
-          selections,
-          totalQuestions,
-          focusArea,
-          title: generateTitle(),
-          message: `Good luck, ${childName}!`,
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        toast.success(data.data.message);
-        onSuccess?.(data.data.challengeId);
-      } else {
-        toast.error(data.error || 'Failed to create challenge');
-      }
-    } catch (error) {
-      console.error('Error creating challenge:', error);
-      toast.error('Failed to create challenge');
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const generateTitle = () => {
-    if (selections.length === 1) {
-      return `${selections[0].topic} Challenge`;
-    } else if (selections.length === 2) {
-      return `${selections[0].topic} & ${selections[1].topic}`;
-    } else {
-      const subjects = [...new Set(selections.map(s => s.subject))];
-      if (subjects.length === 1) {
-        return `${subjects[0]} - ${selections.length} Topics`;
-      } else {
-        return `Multi-Subject Challenge - ${selections.length} Topics`;
-      }
-    }
-  };
-
-  const toggleSubject = (subject: string) => {
-    const newExpanded = new Set(expandedSubjects);
-    if (newExpanded.has(subject)) {
-      newExpanded.delete(subject);
-    } else {
-      newExpanded.add(subject);
-    }
-    setExpandedSubjects(newExpanded);
-  };
-
-  const toggleTopic = (subject: string, topic: string) => {
-    const key = `${subject}:${topic}`;
-    const newExpanded = new Set(expandedTopics);
-    if (newExpanded.has(key)) {
-      newExpanded.delete(key);
-    } else {
-      newExpanded.add(key);
-    }
-    setExpandedTopics(newExpanded);
-  };
-
-  const isTopicSelected = (subject: string, topic: string) => {
-    return selections.some(s => s.subject === subject && s.topic === topic);
-  };
-
-  const getTopicSelection = (subject: string, topic: string) => {
-    return selections.find(s => s.subject === subject && s.topic === topic);
-  };
-
-  const toggleTopicSelection = (subject: string, topic: string, subtopics: string[]) => {
-    const existing = getTopicSelection(subject, topic);
+  const toggleSelection = (subject: string, topic: string) => {
+    const existing = selections.find(s => s.subject === subject && s.topic === topic);
     
     if (existing) {
       // Remove selection
       setSelections(selections.filter(s => !(s.subject === subject && s.topic === topic)));
     } else {
-      // Add selection (check max limit)
+      // Add selection with 'all' subtopics by default
       if (selections.length >= 10) {
         toast.error('Maximum 10 topics allowed');
         return;
@@ -277,13 +143,43 @@ export default function AdvancedChallengeCreator({
     setSelections(selections.filter((_, i) => i !== index));
   };
 
-  const canProceedToStep2 = selections.length > 0;
-  const canProceedToStep3 = totalQuestions >= (suggestion?.minimum || 3);
+  const createChallenge = async () => {
+    try {
+      setCreating(true);
+      
+      const response = await fetch('/api/advanced-challenge/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          childId,
+          selections,
+          totalQuestions,
+          focusArea,
+          title: `Advanced Challenge - ${new Date().toLocaleDateString()}`,
+          message: `Multi-topic challenge covering ${selections.length} topics`
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success('Challenge created successfully!');
+        onSuccess?.(data.challengeId);
+      } else {
+        toast.error(data.error || 'Failed to create challenge');
+      }
+    } catch (error) {
+      console.error('Error creating challenge:', error);
+      toast.error('Failed to create challenge');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Progress indicator */}
-      <div className="flex items-center justify-center gap-4">
+      {/* Progress Steps */}
+      <div className="flex items-center justify-center">
         <div className={`flex items-center gap-2 ${step === 1 ? 'text-primary' : 'text-muted-foreground'}`}>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 1 ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
             1
@@ -308,9 +204,9 @@ export default function AdvancedChallengeCreator({
 
       {/* Step 1: Topic Selection */}
       {step === 1 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left: Topic Tree */}
-          <Card className="lg:col-span-2">
+          <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
@@ -322,129 +218,147 @@ export default function AdvancedChallengeCreator({
             </CardHeader>
             <CardContent>
               {loadingTopics ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin" />
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                 </div>
               ) : (
                 <ScrollArea className="h-[500px] pr-4">
                   <div className="space-y-2">
-                    {Object.entries(availableTopics).map(([subject, topics]) => (
-                      <div key={subject} className="border rounded-lg">
-                        {/* Subject Header */}
-                        <button
-                          onClick={() => toggleSubject(subject)}
-                          className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+                    {Object.entries(availableTopics).map(([subject, topics]) => {
+                      const isSubjectExpanded = expandedSubjects.has(subject);
+                      
+                      return (
+                        <Collapsible
+                          key={subject}
+                          open={isSubjectExpanded}
+                          onOpenChange={() => {
+                            const newExpanded = new Set(expandedSubjects);
+                            if (isSubjectExpanded) {
+                              newExpanded.delete(subject);
+                            } else {
+                              newExpanded.add(subject);
+                            }
+                            setExpandedSubjects(newExpanded);
+                          }}
                         >
-                          <div className="flex items-center gap-2">
-                            {expandedSubjects.has(subject) ? (
+                          <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 rounded-lg hover:bg-accent">
+                            {isSubjectExpanded ? (
                               <ChevronDown className="w-4 h-4" />
                             ) : (
                               <ChevronRight className="w-4 h-4" />
                             )}
                             <span className="font-semibold">{subject}</span>
-                            <Badge variant="secondary">{topics.length} topics</Badge>
-                          </div>
-                        </button>
-
-                        {/* Topics List */}
-                        {expandedSubjects.has(subject) && (
-                          <div className="border-t">
+                            <Badge variant="outline" className="ml-auto">
+                              {topics.length} {topics.length === 1 ? 'topic' : 'topics'}
+                            </Badge>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="pl-6 pt-2 space-y-2">
                             {topics.map((topicData) => {
-                              const isSelected = isTopicSelected(subject, topicData.topic);
-                              const selection = getTopicSelection(subject, topicData.topic);
-                              const topicKey = `${subject}:${topicData.topic}`;
-                              const isExpanded = expandedTopics.has(topicKey);
-
+                              const isSelected = selections.some(
+                                s => s.subject === subject && s.topic === topicData.topic
+                              );
+                              const selection = selections.find(
+                                s => s.subject === subject && s.topic === topicData.topic
+                              );
+                              const isTopicExpanded = expandedTopics.has(`${subject}-${topicData.topic}`);
+                              
                               return (
-                                <div key={topicData.topic} className="border-b last:border-b-0">
-                                  {/* Topic Header */}
-                                  <div className="flex items-center gap-2 p-3 hover:bg-muted/30">
-                                    <Checkbox
-                                      checked={isSelected}
-                                      onCheckedChange={() => toggleTopicSelection(subject, topicData.topic, topicData.subtopics.map(st => st.name))}
-                                      disabled={!isSelected && selections.length >= 10}
-                                    />
-                                    <button
-                                      onClick={() => toggleTopic(subject, topicData.topic)}
-                                      className="flex-1 flex items-center justify-between text-left"
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        {isExpanded ? (
-                                          <ChevronDown className="w-3 h-3" />
-                                        ) : (
-                                          <ChevronRight className="w-3 h-3" />
-                                        )}
-                                        <span className="font-medium">{topicData.topic}</span>
-                                        <Badge variant="outline" className="text-xs">
-                                          {topicData.subtopics.length} subtopics
-                                        </Badge>
+                                <div key={topicData.topic} className="border rounded-lg p-3">
+                                  <Collapsible
+                                    open={isSelected && isTopicExpanded}
+                                    onOpenChange={() => {
+                                      const key = `${subject}-${topicData.topic}`;
+                                      const newExpanded = new Set(expandedTopics);
+                                      if (isTopicExpanded) {
+                                        newExpanded.delete(key);
+                                      } else {
+                                        newExpanded.add(key);
+                                      }
+                                      setExpandedTopics(newExpanded);
+                                    }}
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      <Checkbox
+                                        checked={isSelected}
+                                        onCheckedChange={() => toggleSelection(subject, topicData.topic)}
+                                        className="mt-1"
+                                      />
+                                      <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                          <CollapsibleTrigger className="flex items-center gap-2 hover:text-primary">
+                                            {isSelected && isTopicExpanded ? (
+                                              <ChevronDown className="w-4 h-4" />
+                                            ) : (
+                                              <ChevronRight className="w-4 h-4" />
+                                            )}
+                                            <span className="font-medium">{topicData.topic}</span>
+                                          </CollapsibleTrigger>
+                                          <Badge variant="secondary">
+                                            {topicData.subtopics.length} {topicData.subtopics.length === 1 ? 'subtopic' : 'subtopics'}
+                                          </Badge>
+                                        </div>
+                                        
+                                        <CollapsibleContent className="mt-3 space-y-3">
+                                          <RadioGroup
+                                            value={selection?.subtopics === 'all' ? 'all' : 'specific'}
+                                            onValueChange={(value) => {
+                                              if (value === 'all') {
+                                                updateSubtopicSelection(subject, topicData.topic, 'all');
+                                              } else {
+                                                updateSubtopicSelection(subject, topicData.topic, []);
+                                              }
+                                            }}
+                                          >
+                                            <div className="flex items-center space-x-2">
+                                              <RadioGroupItem value="all" id={`all-${subject}-${topicData.topic}`} />
+                                              <Label htmlFor={`all-${subject}-${topicData.topic}`} className="font-normal">
+                                                All subtopics ({topicData.subtopics.length})
+                                              </Label>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                              <RadioGroupItem value="specific" id={`specific-${subject}-${topicData.topic}`} />
+                                              <Label htmlFor={`specific-${subject}-${topicData.topic}`} className="font-normal">
+                                                Select specific subtopics
+                                              </Label>
+                                            </div>
+                                          </RadioGroup>
+                                          
+                                          {Array.isArray(selection?.subtopics) && (
+                                            <div className="pl-6 space-y-2 border-l-2 border-muted">
+                                              {topicData.subtopics.map((subtopic) => {
+                                                const current = selection.subtopics as string[];
+                                                const isChecked = current.includes(subtopic.name);
+                                                
+                                                return (
+                                                  <div key={subtopic.name} className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                      checked={isChecked}
+                                                      onCheckedChange={(checked) => {
+                                                        const updated = checked
+                                                          ? [...current, subtopic.name]
+                                                          : current.filter(s => s !== subtopic.name);
+                                                        updateSubtopicSelection(subject, topicData.topic, updated);
+                                                      }}
+                                                    />
+                                                    <Label className="text-sm font-normal">
+                                                      {subtopic.name}
+                                                    </Label>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          )}
+                                        </CollapsibleContent>
                                       </div>
-                                    </button>
-                                  </div>
-
-                                  {/* Subtopics */}
-                                  {isSelected && (
-                                    <div className="bg-muted/20 p-3 space-y-2">
-                                      <RadioGroup
-                                        value={selection?.subtopics === 'all' ? 'all' : 'specific'}
-                                        onValueChange={(value) => {
-                                          if (value === 'all') {
-                                            updateSubtopicSelection(subject, topicData.topic, []);
-                                          } else if (value === 'specific') {
-                                            // Initialize with empty array to show the subtopic list
-                                            updateSubtopicSelection(subject, topicData.topic, []);
-                                          }
-                                        }}
-                                      >
-                                        <div className="flex items-center space-x-2">
-                                          <RadioGroupItem value="all" id={`${topicKey}-all`} />
-                                          <Label htmlFor={`${topicKey}-all`} className="text-sm">
-                                            All subtopics ({topicData.subtopics.length})
-                                          </Label>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                          <RadioGroupItem value="specific" id={`${topicKey}-specific`} />
-                                          <Label htmlFor={`${topicKey}-specific`} className="text-sm">
-                                            Select specific subtopics
-                                          </Label>
-                                        </div>
-                                      </RadioGroup>
-
-                                      {Array.isArray(selection?.subtopics) && (
-                                        <div className="ml-6 space-y-1 mt-2">
-                                          {topicData.subtopics.map((subtopic) => {
-                                            const selectedSubtopics = selection?.subtopics === 'all' ? [] : (selection?.subtopics || []);
-                                            const isSubtopicSelected = selectedSubtopics.includes(subtopic.name);
-
-                                            return (
-                                              <div key={subtopic.name} className="flex items-center gap-2">
-                                                <Checkbox
-                                                  checked={isSubtopicSelected}
-                                                  onCheckedChange={(checked) => {
-                                                    const current = selection?.subtopics === 'all' ? [] : (selection?.subtopics || []);
-                                                    const updated = checked
-                                                      ? [...current, subtopic.name]
-                                                      : current.filter(s => s !== subtopic.name);
-                                                    updateSubtopicSelection(subject, topicData.topic, updated);
-                                                  }}
-                                                />
-                                                <Label className="text-sm font-normal">
-                                                  {subtopic.name}
-                                                </Label>
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      )}
                                     </div>
-                                  )}
+                                  </Collapsible>
                                 </div>
                               );
                             })}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               )}
@@ -461,16 +375,18 @@ export default function AdvancedChallengeCreator({
             </CardHeader>
             <CardContent>
               {selections.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No topics selected yet</p>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <AlertCircle className="w-12 h-12 text-muted-foreground mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    No topics selected yet
+                  </p>
                 </div>
               ) : (
-                <ScrollArea className="h-[400px]">
-                  <div className="space-y-2">
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-3">
                     {selections.map((selection, index) => (
-                      <div key={index} className="border rounded-lg p-3 space-y-1">
-                        <div className="flex items-start justify-between">
+                      <div key={index} className="border rounded-lg p-3">
+                        <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
                             <p className="font-medium text-sm">{selection.topic}</p>
                             <p className="text-xs text-muted-foreground">{selection.subject}</p>
@@ -478,8 +394,8 @@ export default function AdvancedChallengeCreator({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0"
                             onClick={() => removeSelection(index)}
+                            className="h-6 w-6 p-0"
                           >
                             <X className="w-4 h-4" />
                           </Button>
@@ -488,7 +404,7 @@ export default function AdvancedChallengeCreator({
                           {selection.subtopics === 'all' ? (
                             <span>All subtopics</span>
                           ) : (
-                            <span>{selection.subtopics.length} subtopic(s) selected</span>
+                            <span>{selection.subtopics.length} specific subtopics</span>
                           )}
                         </div>
                       </div>
@@ -511,42 +427,24 @@ export default function AdvancedChallengeCreator({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Suggestion */}
-            {suggestion && (
-              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <Sparkles className="w-5 h-5 text-primary mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm mb-1">Recommended: {suggestion.recommended} questions</p>
-                    <p className="text-sm text-muted-foreground">{suggestion.reasoning}</p>
-                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                      <Clock className="w-3 h-3" />
-                      <span>Estimated duration: ~{suggestion.estimatedDuration} minutes</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Question Count Slider */}
             <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <Label>Total Questions: {totalQuestions}</Label>
-                {suggestion && (
-                  <span className="text-xs text-muted-foreground">
-                    Range: {suggestion.minimum} - {suggestion.maximum}
-                  </span>
-                )}
-              </div>
+              <Label>Total Questions: {totalQuestions}</Label>
               <Slider
                 value={[totalQuestions]}
-                onValueChange={(value) => setTotalQuestions(value[0])}
-                min={suggestion?.minimum || 3}
-                max={suggestion?.maximum || 200}
+                onValueChange={([value]) => setTotalQuestions(value)}
+                min={minQuestions}
+                max={maxQuestions}
                 step={1}
-                className="w-full"
+                className="mt-2"
               />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Min: {minQuestions}</span>
+                <span>Max: {maxQuestions}</span>
+              </div>
             </div>
+
+            <Separator />
 
             {/* Focus Area */}
             <div className="space-y-3">
@@ -572,43 +470,6 @@ export default function AdvancedChallengeCreator({
                 </div>
               </RadioGroup>
             </div>
-
-            <Separator />
-
-            {/* Distribution Preview */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Distribution Preview</Label>
-                {loadingPreview && <Loader2 className="w-4 h-4 animate-spin" />}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Questions will be mixed across all topics, not presented sequentially.
-              </p>
-              <div className="space-y-2">
-                {distribution.map((item, index) => (
-                  <div key={index} className="border rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="font-medium text-sm">{item.topic}</p>
-                        {item.subtopics !== 'all' && (
-                          <p className="text-xs text-muted-foreground">
-                            {Array.isArray(item.subtopics) ? item.subtopics.join(', ') : item.subtopics}
-                          </p>
-                        )}
-                      </div>
-                      <Badge variant="secondary">
-                        {item.allocated} questions ({item.percentage.toFixed(1)}%)
-                      </Badge>
-                    </div>
-                    <div className="flex gap-2 text-xs">
-                      <span className="text-green-600">Easy: {item.byDifficulty.easy}</span>
-                      <span className="text-yellow-600">Medium: {item.byDifficulty.medium}</span>
-                      <span className="text-red-600">Hard: {item.byDifficulty.hard}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </CardContent>
         </Card>
       )}
@@ -622,64 +483,74 @@ export default function AdvancedChallengeCreator({
               Review your challenge before creating it for {childName}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Challenge Title</Label>
-              <p className="text-sm font-medium">{generateTitle()}</p>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Questions</p>
+                <p className="text-2xl font-bold">{totalQuestions}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Topics Selected</p>
+                <p className="text-2xl font-bold">{selections.length}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Focus Area</p>
+                <p className="text-lg font-semibold capitalize">{focusArea}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Estimated Duration</p>
+                <p className="text-lg font-semibold">{totalQuestions} minutes</p>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Topics ({selections.length})</Label>
-              <div className="text-sm space-y-1">
-                {selections.map((sel, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-600" />
-                    <span>{sel.subject} - {sel.topic}</span>
+            <Separator />
+
+            <div>
+              <p className="text-sm font-medium mb-3">Selected Topics:</p>
+              <div className="space-y-2">
+                {selections.map((selection, index) => (
+                  <div key={index} className="flex items-center justify-between border rounded-lg p-3">
+                    <div>
+                      <p className="font-medium text-sm">{selection.topic}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {selection.subject} • {selection.subtopics === 'all' ? 'All subtopics' : `${selection.subtopics.length} subtopics`}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Total Questions</Label>
-                <p className="text-2xl font-bold">{totalQuestions}</p>
-              </div>
-              <div className="space-y-2">
-                <Label>Estimated Duration</Label>
-                <p className="text-2xl font-bold">~{totalQuestions} min</p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Focus Area</Label>
-              <Badge variant="secondary" className="capitalize">{focusArea}</Badge>
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* Navigation Buttons */}
-      <div className="flex justify-between">
-        {step === 1 ? (
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-        ) : (
-          <Button variant="outline" onClick={() => setStep(step - 1)}>
-            Back
-          </Button>
-        )}
+      <div className="flex items-center justify-between">
+        <Button
+          variant="outline"
+          onClick={() => {
+            if (step === 1) {
+              onCancel?.();
+            } else {
+              setStep(step - 1);
+            }
+          }}
+        >
+          {step === 1 ? 'Cancel' : 'Back'}
+        </Button>
 
         {step < 3 ? (
           <Button
             onClick={() => setStep(step + 1)}
-            disabled={step === 1 ? !canProceedToStep2 : !canProceedToStep3}
+            disabled={step === 1 && selections.length === 0}
           >
             Next
           </Button>
         ) : (
-          <Button onClick={handleCreateChallenge} disabled={creating}>
+          <Button
+            onClick={createChallenge}
+            disabled={creating}
+          >
             {creating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
