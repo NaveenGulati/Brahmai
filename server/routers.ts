@@ -1142,9 +1142,17 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
     getChallenges: publicProcedure
       .input(z.object({ childId: z.number().optional() }))
       .query(async ({ ctx, input }) => {
-        const userId = input.childId || ctx.user?.id;
-        if (!userId) return [];
-        return db.getChildChallenges(userId);
+        let childProfileId = input.childId;
+        
+        // If no childId provided, try to get it from OAuth user
+        if (!childProfileId && ctx.user?.id) {
+          // Convert user ID to child profile ID
+          const childProfile = await db.getChildProfile(ctx.user.id);
+          childProfileId = childProfile?.id;
+        }
+        
+        if (!childProfileId) return [];
+        return db.getChildChallenges(childProfileId);
       }),
 
     // Complete challenge (public for local auth)
