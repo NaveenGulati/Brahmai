@@ -171,7 +171,8 @@ export async function getChildrenByParent(parentId: number) {
   
   // Efficient join - only fetch needed fields
   return db.select({
-    id: users.id,
+    id: childProfiles.id, // FIXED: Return childProfile.id, not user.id
+    userId: users.id, // Add userId for reference
     name: users.name,
     username: users.username,
     isActive: users.isActive,
