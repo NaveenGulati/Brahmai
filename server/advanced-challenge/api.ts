@@ -276,7 +276,7 @@ router.post('/create', async (req, res) => {
       assignedToType: 'individual',
       moduleId: null, // No single module for advanced challenges
       challengeType: 'advanced', // Use camelCase to match schema
-      challengeScope: selections as any, // Store selections as JSONB
+      challengeScope: { topics: selections } as any, // Store selections as JSONB with topics wrapper
       title: challengeTitle,
       message: message || null,
       questionCount: selectedQuestions.length,

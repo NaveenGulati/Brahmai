@@ -46,7 +46,20 @@ export async function getNextAdvancedChallengeQuestion(
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Not an advanced challenge' });
   }
 
-  const challengeScope = challenge.challengeScope as ChallengeScope;
+  // Handle both old and new challengeScope structures for backward compatibility
+  let challengeScope: ChallengeScope;
+  const rawScope = challenge.challengeScope as any;
+  
+  if (Array.isArray(rawScope)) {
+    // Old format: challengeScope is directly an array of selections
+    challengeScope = { topics: rawScope };
+  } else if (rawScope && Array.isArray(rawScope.topics)) {
+    // New format: challengeScope has a topics property
+    challengeScope = rawScope as ChallengeScope;
+  } else {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid challenge scope structure' });
+  }
+  
   const focusArea = (session.focusArea as FocusArea) || 'balanced';
 
   // Get all responses so far
