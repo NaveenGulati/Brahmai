@@ -160,6 +160,29 @@ router.post('/preview', async (req, res) => {
     // Calculate distribution
     const { distribution, shortfalls } = await calculateDistribution(selections, suggested);
     
+    // Calculate difficulty breakdown based on focusArea
+    const getDifficultyBreakdown = (allocated: number) => {
+      if (focusArea === 'strengthen') {
+        return {
+          easy: Math.round(allocated * 0.6),
+          medium: Math.round(allocated * 0.3),
+          hard: Math.round(allocated * 0.1)
+        };
+      } else if (focusArea === 'improve') {
+        return {
+          easy: Math.round(allocated * 0.1),
+          medium: Math.round(allocated * 0.3),
+          hard: Math.round(allocated * 0.6)
+        };
+      } else { // balanced
+        return {
+          easy: Math.round(allocated * 0.33),
+          medium: Math.round(allocated * 0.34),
+          hard: Math.round(allocated * 0.33)
+        };
+      }
+    };
+    
     // Format response
     const formattedDistribution = distribution.map(d => ({
       subject: d.subject,
@@ -167,7 +190,8 @@ router.post('/preview', async (req, res) => {
       subtopics: d.subtopics,
       available: d.available,
       allocated: d.allocated,
-      percentage: Math.round((d.allocated / suggested) * 100)
+      percentage: Math.round((d.allocated / suggested) * 100),
+      byDifficulty: getDifficultyBreakdown(d.allocated)
     }));
     
     const warnings = shortfalls.map(s => ({
