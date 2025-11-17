@@ -204,7 +204,7 @@ export default function AdvancedChallengeCreator({
 
       {/* Step 1: Topic Selection */}
       {step === 1 && (
-        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 md:gap-6">
           {/* Left: Topic Tree */}
           <Card>
             <CardHeader>
@@ -222,7 +222,7 @@ export default function AdvancedChallengeCreator({
                   <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <ScrollArea className="h-[500px] pr-4">
+                <ScrollArea className="h-[600px] md:h-[500px] pr-4">
                   <div className="space-y-4">
                     {Object.entries(availableTopics).map(([subject, topics]) => {
                       const isSubjectExpanded = expandedSubjects.has(subject);
@@ -342,7 +342,6 @@ export default function AdvancedChallengeCreator({
                                                     />
                                                     <Label className="text-sm font-normal cursor-pointer flex-1 leading-relaxed">
                                                       {subtopic.name}
-                                                      <span className="text-xs text-muted-foreground ml-2">({subtopic.questionCount} questions)</span>
                                                     </Label>
                                                   </div>
                                                 );

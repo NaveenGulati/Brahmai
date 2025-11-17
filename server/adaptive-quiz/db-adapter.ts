@@ -66,7 +66,7 @@ export async function saveResponse(data: {
   timeTaken: number;
   pointsEarned: number;
 }) {
-  return db.saveQuizResponse(data);
+  return db.createQuizResponse(data);
 }
 
 /**
