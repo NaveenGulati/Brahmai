@@ -261,10 +261,10 @@ export default function AdvancedChallengeCreator({
     }
   };
 
-  const updateSubtopicSelection = (subject: string, topic: string, subtopics: string[]) => {
+  const updateSubtopicSelection = (subject: string, topic: string, subtopics: string[] | 'all') => {
     setSelections(selections.map(s => 
       (s.subject === subject && s.topic === topic)
-        ? { ...s, subtopics: subtopics.length === 0 ? 'all' : subtopics }
+        ? { ...s, subtopics }
         : s
     ));
   };
@@ -386,6 +386,9 @@ export default function AdvancedChallengeCreator({
                                         onValueChange={(value) => {
                                           if (value === 'all') {
                                             updateSubtopicSelection(subject, topicData.topic, []);
+                                          } else if (value === 'specific') {
+                                            // Initialize with empty array to show the subtopic list
+                                            updateSubtopicSelection(subject, topicData.topic, []);
                                           }
                                         }}
                                       >
@@ -403,7 +406,7 @@ export default function AdvancedChallengeCreator({
                                         </div>
                                       </RadioGroup>
 
-                                      {selection?.subtopics !== 'all' && selection?.subtopics !== undefined && (
+                                      {Array.isArray(selection?.subtopics) && (
                                         <div className="ml-6 space-y-1 mt-2">
                                           {topicData.subtopics.map((subtopic) => {
                                             const selectedSubtopics = selection?.subtopics === 'all' ? [] : (selection?.subtopics || []);
