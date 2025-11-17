@@ -63,6 +63,20 @@ function markdownToPlainText(markdown: string): string {
   text = text.replace(/[★☆✓✔✗✘]/g, '');
   text = text.replace(/[←→↑↓]/g, '');
   
+  // Remove brackets (square, curly, angle) - they should be silent
+  // This prevents TTS from reading them as "dollar" or "bracket"
+  text = text.replace(/[\[\]{}⟨⟩⟪⟫]/g, '');
+  
+  // Expand common abbreviations for better TTS pronunciation
+  text = text.replace(/\betc\.?\b/gi, 'etcetera');
+  text = text.replace(/\be\.g\.\b/gi, 'for example');
+  text = text.replace(/\bi\.e\.\b/gi, 'that is');
+  text = text.replace(/\bvs\.?\b/gi, 'versus');
+  text = text.replace(/\bDr\.\b/g, 'Doctor');
+  text = text.replace(/\bMr\.\b/g, 'Mister');
+  text = text.replace(/\bMrs\.\b/g, 'Missus');
+  text = text.replace(/\bMs\.\b/g, 'Miss');
+  
   // Clean up extra whitespace
   text = text.replace(/\n{3,}/g, '\n\n');
   text = text.replace(/\s{2,}/g, ' ');
