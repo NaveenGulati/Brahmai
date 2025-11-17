@@ -266,81 +266,19 @@ export default function ChallengeCreator({
             </CardContent>
           </Card>
 
-          {/* Complexity Slider */}
+          {/* Adaptive Difficulty Info */}
           <Card>
             <CardHeader>
-              <CardTitle>Difficulty Level</CardTitle>
-              <CardDescription>Control how questions are selected</CardDescription>
+              <CardTitle>🔄 Adaptive Difficulty</CardTitle>
+              <CardDescription>Questions automatically adapt to your child's performance</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Toggle for complexity boundaries */}
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="space-y-1">
-                  <Label htmlFor="complexity-toggle" className="text-base font-medium">
-                    {useComplexityBoundaries ? '🎯 Set Difficulty Boundaries' : '🔄 Fully Adaptive'}
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    {useComplexityBoundaries
-                      ? 'Questions stay within your selected difficulty range'
-                      : 'Questions adapt freely based on performance (no limits)'}
-                  </p>
-                </div>
-                <input
-                  id="complexity-toggle"
-                  type="checkbox"
-                  checked={useComplexityBoundaries}
-                  onChange={(e) => setUseComplexityBoundaries(e.target.checked)}
-                  className="w-11 h-6 bg-gray-200 rounded-full peer appearance-none cursor-pointer transition-colors checked:bg-blue-600 relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform checked:after:translate-x-5"
-                />
+            <CardContent>
+              <div className="p-4 bg-muted rounded-lg space-y-2">
+                <p className="text-sm font-medium">Smart Question Selection</p>
+                <p className="text-sm text-muted-foreground">
+                  Our adaptive algorithm analyzes your child's performance history and automatically selects questions at the optimal difficulty level. Questions will adapt in real-time based on their answers.
+                </p>
               </div>
-
-              {/* Show slider only if boundaries are enabled */}
-              {useComplexityBoundaries && (
-              <>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                     <Label>Complexity: {complexity}</Label>
-                     <Badge variant="outline">{complexityPreview.level}</Badge>
-                  </div>
-                  <Slider
-                    value={[complexity]}
-                    onValueChange={(value) => setComplexity(value[0])}
-                    min={1}
-                    max={10}
-                    step={1}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>1 (Easy)</span>
-                    <span>5 (Medium)</span>
-                    <span>10 (Hard)</span>
-                  </div>
-                </div>
-
-                {/* Difficulty Distribution Preview */}
-                <div className="p-4 bg-muted rounded-lg space-y-2">
-                  <p className="text-sm font-medium">Question Distribution:</p>
-                  <p className="text-sm text-muted-foreground">{complexityPreview.description}</p>
-                  <div className="flex gap-2 mt-2">
-                    {complexityPreview.distribution.easy > 0 && (
-                      <Badge variant="secondary">
-                        {complexityPreview.distribution.easy}% Easy
-                      </Badge>
-                    )}
-                    {complexityPreview.distribution.medium > 0 && (
-                      <Badge variant="secondary">
-                        {complexityPreview.distribution.medium}% Medium
-                      </Badge>
-                    )}
-                    {complexityPreview.distribution.hard > 0 && (
-                      <Badge variant="secondary">
-                        {complexityPreview.distribution.hard}% Hard
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </>
-              )}
             </CardContent>
           </Card>
 
