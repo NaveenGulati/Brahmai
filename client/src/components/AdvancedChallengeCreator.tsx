@@ -151,12 +151,16 @@ export default function AdvancedChallengeCreator({
       const data = await response.json();
       
       if (data.success) {
-        setSuggestion(data.data.suggestion);
-        setDistribution(data.data.distribution);
+        setSuggestion({
+          recommended: data.suggestedTotal,
+          minimum: Math.ceil(selections.length * 3),
+          maximum: data.actualTotal
+        });
+        setDistribution(data.distribution);
         
         // Auto-adjust to recommended if first time
-        if (!totalQuestions && data.data.suggestion.recommended) {
-          setTotalQuestions(data.data.suggestion.recommended);
+        if (!totalQuestions && data.suggestedTotal) {
+          setTotalQuestions(data.suggestedTotal);
         }
       } else {
         toast.error('Failed to preview distribution');
@@ -426,9 +430,6 @@ export default function AdvancedChallengeCreator({
                                                 />
                                                 <Label className="text-sm font-normal">
                                                   {subtopic.name}
-                                                  <span className="text-muted-foreground ml-1">
-                                                    ({subtopic.questionCount})
-                                                  </span>
                                                 </Label>
                                               </div>
                                             );
