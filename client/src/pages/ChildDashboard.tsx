@@ -86,13 +86,14 @@ export default function ChildDashboard() {
   // Debug: Log challenge data
   console.log('All challenges:', challenges);
   console.log('Pending challenges:', pendingChallenges);
-  console.log('Pending challenges detailed:', pendingChallenges.map(c => ({
+  const detailedChallenges = pendingChallenges.map(c => ({
     id: c.id,
     title: c.title,
     challengeType: c.challengeType,
     moduleId: c.moduleId,
     status: c.status
-  })));
+  }));
+  console.log('Pending challenges detailed:', JSON.stringify(detailedChallenges, null, 2));
 
   const handleLogout = async () => {
     localStorage.removeItem('childUser');
