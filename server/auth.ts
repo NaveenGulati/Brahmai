@@ -29,8 +29,8 @@ export async function authenticateChild(username: string, password: string) {
 
   console.log('[Auth] Attempting login for username:', username);
 
-  // Convert username to lowercase for case-insensitive comparison
-  const normalizedUsername = username.toLowerCase();
+  // Trim whitespace and convert username to lowercase for case-insensitive comparison
+  const normalizedUsername = username.trim().toLowerCase();
 
   const result = await db
     .select()
@@ -90,8 +90,8 @@ export async function createChildWithPassword(
     throw new Error('Database not available');
   }
 
-  // Normalize username to lowercase for case-insensitive storage
-  const normalizedUsername = username.toLowerCase();
+  // Trim whitespace and normalize username to lowercase for case-insensitive storage
+  const normalizedUsername = username.trim().toLowerCase();
 
   // Check if username already exists
   const existing = await db
