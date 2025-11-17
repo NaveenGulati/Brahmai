@@ -236,7 +236,7 @@ export default function ParentDashboard() {
                             onClick={() => {
                               const newPassword = prompt(`Enter new password for ${child.name}:`);
                               if (newPassword && newPassword.length >= 4) {
-                                resetPasswordMutation.mutate({ childId: child.id, newPassword });
+                                resetPasswordMutation.mutate({ childId: child.userId, newPassword });
                               } else if (newPassword) {
                                 toast.error('Password must be at least 4 characters');
                               }
