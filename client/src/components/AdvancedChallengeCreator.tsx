@@ -204,9 +204,9 @@ export default function AdvancedChallengeCreator({
 
       {/* Step 1: Topic Selection */}
       {step === 1 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
           {/* Left: Topic Tree */}
-          <Card className="md:col-span-2">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
@@ -223,7 +223,7 @@ export default function AdvancedChallengeCreator({
                 </div>
               ) : (
                 <ScrollArea className="h-[500px] pr-4">
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {Object.entries(availableTopics).map(([subject, topics]) => {
                       const isSubjectExpanded = expandedSubjects.has(subject);
                       
@@ -241,18 +241,18 @@ export default function AdvancedChallengeCreator({
                             setExpandedSubjects(newExpanded);
                           }}
                         >
-                          <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 rounded-lg hover:bg-accent">
+                          <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 rounded-lg hover:bg-accent transition-colors">
                             {isSubjectExpanded ? (
                               <ChevronDown className="w-4 h-4" />
                             ) : (
                               <ChevronRight className="w-4 h-4" />
                             )}
-                            <span className="font-semibold">{subject}</span>
-                            <Badge variant="outline" className="ml-auto">
+                            <span className="font-semibold text-base">{subject}</span>
+                            <Badge variant="outline" className="ml-auto text-xs">
                               {topics.length} {topics.length === 1 ? 'topic' : 'topics'}
                             </Badge>
                           </CollapsibleTrigger>
-                          <CollapsibleContent className="pl-6 pt-2 space-y-2">
+                          <CollapsibleContent className="pl-6 pt-3 space-y-3">
                             {topics.map((topicData) => {
                               const isSelected = selections.some(
                                 s => s.subject === subject && s.topic === topicData.topic
@@ -263,7 +263,7 @@ export default function AdvancedChallengeCreator({
                               const isTopicExpanded = expandedTopics.has(`${subject}-${topicData.topic}`);
                               
                               return (
-                                <div key={topicData.topic} className="border rounded-lg p-3">
+                                <div key={topicData.topic} className="border rounded-lg p-4 hover:border-primary/30 transition-colors">
                                   <Collapsible
                                     open={isSelected && isTopicExpanded}
                                     onOpenChange={() => {
@@ -277,28 +277,28 @@ export default function AdvancedChallengeCreator({
                                       setExpandedTopics(newExpanded);
                                     }}
                                   >
-                                    <div className="flex items-start gap-3">
+                                    <div className="flex items-start gap-4">
                                       <Checkbox
                                         checked={isSelected}
                                         onCheckedChange={() => toggleSelection(subject, topicData.topic)}
                                         className="mt-1"
                                       />
                                       <div className="flex-1">
-                                        <div className="flex items-center justify-between">
-                                          <CollapsibleTrigger className="flex items-center gap-2 hover:text-primary">
+                                        <div className="flex items-center justify-between gap-3">
+                                          <CollapsibleTrigger className="flex items-center gap-2 hover:text-primary flex-1 min-w-0">
                                             {isSelected && isTopicExpanded ? (
-                                              <ChevronDown className="w-4 h-4" />
+                                              <ChevronDown className="w-4 h-4 flex-shrink-0" />
                                             ) : (
-                                              <ChevronRight className="w-4 h-4" />
+                                              <ChevronRight className="w-4 h-4 flex-shrink-0" />
                                             )}
-                                            <span className="font-medium">{topicData.topic}</span>
+                                            <span className="font-medium text-sm truncate">{topicData.topic}</span>
                                           </CollapsibleTrigger>
-                                          <Badge variant="secondary">
+                                          <Badge variant="secondary" className="text-xs whitespace-nowrap flex-shrink-0">
                                             {topicData.subtopics.length} {topicData.subtopics.length === 1 ? 'subtopic' : 'subtopics'}
                                           </Badge>
                                         </div>
                                         
-                                        <CollapsibleContent className="mt-3 space-y-3">
+                                        <CollapsibleContent className="mt-4 space-y-4">
                                           <RadioGroup
                                             value={selection?.subtopics === 'all' ? 'all' : 'specific'}
                                             onValueChange={(value) => {
@@ -324,13 +324,13 @@ export default function AdvancedChallengeCreator({
                                           </RadioGroup>
                                           
                                           {Array.isArray(selection?.subtopics) && (
-                                            <div className="pl-6 space-y-2 border-l-2 border-muted">
+                                            <div className="pl-6 space-y-3 border-l-2 border-muted">
                                               {topicData.subtopics.map((subtopic) => {
                                                 const current = selection.subtopics as string[];
                                                 const isChecked = current.includes(subtopic.name);
                                                 
                                                 return (
-                                                  <div key={subtopic.name} className="flex items-center space-x-2">
+                                                  <div key={subtopic.name} className="flex items-start space-x-3 py-1">
                                                     <Checkbox
                                                       checked={isChecked}
                                                       onCheckedChange={(checked) => {
@@ -340,8 +340,9 @@ export default function AdvancedChallengeCreator({
                                                         updateSubtopicSelection(subject, topicData.topic, updated);
                                                       }}
                                                     />
-                                                    <Label className="text-sm font-normal">
+                                                    <Label className="text-sm font-normal cursor-pointer flex-1 leading-relaxed">
                                                       {subtopic.name}
+                                                      <span className="text-xs text-muted-foreground ml-2">({subtopic.questionCount} questions)</span>
                                                     </Label>
                                                   </div>
                                                 );
