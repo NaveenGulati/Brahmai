@@ -323,7 +323,7 @@ export async function getModulesBySubject(subjectId: number, boardId?: number, g
   const db = await getDb();
   if (!db) return [];
   
-  const conditions = [eq(modules.subjectId, subjectId)];
+  const conditions = [eq(modules.subjectId, subjectId), eq(modules.isActive, true)];
   if (boardId) conditions.push(eq(modules.boardId, boardId));
   if (gradeId) conditions.push(eq(modules.gradeId, gradeId));
   
