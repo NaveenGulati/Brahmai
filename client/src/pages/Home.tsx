@@ -23,6 +23,11 @@ export default function Home() {
     onSuccess: (data) => {
       setIsLoading(false);
       if (data.success) {
+        // Store child user data in localStorage for child role
+        if (data.user?.role === 'child') {
+          localStorage.setItem('childUser', JSON.stringify(data.user));
+          console.log('[Home] Stored childUser:', data.user);
+        }
         toast.success('Login successful!');
         setLocation(data.redirectTo || '/child');
       } else {
