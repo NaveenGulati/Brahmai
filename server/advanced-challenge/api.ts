@@ -78,16 +78,17 @@ router.get('/available-topics', async (req, res) => {
     console.log('[Advanced Challenge] Step 3: Database OK');
     
     // Verify child exists (optional - could skip this for performance)
+    // Note: childId is actually the userId, not the childProfile.id
     console.log('[Advanced Challenge] Step 4: Verifying child exists...');
     const childResult = await db.select({ id: childProfiles.id })
       .from(childProfiles)
-      .where(eq(childProfiles.id, childId));
+      .where(eq(childProfiles.userId, childId));
     
     if (childResult.length === 0) {
-      console.log('[Advanced Challenge] Step 4 FAILED: Child not found');
+      console.log('[Advanced Challenge] Step 4 FAILED: Child not found for userId:', childId);
       return res.status(404).json({ error: 'Child not found' });
     }
-    console.log('[Advanced Challenge] Step 4: Child verified');
+    console.log('[Advanced Challenge] Step 4: Child verified, childProfileId:', childResult[0].id);
     
     // Query all available subject/topic/subtopic combinations with counts
     console.log('[Advanced Challenge] Step 5: Querying topics...');
