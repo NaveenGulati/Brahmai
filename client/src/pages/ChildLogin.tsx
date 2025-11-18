@@ -14,8 +14,11 @@ export default function ChildLogin() {
 
   const loginMutation = trpc.localAuth.childLogin.useMutation({
     onSuccess: (data) => {
-      // Store user data in localStorage
+      // Force clear old data first to prevent cache issues
+      localStorage.removeItem('childUser');
+      // Store new user data in localStorage
       localStorage.setItem('childUser', JSON.stringify(data.user));
+      console.log('[ChildLogin] Stored childUser:', data.user);
       toast.success("Login successful!");
       setLocation('/child');
     },
