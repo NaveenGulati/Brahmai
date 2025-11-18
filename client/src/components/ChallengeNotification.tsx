@@ -29,8 +29,21 @@ export default function ChallengeNotification({
   showSelfPracticeLabel = true,
 }: ChallengeNotificationProps) {
   // Parse challengeScope for advanced challenges
-  const challengeScope = challenge.challengeScope as any;
-  const topics = challengeScope?.topics || [];
+  let challengeScope: any = null;
+  let topics: any[] = [];
+  
+  try {
+    // challengeScope might be a string (JSON) or already an object
+    if (typeof challenge.challengeScope === 'string') {
+      challengeScope = JSON.parse(challenge.challengeScope);
+    } else {
+      challengeScope = challenge.challengeScope;
+    }
+    topics = Array.isArray(challengeScope?.topics) ? challengeScope.topics : [];
+  } catch (error) {
+    console.error('[ChallengeNotification] Failed to parse challengeScope:', error);
+    topics = [];
+  }
   const isSelfPractice = challenge.assignedBy === challenge.assignedTo;
   const isAdvanced = challenge.challengeType === 'advanced';
 
