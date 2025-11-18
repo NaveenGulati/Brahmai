@@ -6,7 +6,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import { getDb, generateAudioForQuestion, generateDetailedExplanationForQuestion } from "./db";
-import { quizSessions, aiExplanationCache, challenges } from "../drizzle/schema";
+import { quizSessions, aiExplanationCache, challenges, childProfiles } from "../drizzle/schema";
 import { eq, and, lt, desc } from "drizzle-orm";
 import { authRouter } from "./authRouter";
 import { adaptiveChallengeRouter } from "./adaptive-challenge-router";
@@ -102,18 +102,20 @@ export const appRouter = router({
         
         if (input.childId === ctx.user.id && ctx.user.role === 'child') {
           // Self-practice: query childProfileId
-          const childProfile = await db.query.childProfiles.findFirst({
-            where: (childProfiles, { eq }) => eq(childProfiles.userId, ctx.user.id),
-          });
+          const childProfileResult = await db
+            .select({ id: childProfiles.id })
+            .from(childProfiles)
+            .where(eq(childProfiles.userId, ctx.user.id))
+            .limit(1);
           
-          if (!childProfile) {
+          if (childProfileResult.length === 0) {
             throw new TRPCError({ 
               code: 'NOT_FOUND',
               message: 'Child profile not found'
             });
           }
           
-          assignedToId = childProfile.id;
+          assignedToId = childProfileResult[0].id;
         }
         
         const challenge = await db.createChallenge({
@@ -1390,11 +1392,13 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
         
         // For child users, we need to get their childProfileId
         // assignedBy = userId, assignedTo = childProfileId
-        const childProfileResult = await db.query.childProfiles.findFirst({
-          where: (childProfiles, { eq }) => eq(childProfiles.userId, userId),
-        });
+        const childProfileResult = await db
+          .select({ id: childProfiles.id })
+          .from(childProfiles)
+          .where(eq(childProfiles.userId, userId))
+          .limit(1);
         
-        if (!childProfileResult) {
+        if (childProfileResult.length === 0) {
           throw new TRPCError({ 
             code: 'NOT_FOUND',
             message: 'Child profile not found for this user'
@@ -1408,7 +1412,7 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
         // Create self-assigned challenge with focusArea and questionCount
         const result = await db.createChallenge({
           assignedBy: userId, // userId (for tracking who created it)
-          assignedTo: childProfileResult.id, // childProfileId (for filtering in dashboard)
+          assignedTo: childProfileResult[0].id, // childProfileId (for filtering in dashboard)
           assignedToType: 'individual',
           moduleId: input.moduleId,
           title,
