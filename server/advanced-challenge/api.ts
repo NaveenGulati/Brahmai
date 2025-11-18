@@ -77,15 +77,26 @@ router.get('/available-topics', async (req, res) => {
     }
     console.log('[Advanced Challenge] Step 3: Database OK');
     
-    // Verify child exists (optional - could skip this for performance)
-    // Note: childId is the childProfileId (childProfiles.id)
-    console.log('[Advanced Challenge] Step 4: Verifying child exists...');
-    const childResult = await db.select({ id: childProfiles.id })
+    // Verify child exists
+    // childId could be either userId (from child) or childProfileId (from parent)
+    // Try both to handle both cases
+    console.log('[Advanced Challenge] Step 4: Verifying child exists for childId:', childId);
+    
+    // Try as childProfileId first
+    let childResult = await db.select({ id: childProfiles.id })
       .from(childProfiles)
       .where(eq(childProfiles.id, childId));
     
+    // If not found, try as userId
     if (childResult.length === 0) {
-      console.log('[Advanced Challenge] Step 4 FAILED: Child not found for childProfileId:', childId);
+      console.log('[Advanced Challenge] Not found as childProfileId, trying as userId...');
+      childResult = await db.select({ id: childProfiles.id })
+        .from(childProfiles)
+        .where(eq(childProfiles.userId, childId));
+    }
+    
+    if (childResult.length === 0) {
+      console.log('[Advanced Challenge] Step 4 FAILED: Child not found for childId:', childId);
       return res.status(404).json({ error: 'Child not found' });
     }
     console.log('[Advanced Challenge] Step 4: Child verified, childProfileId:', childResult[0].id);
@@ -259,9 +270,12 @@ router.post('/create', async (req, res) => {
       return res.status(500).json({ error: 'Database not available' });
     }
     
-    // Verify child exists (childId is childProfileId)
-    console.log('[Advanced Challenge] Verifying child exists for childProfileId:', childId);
-    const childResult = await db.select({ 
+    // Verify child exists
+    // childId could be either userId (from child) or childProfileId (from parent)
+    console.log('[Advanced Challenge] Verifying child exists for childId:', childId);
+    
+    // Try as childProfileId first
+    let childResult = await db.select({ 
       id: childProfiles.id,
       userId: childProfiles.userId,
       parentId: childProfiles.parentId 
@@ -269,8 +283,20 @@ router.post('/create', async (req, res) => {
       .from(childProfiles)
       .where(eq(childProfiles.id, childId));
     
+    // If not found, try as userId
     if (childResult.length === 0) {
-      console.log('[Advanced Challenge] Child not found for childProfileId:', childId);
+      console.log('[Advanced Challenge] Not found as childProfileId, trying as userId...');
+      childResult = await db.select({ 
+        id: childProfiles.id,
+        userId: childProfiles.userId,
+        parentId: childProfiles.parentId 
+      })
+        .from(childProfiles)
+        .where(eq(childProfiles.userId, childId));
+    }
+    
+    if (childResult.length === 0) {
+      console.log('[Advanced Challenge] Child not found for childId:', childId);
       return res.status(404).json({ error: 'Child not found' });
     }
     console.log('[Advanced Challenge] Child verified, childProfileId:', childResult[0].id, 'userId:', childResult[0].userId);
