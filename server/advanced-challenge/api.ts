@@ -63,6 +63,7 @@ const CreateAdvancedChallengeSchema = z.object({
  * Organized by subject > topics > subtopics
  */
 router.get('/available-topics', async (req, res) => {
+  console.log('[Advanced Challenge] GET /available-topics called with query:', req.query);
   try {
     const { childId } = GetAvailableTopicsSchema.parse(req.query);
     

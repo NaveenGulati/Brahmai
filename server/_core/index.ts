@@ -87,8 +87,13 @@ async function startServer() {
   registerTagHierarchyRoutes(app);
   
   // Advanced Challenge API
-  const advancedChallengeRoutes = (await import('../advanced-challenge/api')).default;
-  app.use('/api/advanced-challenge', advancedChallengeRoutes);
+  try {
+    const advancedChallengeRoutes = (await import('../advanced-challenge/api')).default;
+    app.use('/api/advanced-challenge', advancedChallengeRoutes);
+    console.log('[Server] ✅ Advanced Challenge API registered at /api/advanced-challenge');
+  } catch (error) {
+    console.error('[Server] ❌ Failed to register Advanced Challenge API:', error);
+  }
   
   // Simple REST API for saving notes - ASYNC VERSION (Fast response)
   app.post('/api/notes', async (req, res) => {
