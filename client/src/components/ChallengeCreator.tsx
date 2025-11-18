@@ -9,7 +9,7 @@
  * - Subject & Module selection
  * - Question count slider (10-100)
  * - Complexity slider (1-10) with live preview
- * - Focus area selection (Strengthen/Improve/Neutral)
+ * - Focus area selection (Strengthen/Improve/Balanced)
  * - Performance insights display
  * - Duration estimation
  */
@@ -61,7 +61,7 @@ export default function ChallengeCreator({
   const [questionCount, setQuestionCount] = useState(10);
   const [useComplexityBoundaries, setUseComplexityBoundaries] = useState(true);
   const [complexity, setComplexity] = useState(5);
-  const [focusArea, setFocusArea] = useState<'strengthen' | 'improve' | 'neutral'>('neutral');
+  const [focusArea, setFocusArea] = useState<'strengthen' | 'improve' | 'balanced'>('balanced');
 
   // Data fetching
   const { data: subjects, isLoading: loadingSubjects } = trpc.challenge.getUniqueSubjects.useQuery();
@@ -338,11 +338,11 @@ export default function ChallengeCreator({
                   </div>
                 </div>
 
-                {/* Neutral */}
+                {/* Balanced */}
                 <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent cursor-pointer">
-                  <RadioGroupItem value="neutral" id="neutral" />
+                  <RadioGroupItem value="balanced" id="balanced" />
                   <div className="flex-1">
-                    <Label htmlFor="neutral" className="flex items-center gap-2 cursor-pointer">
+                    <Label htmlFor="balanced" className="flex items-center gap-2 cursor-pointer">
                       <Minus className="w-4 h-4 text-blue-600" />
                       <span className="font-medium">Balanced Practice</span>
                     </Label>
