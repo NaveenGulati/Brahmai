@@ -25,6 +25,21 @@ export const authRouter = router({
         });
       }
 
+      // For child users, get their childProfileId
+      let childProfileId = null;
+      if (user.role === 'child') {
+        const db = await sdk.db.getDb();
+        if (db) {
+          const profile = await db.select({ id: sdk.db.childProfiles.id })
+            .from(sdk.db.childProfiles)
+            .where(sdk.db.eq(sdk.db.childProfiles.userId, user.id))
+            .limit(1);
+          if (profile.length > 0) {
+            childProfileId = profile[0].id;
+          }
+        }
+      }
+
       // Create simple session token (JWT will be added later)
       const sessionData = JSON.stringify({
         userId: user.id,
@@ -49,7 +64,8 @@ export const authRouter = router({
         success: true,
         redirectTo,
         user: {
-          id: user.id,
+          id: childProfileId || user.id, // Return childProfileId for children, userId for others
+          userId: user.id, // Keep userId for reference
           name: user.name,
           username: user.username,
           email: user.email,
