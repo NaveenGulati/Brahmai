@@ -95,9 +95,30 @@ export const appRouter = router({
         const module = await db.getModuleById(input.moduleId);
         const title = `${module?.name || 'Quiz'} - ${input.questionCount} questions`;
         
+        // Determine the correct assignedTo value
+        // If childId === ctx.user.id, it's a self-practice challenge
+        // In that case, we need to get the childProfileId
+        let assignedToId = input.childId;
+        
+        if (input.childId === ctx.user.id && ctx.user.role === 'child') {
+          // Self-practice: query childProfileId
+          const childProfile = await db.query.childProfiles.findFirst({
+            where: (childProfiles, { eq }) => eq(childProfiles.userId, ctx.user.id),
+          });
+          
+          if (!childProfile) {
+            throw new TRPCError({ 
+              code: 'NOT_FOUND',
+              message: 'Child profile not found'
+            });
+          }
+          
+          assignedToId = childProfile.id;
+        }
+        
         const challenge = await db.createChallenge({
           assignedBy: ctx.user.id,
-          assignedTo: input.childId,
+          assignedTo: assignedToId, // childProfileId for self-practice, or target childProfileId for parent/teacher
           assignedToType: 'individual',
           moduleId: input.moduleId,
           title,
@@ -1367,14 +1388,27 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
           throw new TRPCError({ code: 'UNAUTHORIZED' });
         }
         
+        // For child users, we need to get their childProfileId
+        // assignedBy = userId, assignedTo = childProfileId
+        const childProfileResult = await db.query.childProfiles.findFirst({
+          where: (childProfiles, { eq }) => eq(childProfiles.userId, userId),
+        });
+        
+        if (!childProfileResult) {
+          throw new TRPCError({ 
+            code: 'NOT_FOUND',
+            message: 'Child profile not found for this user'
+          });
+        }
+        
         // Get module info for title
         const module = await db.getModuleById(input.moduleId);
         const title = `${module?.name || 'Quiz'} - ${input.questionCount} questions`;
         
         // Create self-assigned challenge with focusArea and questionCount
         const result = await db.createChallenge({
-          assignedBy: userId, // Self-assigned
-          assignedTo: userId,
+          assignedBy: userId, // userId (for tracking who created it)
+          assignedTo: childProfileResult.id, // childProfileId (for filtering in dashboard)
           assignedToType: 'individual',
           moduleId: input.moduleId,
           title,
