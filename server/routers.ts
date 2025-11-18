@@ -102,7 +102,15 @@ export const appRouter = router({
         
         if (input.childId === ctx.user.id && ctx.user.role === 'child') {
           // Self-practice: query childProfileId
-          const childProfileResult = await db
+          const database = await getDb();
+          if (!database) {
+            throw new TRPCError({ 
+              code: 'INTERNAL_SERVER_ERROR',
+              message: 'Database not available'
+            });
+          }
+          
+          const childProfileResult = await database
             .select({ id: childProfiles.id })
             .from(childProfiles)
             .where(eq(childProfiles.userId, ctx.user.id))
@@ -1392,7 +1400,15 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
         
         // For child users, we need to get their childProfileId
         // assignedBy = userId, assignedTo = childProfileId
-        const childProfileResult = await db
+        const database = await getDb();
+        if (!database) {
+          throw new TRPCError({ 
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Database not available'
+          });
+        }
+        
+        const childProfileResult = await database
           .select({ id: childProfiles.id })
           .from(childProfiles)
           .where(eq(childProfiles.userId, userId))
