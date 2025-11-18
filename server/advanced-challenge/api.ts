@@ -65,23 +65,32 @@ const CreateAdvancedChallengeSchema = z.object({
 router.get('/available-topics', async (req, res) => {
   console.log('[Advanced Challenge] GET /available-topics called with query:', req.query);
   try {
+    console.log('[Advanced Challenge] Step 1: Parsing query...');
     const { childId } = GetAvailableTopicsSchema.parse(req.query);
+    console.log('[Advanced Challenge] Step 2: Parsed childId:', childId);
     
+    console.log('[Advanced Challenge] Step 3: Getting database...');
     const db = await getDb();
     if (!db) {
+      console.log('[Advanced Challenge] Step 3 FAILED: Database not available');
       return res.status(500).json({ error: 'Database not available' });
     }
+    console.log('[Advanced Challenge] Step 3: Database OK');
     
     // Verify child exists (optional - could skip this for performance)
+    console.log('[Advanced Challenge] Step 4: Verifying child exists...');
     const childResult = await db.select({ id: childProfiles.id })
       .from(childProfiles)
       .where(eq(childProfiles.id, childId));
     
     if (childResult.length === 0) {
+      console.log('[Advanced Challenge] Step 4 FAILED: Child not found');
       return res.status(404).json({ error: 'Child not found' });
     }
+    console.log('[Advanced Challenge] Step 4: Child verified');
     
     // Query all available subject/topic/subtopic combinations with counts
+    console.log('[Advanced Challenge] Step 5: Querying topics...');
     const topicsWithCounts = await db
       .select({
         subject: questions.subject,
@@ -100,6 +109,7 @@ router.get('/available-topics', async (req, res) => {
       .orderBy(questions.subject, questions.topic, questions.subTopic);
     
     // Group by subject → topic → subtopics
+    console.log('[Advanced Challenge] Step 6: Grouping results, got', topicsWithCounts.length, 'rows');
     const grouped: Record<string, any[]> = {};
     
     for (const row of topicsWithCounts) {
@@ -131,10 +141,12 @@ router.get('/available-topics', async (req, res) => {
       }
     }
     
+    console.log('[Advanced Challenge] Step 7: Sending response with', Object.keys(grouped).length, 'subjects');
     res.json({
       success: true,
       data: grouped
     });
+    console.log('[Advanced Challenge] Step 8: Response sent successfully');
     
   } catch (error) {
     console.error('[Advanced Challenge] Error getting available topics:', error);
