@@ -16,6 +16,7 @@ import TeacherDashboard from "./pages/TeacherDashboard";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import { MyNotes } from "./pages/MyNotes";
 import { NoteDetail } from "./pages/NoteDetail";
+import CreateChallenge from "./pages/CreateChallenge";
 
 function Router() {
   return (
@@ -30,6 +31,8 @@ function Router() {
       <Route path={"/child"} component={ChildDashboard} />
       <Route path={"/child/notes"} component={MyNotes} />
       <Route path={"/child/notes/:id"} component={NoteDetail} />
+      <Route path={"/create-challenge"} component={CreateChallenge} />
+      <Route path={"/create-challenge/:targetUserId"} component={CreateChallenge} />
       <Route path={"/subject/:subjectId"} component={SubjectModules} />
       <Route path={"/quiz/:moduleId"} component={QuizPlay} />
       <Route path={"/404"} component={NotFound} />

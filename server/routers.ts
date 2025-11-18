@@ -1167,7 +1167,60 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
         if (!userId) {
           throw new TRPCError({ code: 'UNAUTHORIZED' });
         }
-        await db.updateChallenge(input.challengeId, { status: 'completed', sessionId: input.sessionId, completedAt: new Date() });
+        
+        // Get challenge details before updating
+        const challenge = await db.getChallengeById(input.challengeId);
+        if (!challenge) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Challenge not found' });
+        }
+        
+        // Update challenge status
+        await db.updateChallenge(input.challengeId, { 
+          status: 'completed', 
+          sessionId: input.sessionId, 
+          completedAt: new Date() 
+        });
+        
+        // Get quiz session results if available
+        const session = input.sessionId ? await db.getQuizSessionById(input.sessionId) : null;
+        
+        // Get child profile info
+        const childProfile = await db.getChildProfileById(challenge.assignedTo);
+        
+        // Build notification message with topic/subtopic details
+        let topicsInfo = '';
+        if (challenge.challengeType === 'advanced' && challenge.challengeScope) {
+          const scope = challenge.challengeScope as any;
+          const topics = scope?.topics || [];
+          if (topics.length > 0) {
+            topicsInfo = '\n\n**Topics Covered:**\n';
+            topics.forEach((topic: any) => {
+              topicsInfo += `- ${topic.subjectName}: ${topic.topicName}`;
+              if (topic.subtopics && topic.subtopics.length > 0) {
+                topicsInfo += ` (${topic.subtopics.join(', ')})`;
+              }
+              topicsInfo += '\n';
+            });
+          }
+        } else if (challenge.moduleId) {
+          const module = await db.getModuleById(challenge.moduleId);
+          if (module) {
+            const subject = await db.getSubjectById(module.subjectId);
+            topicsInfo = `\n\n**Topic:** ${subject?.name} - ${module.name}`;
+          }
+        }
+        
+        // Build achievement details
+        let achievementInfo = '';
+        if (session) {
+          achievementInfo = `\n\n**Results:**\n- Score: ${session.score}%\n- Questions: ${session.correctAnswers}/${session.totalQuestions} correct\n- Points Earned: ${session.pointsEarned || 0}`;
+        }
+        
+        // Send notification to parent (if challenge was assigned by parent)
+        // Note: This would require a notification system implementation
+        // For now, we'll log it for future implementation
+        console.log(`[Challenge Completed] Child ${childProfile?.name} completed challenge "${challenge.title}"${topicsInfo}${achievementInfo}`);
+        
         return { success: true };
       }),
 

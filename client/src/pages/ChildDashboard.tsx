@@ -9,6 +9,8 @@ import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
+import ChallengeNotification from '@/components/ChallengeNotification';
 
 export default function ChildDashboard() {
   const { user, loading, logout } = useAuth({ redirectOnUnauthenticated: false });
@@ -112,7 +114,16 @@ export default function ChildDashboard() {
       <header className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">🎓 My Learning Dashboard</h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
+            <Button 
+              onClick={() => setLocation('/create-challenge')}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              size="sm"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">Create Challenge</span>
+              <span className="sm:hidden">Challenge</span>
+            </Button>
             <div className="text-right">
               <p className="text-sm font-semibold text-gray-900">{childUser?.name || user?.name}</p>
               <p className="text-xs text-gray-500">{stats?.totalPoints || 0} points</p>
@@ -133,38 +144,19 @@ export default function ChildDashboard() {
             </h2>
             <div className="space-y-3">
               {pendingChallenges.map((challenge) => (
-                <Card key={challenge.id} className="bg-white">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{challenge.title}</CardTitle>
-                    {challenge.message && (
-                      <CardDescription className="text-base">
-                        {challenge.message.split(/\*\*(.+?)\*\*/).map((part, i) => 
-                          i % 2 === 1 ? <strong key={i} className="font-bold text-gray-900">{part}</strong> : part
-                        )}
-                      </CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent className="flex justify-between items-center">
-                    <div className="text-sm text-gray-600">
-                      {challenge.expiresAt && (
-                        <p>Due: {new Date(challenge.expiresAt).toLocaleDateString()}</p>
-                      )}
-                    </div>
-                    <Button
-                      onClick={() => {
-                        // Store challenge ID in localStorage for the quiz page to access
-                        localStorage.setItem('currentChallengeId', challenge.id.toString());
-                        // For advanced challenges, moduleId is null, so navigate with a placeholder
-                        // The quiz page will detect the challengeId and handle it appropriately
-                        const moduleIdToUse = challenge.moduleId || 1; // Use 1 as placeholder for advanced challenges
-                        setLocation(encryptedRoutes.quiz(moduleIdToUse));
-                      }}
-                      className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
-                    >
-                      Start Challenge 🚀
-                    </Button>
-                  </CardContent>
-                </Card>
+                <ChallengeNotification
+                  key={challenge.id}
+                  challenge={challenge}
+                  viewType="pending"
+                  showSelfPracticeLabel={false}
+                  onStart={(challengeId) => {
+                    // Store challenge ID in localStorage for the quiz page to access
+                    localStorage.setItem('currentChallengeId', challengeId.toString());
+                    // For advanced challenges, moduleId is null, so navigate with a placeholder
+                    const moduleIdToUse = challenge.moduleId || 1;
+                    setLocation(encryptedRoutes.quiz(moduleIdToUse));
+                  }}
+                />
               ))}
             </div>
           </div>

@@ -160,9 +160,16 @@ export async function createChildProfile(data: InsertChildProfile) {
 
 export async function getChildProfile(userId: number) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) return null;
   const result = await db.select().from(childProfiles).where(eq(childProfiles.userId, userId)).limit(1);
-  return result[0];
+  return result[0] || null;
+}
+
+export async function getChildProfileById(childProfileId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(childProfiles).where(eq(childProfiles.id, childProfileId)).limit(1);
+  return result[0] || null;
 }
 
 export async function getChildrenByParent(parentId: number) {
@@ -680,6 +687,13 @@ export async function getChallengesByParent(parentId: number) {
   return db.select().from(challenges)
     .where(eq(challenges.assignedBy, parentId))
     .orderBy(desc(challenges.createdAt));
+}
+
+export async function getChallengeById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(challenges).where(eq(challenges.id, id)).limit(1);
+  return result[0] || null;
 }
 
 export async function updateChallenge(id: number, data: Partial<InsertChallenge>) {

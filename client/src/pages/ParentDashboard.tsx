@@ -14,6 +14,7 @@ import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import UnifiedChallengeCreator from '@/components/UnifiedChallengeCreator';
+import ChallengeNotification from '@/components/ChallengeNotification';
 // QuestionBankManager removed - now managed by QB Admin role
 
 // Format date as "29th Oct 2025, 11:22 AM"
@@ -429,29 +430,13 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
               </div>
             </DialogContent>
           </Dialog>
-          <Dialog open={isChallengeOpen} onOpenChange={setIsChallengeOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">🎯 Create Challenge</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create Adaptive Challenge for {childName}</DialogTitle>
-              <DialogDescription>
-                Configure a personalized quiz challenge based on performance and difficulty
-              </DialogDescription>
-            </DialogHeader>
-            <div className="mt-4">
-              <UnifiedChallengeCreator
-                childId={childId}
-                childName={childName}
-                onSuccess={(challengeId) => {
-                  setIsChallengeOpen(false);
-                }}
-                onCancel={() => setIsChallengeOpen(false)}
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setLocation(`/create-challenge/${childId}`)}
+          >
+            🎯 Create Challenge
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -508,57 +493,20 @@ function ChildProgressCard({ childId, childName }: { childId: number; childName:
           <div className="mt-4">
             <h4 className="font-semibold mb-2 text-green-700">✅ Completed Challenges</h4>
             <div className="space-y-3">
-              {completedChallenges.map((challenge) => {
-                const isSelfPractice = challenge.assignedBy === challenge.assignedTo;
-                const bgColor = isSelfPractice ? 'bg-blue-50' : 'bg-green-50';
-                const borderColor = isSelfPractice ? 'border-blue-200' : 'border-green-200';
-                const hoverColor = isSelfPractice ? 'hover:bg-blue-100' : 'hover:bg-green-100';
-                const scoreColor = isSelfPractice ? 'text-blue-600' : 'text-green-600';
-                
-                return (
-                  <Card key={challenge.id} className={`p-3 ${bgColor} ${borderColor} relative`}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        dismissChallengeMutation.mutate({ challengeId: challenge.id });
-                      }}
-                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors"
-                      title="Dismiss challenge"
-                    >
-                      ✕
-                    </button>
-                    <Link href={challenge.sessionId ? encryptedRoutes.quizReview(challenge.sessionId) : '#'}>
-                      <div className={`${hoverColor} cursor-pointer transition-colors p-1 -m-1 rounded`}>
-                        <div className="flex justify-between items-start mb-2 pr-6">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-sm text-gray-900">
-                                {challenge.sessionId && `Quiz #${challenge.sessionId} | `}
-                                {challenge.subject?.name} - {challenge.module?.name}
-                              </p>
-                              {isSelfPractice && (
-                                <span className="px-2 py-0.5 text-xs font-medium bg-blue-200 text-blue-800 rounded-full">
-                                  🎯 Self-Practice
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-600 mt-1">Completed: {formatCompletedDate(challenge.completedAt!)}</p>
-                          </div>
-                          <span className={`text-lg font-bold ${scoreColor}`}>{challenge.session?.scorePercentage}%</span>
-                        </div>
-                        {challenge.session && (
-                          <div className="flex gap-4 text-xs text-gray-600">
-                            <span>✓ {challenge.session.correctAnswers}/{challenge.session.totalQuestions} correct</span>
-                            {challenge.session.timeTaken && (
-                              <span>⏱️ {Math.floor(challenge.session.timeTaken / 60)}m {challenge.session.timeTaken % 60}s</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                  </Card>
-                );
-              })}
+              {completedChallenges.map((challenge) => (
+                <ChallengeNotification
+                  key={challenge.id}
+                  challenge={challenge}
+                  viewType="completed"
+                  showSelfPracticeLabel={true}
+                  onDismiss={(challengeId) => {
+                    dismissChallengeMutation.mutate({ challengeId });
+                  }}
+                  onViewDetails={(sessionId) => {
+                    setLocation(encryptedRoutes.quizReview(sessionId));
+                  }}
+                />
+              ))}
             </div>
           </div>
         )}
