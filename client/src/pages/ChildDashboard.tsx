@@ -106,7 +106,7 @@ export default function ChildDashboard() {
     window.location.href = '/';
   };
 
-  const earnedAchievementIds = new Set(achievements?.map(a => a.achievementId));
+  const earnedAchievementIds = new Set(achievements?.map(a => a.achievementId) || []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
