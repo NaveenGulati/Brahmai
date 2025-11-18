@@ -39,7 +39,17 @@ export default function ChallengeNotification({
     } else {
       challengeScope = challenge.challengeScope;
     }
-    topics = Array.isArray(challengeScope?.topics) ? challengeScope.topics : [];
+    
+    // Handle two formats:
+    // Format 1 (old): challengeScope is directly an array of topics
+    // Format 2 (new): challengeScope is an object with a 'topics' array
+    if (Array.isArray(challengeScope)) {
+      topics = challengeScope;
+    } else if (Array.isArray(challengeScope?.topics)) {
+      topics = challengeScope.topics;
+    } else {
+      topics = [];
+    }
   } catch (error) {
     console.error('[ChallengeNotification] Failed to parse challengeScope:', error);
     topics = [];
