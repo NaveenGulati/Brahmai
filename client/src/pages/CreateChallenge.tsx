@@ -98,6 +98,10 @@ export default function CreateChallenge({ targetUserId: propTargetUserId, target
   if (!challengeType) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+        {/* DEBUG INFO */}
+        <div className="bg-red-100 border-b border-red-300 px-4 py-2 text-xs font-mono">
+          <strong>DEBUG CreateChallenge:</strong> actualChildId = {actualChildId} | childProfileId = {childProfileId} | user.id = {user?.id} | targetUserId = {targetUserId}
+        </div>
         <div className="container max-w-4xl mx-auto px-4 py-6 md:py-12">
           {/* Header */}
           <div className="mb-6 md:mb-8">
