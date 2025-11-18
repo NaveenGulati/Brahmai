@@ -108,22 +108,38 @@ export default function ChallengeNotification({
           <div className="mt-3 space-y-2">
             <p className="text-sm font-semibold text-gray-700">Topics Covered:</p>
             <div className="space-y-1.5">
-              {topics.map((topic: any, idx: number) => (
-                <div key={idx} className="text-sm bg-muted/50 rounded-md p-2">
-                  <div className="font-medium text-gray-900">
-                    {topic.subjectName} - {topic.topicName}
-                  </div>
-                  {topic.subtopics && topic.subtopics.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {topic.subtopics.map((subtopic: string, subIdx: number) => (
-                        <span key={subIdx} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                          {subtopic}
-                        </span>
-                      ))}
+              {topics.map((topic: any, idx: number) => {
+                // Handle both field name variations (subject/subjectName, topic/topicName)
+                const subjectName = topic.subjectName || topic.subject;
+                const topicName = topic.topicName || topic.topic;
+                // Handle subtopics: could be array, string "all", or undefined
+                const subtopicsArray = Array.isArray(topic.subtopics) ? topic.subtopics : [];
+                const showAllSubtopics = topic.subtopics === 'all';
+                
+                return (
+                  <div key={idx} className="text-sm bg-muted/50 rounded-md p-2">
+                    <div className="font-medium text-gray-900">
+                      {subjectName} - {topicName}
                     </div>
-                  )}
-                </div>
-              ))}
+                    {showAllSubtopics && (
+                      <div className="mt-1">
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                          All subtopics
+                        </span>
+                      </div>
+                    )}
+                    {subtopicsArray.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {subtopicsArray.map((subtopic: string, subIdx: number) => (
+                          <span key={subIdx} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                            {subtopic}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
