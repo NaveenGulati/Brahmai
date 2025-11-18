@@ -240,6 +240,7 @@ router.post('/preview', async (req, res) => {
  * Create an advanced multi-topic challenge
  */
 router.post('/create', async (req, res) => {
+  console.log('[Advanced Challenge] POST /create called');
   try {
     const { 
       childId, 
@@ -250,23 +251,28 @@ router.post('/create', async (req, res) => {
       message, 
       dueDate 
     } = CreateAdvancedChallengeSchema.parse(req.body);
+    console.log('[Advanced Challenge] Creating challenge for userId:', childId, 'with', totalQuestions, 'questions');
     
     const db = await getDb();
     if (!db) {
+      console.log('[Advanced Challenge] Database not available');
       return res.status(500).json({ error: 'Database not available' });
     }
     
-    // Verify child exists
+    // Verify child exists (childId is actually userId)
+    console.log('[Advanced Challenge] Verifying child exists for userId:', childId);
     const childResult = await db.select({ 
       id: childProfiles.id,
       parentId: childProfiles.parentId 
     })
       .from(childProfiles)
-      .where(eq(childProfiles.id, childId));
+      .where(eq(childProfiles.userId, childId));
     
     if (childResult.length === 0) {
+      console.log('[Advanced Challenge] Child not found for userId:', childId);
       return res.status(404).json({ error: 'Child not found' });
     }
+    console.log('[Advanced Challenge] Child verified, childProfileId:', childResult[0].id);
     
     const child = childResult[0];
     
@@ -284,9 +290,10 @@ router.post('/create', async (req, res) => {
     const challengeTitle = title || `Multi-Topic Challenge: ${selections.map(s => s.topic).join(', ')}`;
     
     // Create challenge record
+    console.log('[Advanced Challenge] Creating challenge record...');
     const challengeResult = await db.insert(challenges).values({
       assignedBy: child.parentId,
-      assignedTo: childId,
+      assignedTo: child.id, // Use childProfileId, not userId
       assignedToType: 'individual',
       moduleId: null, // No single module for advanced challenges
       challengeType: 'advanced', // Use camelCase to match schema
@@ -308,6 +315,7 @@ router.post('/create', async (req, res) => {
     // TODO: Store selected questions in a challenge_questions table
     // For now, questions will be selected dynamically when quiz starts
     
+    console.log('[Advanced Challenge] Challenge created successfully, ID:', challengeId);
     res.json({
       success: true,
       challengeId,
