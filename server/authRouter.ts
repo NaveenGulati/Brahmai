@@ -5,6 +5,9 @@ import { TRPCError } from "@trpc/server";
 import { sdk } from "./_core/sdk";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { getDb } from "./db";
+import { childProfiles } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
@@ -28,11 +31,11 @@ export const authRouter = router({
       // For child users, get their childProfileId
       let childProfileId = null;
       if (user.role === 'child') {
-        const db = await sdk.db.getDb();
+        const db = await getDb();
         if (db) {
-          const profile = await db.select({ id: sdk.db.childProfiles.id })
-            .from(sdk.db.childProfiles)
-            .where(sdk.db.eq(sdk.db.childProfiles.userId, user.id))
+          const profile = await db.select({ id: childProfiles.id })
+            .from(childProfiles)
+            .where(eq(childProfiles.userId, user.id))
             .limit(1);
           if (profile.length > 0) {
             childProfileId = profile[0].id;
