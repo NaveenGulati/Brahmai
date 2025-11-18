@@ -31,6 +31,83 @@ export const appRouter = router({
   adaptiveQuiz: adaptiveQuizRouter,
   smartNotes: smartNotesRouter,
 
+  // ============= SHARED CHALLENGE MODULE =============
+  // Accessible by both parents and children for challenge creation
+  challenge: router({
+    // Get unique subjects
+    getUniqueSubjects: protectedProcedure.query(async () => {
+      return db.getUniqueSubjects();
+    }),
+
+    // Get modules for a subject by name
+    getModulesForSubject: protectedProcedure
+      .input(z.object({ subject: z.string() }))
+      .query(async ({ input }) => {
+        const subjects = await db.getAllSubjects();
+        const subject = subjects.find(s => s.name === input.subject);
+        if (!subject) return [];
+        return db.getModulesBySubject(subject.id);
+      }),
+
+    // Get performance summary for a child
+    getPerformanceSummary: protectedProcedure
+      .input(z.object({ 
+        childId: z.number(),
+        subject: z.string().optional()
+      }))
+      .query(async ({ input }) => {
+        const history = await db.getUserQuizHistory(input.childId);
+        if (!input.subject) return null;
+        
+        const subjectQuizzes = history.filter(q => q.subjectName === input.subject);
+        if (subjectQuizzes.length === 0) return null;
+        
+        const avgScore = subjectQuizzes.reduce((sum, q) => sum + (q.scorePercentage || 0), 0) / subjectQuizzes.length;
+        return {
+          avgScore: Math.round(avgScore),
+          totalQuizzes: subjectQuizzes.length,
+        };
+      }),
+
+    // Estimate challenge duration
+    estimateChallengeDuration: protectedProcedure
+      .input(z.object({
+        moduleId: z.number(),
+        questionCount: z.number(),
+        complexity: z.number(),
+      }))
+      .query(async ({ input }) => {
+        const baseTime = input.questionCount * 1;
+        const complexityFactor = 1 + (input.complexity / 10) * 0.5;
+        const estimatedMinutes = Math.round(baseTime * complexityFactor);
+        return { estimatedMinutes };
+      }),
+
+    // Create adaptive challenge (works for both parent and child)
+    createAdaptiveChallenge: protectedProcedure
+      .input(z.object({
+        childId: z.number(),
+        moduleId: z.number(),
+        questionCount: z.number().min(10).max(100),
+        focusArea: z.enum(['strengthen', 'improve', 'balanced']),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const module = await db.getModuleById(input.moduleId);
+        const title = `${module?.name || 'Quiz'} - ${input.questionCount} questions`;
+        
+        const challenge = await db.createChallenge({
+          assignedBy: ctx.user.id,
+          assignedTo: input.childId,
+          assignedToType: 'individual',
+          moduleId: input.moduleId,
+          title,
+          focusArea: input.focusArea,
+        });
+        
+        return { challengeId: challenge.id };
+      }),
+  }),
+
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -84,6 +161,11 @@ export const appRouter = router({
       return db.getAllSubjects();
     }),
 
+    // Get unique subjects for challenge creation
+    getUniqueSubjects: parentProcedure.query(async () => {
+      return db.getUniqueSubjects();
+    }),
+
     // Get modules by subject (read-only for parents)
     getModules: parentProcedure
       .input(z.object({ subjectId: z.number() }))
@@ -91,11 +173,58 @@ export const appRouter = router({
         return db.getModulesBySubject(input.subjectId);
       }),
 
+    // Get modules for a subject by name (for challenge creation)
+    getModulesForSubject: parentProcedure
+      .input(z.object({ subject: z.string() }))
+      .query(async ({ input }) => {
+        // Get subject ID from name
+        const subjects = await db.getAllSubjects();
+        const subject = subjects.find(s => s.name === input.subject);
+        if (!subject) return [];
+        return db.getModulesBySubject(subject.id);
+      }),
+
     // Get child progress
     getChildProgress: parentProcedure
       .input(z.object({ childId: z.number() }))
       .query(async ({ input }) => {
         return db.getUserStats(input.childId);
+      }),
+
+    // Get performance summary for a subject (for challenge creation)
+    getPerformanceSummary: parentProcedure
+      .input(z.object({ 
+        childId: z.number(),
+        subject: z.string().optional()
+      }))
+      .query(async ({ input }) => {
+        const history = await db.getUserQuizHistory(input.childId);
+        if (!input.subject) return null;
+        
+        const subjectQuizzes = history.filter(q => q.subjectName === input.subject);
+        if (subjectQuizzes.length === 0) return null;
+        
+        const avgScore = subjectQuizzes.reduce((sum, q) => sum + (q.scorePercentage || 0), 0) / subjectQuizzes.length;
+        return {
+          avgScore: Math.round(avgScore),
+          totalQuizzes: subjectQuizzes.length,
+        };
+      }),
+
+    // Estimate challenge duration
+    estimateChallengeDuration: parentProcedure
+      .input(z.object({
+        moduleId: z.number(),
+        questionCount: z.number(),
+        complexity: z.number(),
+      }))
+      .query(async ({ input }) => {
+        // Simple estimation: 1 minute per question on average
+        const baseTime = input.questionCount * 1;
+        // Add complexity factor (harder questions take longer)
+        const complexityFactor = 1 + (input.complexity / 10) * 0.5;
+        const estimatedMinutes = Math.round(baseTime * complexityFactor);
+        return { estimatedMinutes };
       }),
 
     // Get child quiz history

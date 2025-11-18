@@ -64,12 +64,12 @@ export default function ChallengeCreator({
   const [focusArea, setFocusArea] = useState<'strengthen' | 'improve' | 'neutral'>('neutral');
 
   // Data fetching
-  const { data: subjects, isLoading: loadingSubjects } = trpc.parent.getUniqueSubjects.useQuery();
-  const { data: modules, isLoading: loadingModules } = trpc.parent.getModulesForSubject.useQuery(
+  const { data: subjects, isLoading: loadingSubjects } = trpc.challenge.getUniqueSubjects.useQuery();
+  const { data: modules, isLoading: loadingModules } = trpc.challenge.getModulesForSubject.useQuery(
     { subject: selectedSubject },
     { enabled: !!selectedSubject }
   );
-  const { data: performanceSummary } = trpc.parent.getPerformanceSummary.useQuery(
+  const { data: performanceSummary } = trpc.challenge.getPerformanceSummary.useQuery(
     { childId, subject: selectedSubject },
     { enabled: !!selectedSubject }
   );
@@ -88,7 +88,7 @@ export default function ChallengeCreator({
   };
 
   const complexityPreview = COMPLEXITY_LEVELS[complexity];
-  const { data: estimatedDuration } = trpc.parent.estimateChallengeDuration.useQuery(
+  const { data: estimatedDuration } = trpc.challenge.estimateChallengeDuration.useQuery(
     {
       moduleId: selectedModule || 0,
       questionCount,
@@ -98,7 +98,7 @@ export default function ChallengeCreator({
   );
 
   // Create challenge mutation
-  const createChallenge = trpc.parent.createAdaptiveChallenge.useMutation({
+  const createChallenge = trpc.challenge.createAdaptiveChallenge.useMutation({
     onSuccess: (data) => {
       toast.success('Challenge created successfully!');
       // Invalidate challenges query to refresh the list

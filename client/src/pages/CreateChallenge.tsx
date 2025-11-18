@@ -16,7 +16,8 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, Target, ArrowLeft, User } from 'lucide-react';
 import ChallengeCreator from '@/components/ChallengeCreator';
 import AdvancedChallengeCreator from '@/components/AdvancedChallengeCreator';
-import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { trpc } from '@/lib/trpc';
 
 interface CreateChallengeProps {
   // Optional: if creating for someone else (parent/teacher creating for child)
@@ -28,45 +29,40 @@ export default function CreateChallenge({ targetUserId: propTargetUserId, target
   const [, navigate] = useLocation();
   const [match, params] = useRoute('/create-challenge/:targetUserId');
   const [challengeType, setChallengeType] = useState<'simple' | 'advanced' | null>(null);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [targetUser, setTargetUser] = useState<any>(null);
+  const { user, loading } = useAuth();
   
   // Use route param if available, otherwise use prop
   const targetUserId = params?.targetUserId ? parseInt(params.targetUserId) : propTargetUserId;
   const targetUserName = propTargetUserName;
-
-  // Get current user info
-  const { data: user } = useQuery({
-    queryKey: ['/api/user'],
-  });
-
+  
+  // Get child profile for current user if they're a child
+  const [childProfileId, setChildProfileId] = useState<number | null>(null);
+  
   useEffect(() => {
-    if (user) {
-      setCurrentUser(user);
-      // If no target specified, user is creating for themselves
-      if (!targetUserId) {
-        setTargetUser(user);
+    const storedUser = localStorage.getItem('childUser');
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        setChildProfileId(parsed.id);
+      } catch (e) {
+        console.error('Failed to parse childUser:', e);
       }
     }
-  }, [user, targetUserId]);
-
-  // Get target user info if creating for someone else
-  const { data: targetUserData } = useQuery({
-    queryKey: [`/api/users/${targetUserId}`],
-    enabled: !!targetUserId,
-  });
-
-  useEffect(() => {
-    if (targetUserData) {
-      setTargetUser(targetUserData);
-    }
-  }, [targetUserData]);
+  }, []);
+  
+  // Determine the actual child ID to use
+  const actualChildId = targetUserId || childProfileId || user?.id;
+  const actualChildName = targetUserName || user?.name || 'Student';
+  
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
 
   const handleSuccess = (challengeId: number) => {
     // Navigate back to appropriate dashboard
-    if (currentUser?.role === 'parent') {
+    if (user?.role === 'parent') {
       navigate('/parent');
-    } else if (currentUser?.role === 'teacher') {
+    } else if (user?.role === 'teacher') {
       navigate('/teacher');
     } else {
       navigate('/child');
@@ -75,9 +71,9 @@ export default function CreateChallenge({ targetUserId: propTargetUserId, target
 
   const handleCancel = () => {
     // Navigate back to appropriate dashboard
-    if (currentUser?.role === 'parent') {
+    if (user?.role === 'parent') {
       navigate('/parent');
-    } else if (currentUser?.role === 'teacher') {
+    } else if (user?.role === 'teacher') {
       navigate('/teacher');
     } else {
       navigate('/child');
@@ -85,15 +81,15 @@ export default function CreateChallenge({ targetUserId: propTargetUserId, target
   };
 
   const getPageTitle = () => {
-    if (targetUser && currentUser && targetUser.id !== currentUser.id) {
-      return `Create Challenge for ${targetUserName || targetUser.username}`;
+    if (targetUserId && targetUserId !== actualChildId) {
+      return `Create Challenge for ${targetUserName || 'Student'}`;
     }
     return 'Create Challenge';
   };
 
   const getPageDescription = () => {
-    if (targetUser && currentUser && targetUser.id !== currentUser.id) {
-      return `Set up a personalized challenge for ${targetUserName || targetUser.username}`;
+    if (targetUserId && targetUserId !== actualChildId) {
+      return `Set up a personalized challenge for ${targetUserName || 'Student'}`;
     }
     return 'Challenge yourself and track your progress';
   };
@@ -124,11 +120,11 @@ export default function CreateChallenge({ targetUserId: propTargetUserId, target
                 </p>
               </div>
               
-              {targetUser && currentUser && targetUser.id !== currentUser.id && (
+              {targetUserId && targetUserId !== actualChildId && (
                 <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-lg">
                   <User className="w-4 h-4 text-primary" />
                   <span className="text-sm font-medium text-primary">
-                    {targetUserName || targetUser.username}
+                    {targetUserName || 'Student'}
                   </span>
                 </div>
               )}
@@ -286,15 +282,15 @@ export default function CreateChallenge({ targetUserId: propTargetUserId, target
         <div className="space-y-6">
           {challengeType === 'simple' ? (
             <ChallengeCreator
-              childId={targetUser?.id || currentUser?.id}
-              childName={targetUserName || targetUser?.username || currentUser?.username}
+              childId={actualChildId}
+              childName={actualChildName}
               onSuccess={handleSuccess}
               onCancel={handleCancel}
             />
           ) : (
             <AdvancedChallengeCreator
-              childId={targetUser?.id || currentUser?.id}
-              childName={targetUserName || targetUser?.username || currentUser?.username}
+              childId={actualChildId}
+              childName={actualChildName}
               onSuccess={handleSuccess}
               onCancel={handleCancel}
             />
