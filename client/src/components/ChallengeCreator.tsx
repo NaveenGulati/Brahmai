@@ -242,10 +242,10 @@ export default function ChallengeCreator({
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label>Questions: {questionCount}</Label>
-                  {estimatedDuration && (
+                  {estimatedDuration?.estimatedMinutes && (
                     <Badge variant="secondary" className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      ~{estimatedDuration} min
+                      ~{estimatedDuration.estimatedMinutes} min
                     </Badge>
                   )}
                 </div>
@@ -389,7 +389,7 @@ export default function ChallengeCreator({
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Estimated Time</p>
-                <p className="font-medium">{estimatedDuration || '~15'} minutes</p>
+                <p className="font-medium">{estimatedDuration?.estimatedMinutes || '~15'} minutes</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Complexity</p>
