@@ -78,14 +78,14 @@ router.get('/available-topics', async (req, res) => {
     console.log('[Advanced Challenge] Step 3: Database OK');
     
     // Verify child exists (optional - could skip this for performance)
-    // Note: childId is actually the userId, not the childProfile.id
+    // Note: childId is the childProfileId (childProfiles.id)
     console.log('[Advanced Challenge] Step 4: Verifying child exists...');
     const childResult = await db.select({ id: childProfiles.id })
       .from(childProfiles)
-      .where(eq(childProfiles.userId, childId));
+      .where(eq(childProfiles.id, childId));
     
     if (childResult.length === 0) {
-      console.log('[Advanced Challenge] Step 4 FAILED: Child not found for userId:', childId);
+      console.log('[Advanced Challenge] Step 4 FAILED: Child not found for childProfileId:', childId);
       return res.status(404).json({ error: 'Child not found' });
     }
     console.log('[Advanced Challenge] Step 4: Child verified, childProfileId:', childResult[0].id);
@@ -259,20 +259,21 @@ router.post('/create', async (req, res) => {
       return res.status(500).json({ error: 'Database not available' });
     }
     
-    // Verify child exists (childId is actually userId)
-    console.log('[Advanced Challenge] Verifying child exists for userId:', childId);
+    // Verify child exists (childId is childProfileId)
+    console.log('[Advanced Challenge] Verifying child exists for childProfileId:', childId);
     const childResult = await db.select({ 
       id: childProfiles.id,
+      userId: childProfiles.userId,
       parentId: childProfiles.parentId 
     })
       .from(childProfiles)
-      .where(eq(childProfiles.userId, childId));
+      .where(eq(childProfiles.id, childId));
     
     if (childResult.length === 0) {
-      console.log('[Advanced Challenge] Child not found for userId:', childId);
+      console.log('[Advanced Challenge] Child not found for childProfileId:', childId);
       return res.status(404).json({ error: 'Child not found' });
     }
-    console.log('[Advanced Challenge] Child verified, childProfileId:', childResult[0].id);
+    console.log('[Advanced Challenge] Child verified, childProfileId:', childResult[0].id, 'userId:', childResult[0].userId);
     
     const child = childResult[0];
     
