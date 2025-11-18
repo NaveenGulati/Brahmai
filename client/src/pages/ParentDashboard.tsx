@@ -293,6 +293,7 @@ export default function ParentDashboard() {
 }
 
 function ChildProgressCard({ childId, childName }: { childId: number; childName: string }) {
+  const [, setLocation] = useLocation();
   const [isChallengeOpen, setIsChallengeOpen] = useState(false);
   const [challengeModule, setChallengeModule] = useState<number | null>(null);
   const [challengeSubject, setChallengeSubject] = useState<number | null>(null);
