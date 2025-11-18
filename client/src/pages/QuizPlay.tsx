@@ -31,6 +31,7 @@ export default function QuizPlay() {
   const [isReady, setIsReady] = useState(false);
 
   const [sessionId, setSessionId] = useState<number | null>(null);
+  const [showExitDialog, setShowExitDialog] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<any>(null);
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
@@ -215,20 +216,18 @@ export default function QuizPlay() {
     const handlePopState = (e: PopStateEvent) => {
       if (isNavigatingAway) return; // Already confirmed, allow navigation
       
-      const confirmExit = window.confirm(
-        'You have a quiz in progress. If you leave, all progress will be lost and the session will be terminated. Are you sure you want to exit?'
-      );
-      
-      if (!confirmExit) {
-        // User cancelled - push state back to prevent navigation
-        window.history.pushState(null, '', window.location.href);
-      } else {
-        // User confirmed exit - remove listeners and navigate back
-        isNavigatingAway = true;
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-        window.removeEventListener('popstate', handlePopState);
-        window.history.back();
-      }
+      // Prevent navigation and show dialog
+      window.history.pushState(null, '', window.location.href);
+      setShowExitDialog(true);
+    };
+    
+    // Store handler reference for dialog buttons
+    (window as any).__quizExitHandler = () => {
+      isNavigatingAway = true;
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+      setShowExitDialog(false);
+      window.history.back();
     };
 
     // Push initial state to enable back button detection
@@ -681,6 +680,33 @@ export default function QuizPlay() {
               disabled={createSelfChallengeMutation.isLoading}
             >
               {createSelfChallengeMutation.isLoading ? 'Creating...' : 'Start Quiz'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Exit Confirmation Dialog */}
+      <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>⚠️ Abandon Quiz?</DialogTitle>
+            <DialogDescription>
+              You have a quiz in progress. If you leave now, all your progress will be lost and the session will be terminated. Are you sure you want to exit?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExitDialog(false)}>
+              Stay and Continue
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => {
+                if ((window as any).__quizExitHandler) {
+                  (window as any).__quizExitHandler();
+                }
+              }}
+            >
+              Yes, Exit Quiz
             </Button>
           </DialogFooter>
         </DialogContent>

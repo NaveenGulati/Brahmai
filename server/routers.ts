@@ -132,6 +132,7 @@ export const appRouter = router({
           assignedToType: 'individual',
           moduleId: input.moduleId,
           title,
+          questionCount: input.questionCount,
           focusArea: input.focusArea,
         });
         
