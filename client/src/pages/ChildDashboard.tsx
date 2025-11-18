@@ -112,10 +112,6 @@ export default function ChildDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
-        {/* DEBUG INFO */}
-        <div className="bg-yellow-100 border-b border-yellow-300 px-4 py-2 text-xs font-mono">
-          <strong>DEBUG:</strong> childUser.id = {childUser?.id} | childUser.userId = {childUser?.userId} | localStorage = {localStorage.getItem('childUser')}
-        </div>
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">🎓 My Learning Dashboard</h1>
           <div className="flex items-center gap-2 md:gap-4">

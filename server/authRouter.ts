@@ -31,26 +31,17 @@ export const authRouter = router({
       // For child users, get their childProfileId
       let childProfileId = null;
       if (user.role === 'child') {
-        console.log('[Auth] User is child, getting childProfileId for userId:', user.id);
         const db = await getDb();
-        if (!db) {
-          console.error('[Auth] Database not available!');
-        } else {
-          console.log('[Auth] Database OK, querying childProfiles...');
+        if (db) {
           const profile = await db.select({ id: childProfiles.id })
             .from(childProfiles)
             .where(eq(childProfiles.userId, user.id))
             .limit(1);
-          console.log('[Auth] Query result:', profile);
           if (profile.length > 0) {
             childProfileId = profile[0].id;
-            console.log('[Auth] Found childProfileId:', childProfileId);
-          } else {
-            console.error('[Auth] No childProfile found for userId:', user.id);
           }
         }
       }
-      console.log('[Auth] Final childProfileId:', childProfileId);
 
       // Create simple session token (JWT will be added later)
       const sessionData = JSON.stringify({

@@ -24,7 +24,6 @@ export function DevLogin() {
         // Store child user data in localStorage for child role
         if (data.user?.role === 'child') {
           localStorage.setItem('childUser', JSON.stringify(data.user));
-          console.log('[DevLogin] Stored childUser:', data.user);
         }
         toast.success('Login successful!');
         // Use redirectTo from server response, or default to /child
