@@ -237,6 +237,13 @@ export default function QuizReview() {
   
   const handlePracticeSimilar = async (response: any) => {
     try {
+      // Validate moduleId exists
+      if (!session?.moduleId) {
+        toast.error('Module information not available. Please try again.');
+        console.error('Session moduleId is null:', session);
+        return;
+      }
+
       // Get the detailed explanation if available
       const detailedExplanation = expandedExplanations[response.questionId] || '';
       
