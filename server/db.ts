@@ -1626,7 +1626,19 @@ export async function generateDetailedExplanationForQuestion(
     throw new Error('Database not available');
   }
 
-  // Check cache first
+  // FIRST: Check if question has pre-generated detailedExplanation
+  const question = await db
+    .select()
+    .from(questions)
+    .where(eq(questions.id, questionId))
+    .limit(1);
+
+  if (question.length > 0 && question[0].detailedExplanation) {
+    console.log(`[AI] Using pre-generated explanation from questions table for question ${questionId}`);
+    return { detailedExplanation: question[0].detailedExplanation, fromCache: true };
+  }
+
+  // SECOND: Check aiExplanationCache
   const cached = await db
     .select()
     .from(aiExplanationCache)
@@ -1634,7 +1646,7 @@ export async function generateDetailedExplanationForQuestion(
     .limit(1);
 
   if (cached.length > 0 && cached[0].detailedExplanation) {
-    console.log(`[AI] Using cached explanation for question ${questionId}`);
+    console.log(`[AI] Using cached explanation from aiExplanationCache for question ${questionId}`);
     
     // Update usage stats
     await updateCachedExplanationUsage(questionId);
@@ -1659,13 +1671,7 @@ export async function generateDetailedExplanationForQuestion(
     return { detailedExplanation: explanation, fromCache: true };
   }
 
-  // Generate new explanation
-  const question = await db
-    .select()
-    .from(questions)
-    .where(eq(questions.id, questionId))
-    .limit(1);
-
+  // Generate new explanation (reuse question from earlier query)
   if (question.length === 0) {
     throw new Error('Question not found');
   }

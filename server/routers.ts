@@ -359,6 +359,7 @@ export const appRouter = router({
             options: typeof question?.options === 'string' ? JSON.parse(question.options) : question?.options,
             correctAnswer: question?.correctAnswer || '',
             explanation: question?.explanation,
+            detailedExplanation: question?.detailedExplanation,
             difficulty: question?.difficulty,
             maxPoints: question?.points || 0,
           };
@@ -1050,6 +1051,7 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
             options: typeof question?.options === 'string' ? JSON.parse(question.options) : question?.options,
             correctAnswer: question?.correctAnswer || '',
             explanation: question?.explanation,
+            detailedExplanation: question?.detailedExplanation,
             difficulty: question?.difficulty,
             maxPoints: question?.points || 0,
           };
