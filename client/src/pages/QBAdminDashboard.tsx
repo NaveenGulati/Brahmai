@@ -6,7 +6,8 @@ import QuestionBankManager from "@/components/QuestionBankManager";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { BookOpen, BarChart3, FileQuestion, Plus } from "lucide-react";
+import { BookOpen, BarChart3, FileQuestion, Plus, Library } from "lucide-react";
+import TextbookManager from "@/components/TextbookManager";
 
 export default function QBAdminDashboard() {
   const { user, loading, isAuthenticated, logout } = useAuth();
@@ -108,7 +109,7 @@ export default function QBAdminDashboard() {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+          <TabsList className="grid w-full grid-cols-4 lg:w-[800px]">
             <TabsTrigger value="questions" className="flex items-center gap-2">
               <FileQuestion className="h-4 w-4" />
               Questions
@@ -120,6 +121,10 @@ export default function QBAdminDashboard() {
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Analytics
+            </TabsTrigger>
+            <TabsTrigger value="textbooks" className="flex items-center gap-2">
+              <Library className="h-4 w-4" />
+              Textbooks
             </TabsTrigger>
           </TabsList>
 
@@ -229,6 +234,11 @@ export default function QBAdminDashboard() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Textbooks Tab */}
+          <TabsContent value="textbooks" className="space-y-4">
+            <TextbookManager />
           </TabsContent>
         </Tabs>
       </div>

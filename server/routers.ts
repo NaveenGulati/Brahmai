@@ -12,7 +12,8 @@ import { authRouter } from "./authRouter";
 import { adaptiveChallengeRouter } from "./adaptive-challenge-router";
 import { adaptiveQuizRouter } from "./adaptive-quiz";
 import { smartNotesRouter } from "./smartNotesRouter";
-import { notes, tags, noteTags, generatedQuestions, noteQuizAttempts } from "./db-schema-notes";
+import { notes, tags, noteTags, noteQuizAttempts } from "./db-schema-notes";
+import { questionGenerationJobs, generatedQuestions } from "../drizzle/schema";
 
 // Custom procedure for child access
 const childProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -1551,6 +1552,255 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         return db.deleteChapter(input.id);
+      }),
+
+    // ===== AI QUESTION GENERATION =====
+    // Generate questions from chapter
+    generateQuestionsFromChapter: qbAdminProcedure
+      .input(z.object({
+        chapterId: z.number(),
+        board: z.string(),
+        grade: z.number(),
+        subject: z.string(),
+        topic: z.string(),
+        subTopic: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { generateQuestionsFromChapter } = await import('./ai-question-generator');
+        
+        // Get chapter details
+        const chapters = await db.getChaptersByTextbook(0); // Will filter by ID
+        const chapter = chapters.find((c: any) => c.id === input.chapterId);
+        
+        if (!chapter || !chapter.extractedText) {
+          throw new TRPCError({ 
+            code: 'BAD_REQUEST', 
+            message: 'Chapter not found or has no extracted text. Please upload and process the PDF first.' 
+          });
+        }
+
+        // Create question generation job
+        const database = await getDb();
+        if (!database) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+        }
+
+        const jobResult = await database
+          .insert(questionGenerationJobs)
+          .values({
+            chapterId: input.chapterId,
+            status: 'processing',
+            requestedBy: ctx.user.id,
+            parameters: JSON.stringify({
+              board: input.board,
+              grade: input.grade,
+              subject: input.subject,
+              topic: input.topic,
+              subTopic: input.subTopic,
+            }),
+          })
+          .returning();
+
+        const job = jobResult[0];
+
+        try {
+          // Generate questions using AI
+          const result = await generateQuestionsFromChapter({
+            chapterText: chapter.extractedText,
+            board: input.board,
+            grade: input.grade,
+            subject: input.subject,
+            topic: input.topic,
+            subTopic: input.subTopic,
+            generatedBy: ctx.user.name || ctx.user.email,
+          });
+
+          // Update job status
+          await database
+            .update(questionGenerationJobs)
+            .set({
+              status: 'completed',
+              totalGenerated: result.questions.length,
+              completedAt: new Date(),
+            })
+            .where(eq(questionGenerationJobs.id, job.id));
+
+          // Store generated questions
+          const generatedQuestionRecords = result.questions.map((q: any) => ({
+            jobId: job.id,
+            questionData: JSON.stringify(q),
+            reviewStatus: 'pending',
+            qualityScore: 85, // Default score, can be calculated
+          }));
+
+          await database
+            .insert(generatedQuestions)
+            .values(generatedQuestionRecords);
+
+          return {
+            jobId: job.id,
+            questionsGenerated: result.questions.length,
+            questions: result.questions,
+          };
+        } catch (error) {
+          // Update job with error
+          await database
+            .update(questionGenerationJobs)
+            .set({
+              status: 'failed',
+              errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            })
+            .where(eq(questionGenerationJobs.id, job.id));
+
+          throw error;
+        }
+      }),
+
+    // Get generation jobs
+    getGenerationJobs: qbAdminProcedure
+      .input(z.object({ chapterId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        const database = await getDb();
+        if (!database) return [];
+
+        let query = database.select().from(questionGenerationJobs);
+        
+        if (input?.chapterId) {
+          query = query.where(eq(questionGenerationJobs.chapterId, input.chapterId));
+        }
+
+        return query.orderBy(desc(questionGenerationJobs.createdAt));
+      }),
+
+    // Get generated questions by job
+    getGeneratedQuestions: qbAdminProcedure
+      .input(z.object({ jobId: z.number() }))
+      .query(async ({ input }) => {
+        const database = await getDb();
+        if (!database) return [];
+
+        const questions = await database
+          .select()
+          .from(generatedQuestions)
+          .where(eq(generatedQuestions.jobId, input.jobId));
+
+        return questions.map((q: any) => ({
+          ...q,
+          questionData: JSON.parse(q.questionData as string),
+        }));
+      }),
+
+    // Approve generated question
+    approveGeneratedQuestion: qbAdminProcedure
+      .input(z.object({ 
+        generatedQuestionId: z.number(),
+        reviewNotes: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const database = await getDb();
+        if (!database) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+        }
+
+        // Get the generated question
+        const genQuestions = await database
+          .select()
+          .from(generatedQuestions)
+          .where(eq(generatedQuestions.id, input.generatedQuestionId));
+
+        if (genQuestions.length === 0) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Generated question not found' });
+        }
+
+        const genQuestion = genQuestions[0];
+        const questionData = JSON.parse(genQuestion.questionData as string);
+
+        // Insert into main question bank
+        const result = await db.bulkUploadQuestionsUserFriendly(
+          [questionData],
+          ctx.user.id
+        );
+
+        // Update generated question status
+        await database
+          .update(generatedQuestions)
+          .set({
+            reviewStatus: 'approved',
+            reviewedBy: ctx.user.id,
+            reviewedAt: new Date(),
+            reviewNotes: input.reviewNotes,
+          })
+          .where(eq(generatedQuestions.id, input.generatedQuestionId));
+
+        // Update job stats
+        const job = await database
+          .select()
+          .from(questionGenerationJobs)
+          .where(eq(questionGenerationJobs.id, genQuestion.jobId));
+
+        if (job.length > 0) {
+          await database
+            .update(questionGenerationJobs)
+            .set({
+              approvedCount: (job[0].approvedCount || 0) + 1,
+            })
+            .where(eq(questionGenerationJobs.id, genQuestion.jobId));
+        }
+
+        return { success: true, questionId: result.created > 0 ? result.created : null };
+      }),
+
+    // Reject generated question
+    rejectGeneratedQuestion: qbAdminProcedure
+      .input(z.object({ 
+        generatedQuestionId: z.number(),
+        reviewNotes: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const database = await getDb();
+        if (!database) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+        }
+
+        // Get the generated question
+        const genQuestions = await database
+          .select()
+          .from(generatedQuestions)
+          .where(eq(generatedQuestions.id, input.generatedQuestionId));
+
+        if (genQuestions.length === 0) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Generated question not found' });
+        }
+
+        const genQuestion = genQuestions[0];
+
+        // Update generated question status
+        await database
+          .update(generatedQuestions)
+          .set({
+            reviewStatus: 'rejected',
+            reviewedBy: ctx.user.id,
+            reviewedAt: new Date(),
+            reviewNotes: input.reviewNotes,
+          })
+          .where(eq(generatedQuestions.id, input.generatedQuestionId));
+
+        // Update job stats
+        const job = await database
+          .select()
+          .from(questionGenerationJobs)
+          .where(eq(questionGenerationJobs.id, genQuestion.jobId));
+
+        if (job.length > 0) {
+          await database
+            .update(questionGenerationJobs)
+            .set({
+              rejectedCount: (job[0].rejectedCount || 0) + 1,
+            })
+            .where(eq(questionGenerationJobs.id, genQuestion.jobId));
+        }
+
+        return { success: true };
       }),
   }),
 
