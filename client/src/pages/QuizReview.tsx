@@ -90,21 +90,6 @@ export default function QuizReview() {
   const { user } = useAuth({ redirectOnUnauthenticated: false });
   const [aiAnalysis, setAiAnalysis] = useState<{ fullAnalysis: string } | null>(null);
   const [expandedExplanations, setExpandedExplanations] = useState<Record<number, string>>({});
-  
-  // Initialize expandedExplanations with cached detailedExplanation when data loads
-  useEffect(() => {
-    if (actualReviewData?.responses) {
-      const cached: Record<number, string> = {};
-      actualReviewData.responses.forEach((response: any) => {
-        if (response.detailedExplanation) {
-          cached[response.questionId] = response.detailedExplanation;
-        }
-      });
-      if (Object.keys(cached).length > 0) {
-        setExpandedExplanations(prev => ({ ...cached, ...prev })); // Cached first, then any user-generated
-      }
-    }
-  }, [actualReviewData]);
   const [simplificationLevels, setSimplificationLevels] = useState<Record<number, number>>({});
   const [explanationHistory, setExplanationHistory] = useState<Record<number, string[]>>({});
   const [highlightedQuestionId, setHighlightedQuestionId] = useState<number | null>(null);
