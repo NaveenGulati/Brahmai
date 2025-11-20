@@ -10,6 +10,18 @@ import { eq, and, inArray, sql, notInArray } from 'drizzle-orm';
 import * as dbAdapter from './db-adapter';
 import type { FocusArea } from './types';
 
+/**
+ * Shuffle array using Fisher-Yates algorithm
+ */
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 interface TopicSelection {
   subject: string;
   topic: string;
@@ -174,6 +186,14 @@ export async function getNextAdvancedChallengeQuestion(
     throw new TRPCError({ code: 'NOT_FOUND', message: 'No suitable question found' });
   }
 
+  // Parse and shuffle options for MCQs
+  const parsedOptions = typeof selectedQuestion.options === 'string' 
+    ? JSON.parse(selectedQuestion.options) 
+    : selectedQuestion.options;
+  const shuffledOptions = selectedQuestion.questionType === 'multiple_choice' && Array.isArray(parsedOptions)
+    ? shuffleArray(parsedOptions)
+    : parsedOptions;
+
   return {
     currentQuestionNumber: responses.length + 1,
     totalQuestions: session.totalQuestions,
@@ -182,9 +202,7 @@ export async function getNextAdvancedChallengeQuestion(
       questionType: selectedQuestion.questionType,
       questionText: selectedQuestion.questionText,
       questionImage: selectedQuestion.questionImage,
-      options: typeof selectedQuestion.options === 'string' 
-        ? JSON.parse(selectedQuestion.options) 
-        : selectedQuestion.options,
+      options: shuffledOptions,
       points: selectedQuestion.points,
       timeLimit: selectedQuestion.timeLimit,
       difficulty: selectedQuestion.difficulty,

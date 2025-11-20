@@ -17,6 +17,19 @@ import { startAdvancedChallengeQuiz } from './advanced-challenge-quiz';
 import { getNextAdvancedChallengeQuestion } from './advanced-challenge-next-question';
 
 /**
+ * Shuffle array using Fisher-Yates algorithm
+ * This prevents students from guessing based on option position patterns
+ */
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+/**
  * START QUIZ - Initialize adaptive quiz session
  */
 export const startQuizInput = z.object({
@@ -93,6 +106,14 @@ export async function startQuizMutation(input: z.infer<typeof startQuizInput>, u
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to select first question' });
   }
 
+  // Parse and shuffle options for MCQs
+  const parsedOptions = typeof firstQuestion.options === 'string' 
+    ? JSON.parse(firstQuestion.options) 
+    : firstQuestion.options;
+  const shuffledOptions = firstQuestion.questionType === 'multiple_choice' && Array.isArray(parsedOptions)
+    ? shuffleArray(parsedOptions)
+    : parsedOptions;
+
   return {
     sessionId,
     totalQuestions: quizSize,
@@ -103,7 +124,7 @@ export async function startQuizMutation(input: z.infer<typeof startQuizInput>, u
       questionType: firstQuestion.questionType,
       questionText: firstQuestion.questionText,
       questionImage: firstQuestion.questionImage,
-      options: typeof firstQuestion.options === 'string' ? JSON.parse(firstQuestion.options) : firstQuestion.options,
+      options: shuffledOptions,
       points: firstQuestion.points,
       timeLimit: firstQuestion.timeLimit,
       difficulty: firstQuestion.difficulty,
@@ -283,6 +304,14 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Question selection error: duplicate question text selected' });
   }
 
+  // Parse and shuffle options for MCQs
+  const parsedOptions = typeof selectedQuestion.options === 'string' 
+    ? JSON.parse(selectedQuestion.options) 
+    : selectedQuestion.options;
+  const shuffledOptions = selectedQuestion.questionType === 'multiple_choice' && Array.isArray(parsedOptions)
+    ? shuffleArray(parsedOptions)
+    : parsedOptions;
+
   return {
     currentQuestionNumber: responses.length + 1,
     totalQuestions: session.totalQuestions,
@@ -291,9 +320,7 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
       questionType: selectedQuestion.questionType,
       questionText: selectedQuestion.questionText,
       questionImage: selectedQuestion.questionImage,
-      options: typeof selectedQuestion.options === 'string' 
-        ? JSON.parse(selectedQuestion.options) 
-        : selectedQuestion.options,
+      options: shuffledOptions,
       points: selectedQuestion.points,
       timeLimit: selectedQuestion.timeLimit,
       difficulty: selectedQuestion.difficulty,

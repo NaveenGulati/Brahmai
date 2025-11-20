@@ -10,6 +10,18 @@ import { eq, and, inArray, sql } from 'drizzle-orm';
 import * as dbAdapter from './db-adapter';
 import type { FocusArea } from './types';
 
+/**
+ * Shuffle array using Fisher-Yates algorithm
+ */
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 interface TopicSelection {
   subject: string;
   topic: string;
@@ -214,6 +226,14 @@ export async function startAdvancedChallengeQuiz(
   // Select first question
   const firstQuestion = allQuestions[0];
 
+  // Parse and shuffle options for MCQs
+  const parsedOptions = typeof firstQuestion.options === 'string' 
+    ? JSON.parse(firstQuestion.options) 
+    : firstQuestion.options;
+  const shuffledOptions = firstQuestion.questionType === 'multiple_choice' && Array.isArray(parsedOptions)
+    ? shuffleArray(parsedOptions)
+    : parsedOptions;
+
   return {
     sessionId,
     totalQuestions: allQuestions.length,
@@ -224,9 +244,7 @@ export async function startAdvancedChallengeQuiz(
       questionType: firstQuestion.questionType,
       questionText: firstQuestion.questionText,
       questionImage: firstQuestion.questionImage,
-      options: typeof firstQuestion.options === 'string' 
-        ? JSON.parse(firstQuestion.options) 
-        : firstQuestion.options,
+      options: shuffledOptions,
       points: firstQuestion.points,
       timeLimit: firstQuestion.timeLimit,
       difficulty: firstQuestion.difficulty,
