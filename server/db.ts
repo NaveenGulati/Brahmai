@@ -904,6 +904,19 @@ export async function getSubjectById(id: number) {
   return result[0];
 }
 
+export async function getSubjectByName(name: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(subjects).where(sql`LOWER(${subjects.name}) = LOWER(${name})`).limit(1);
+  return result[0];
+}
+
+export async function getModulesBySubjectId(subjectId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(modules).where(eq(modules.subjectId, subjectId));
+}
+
 export async function getUserActivityLog(userId: number, startDate?: Date, endDate?: Date, limit: number = 50) {
   const db = await getDb();
   if (!db) return [];

@@ -349,8 +349,22 @@ export const appRouter = router({
         const questionsMap = new Map(questionsData.map(q => [q.id, q]));
 
         // Get detailed response data with questions
-        const detailedResponses = responses.map((r: any) => {
+        const detailedResponses = await Promise.all(responses.map(async (r: any) => {
           const question = questionsMap.get(r.questionId);
+          
+          // Dynamically look up moduleId from question's subject
+          let moduleId = session.moduleId; // Use session's moduleId if available
+          if (!moduleId && question?.subject) {
+            // For challenge-based quizzes, look up moduleId from subject
+            const subjectData = await db.getSubjectByName(question.subject);
+            if (subjectData) {
+              const moduleData = await db.getModulesBySubjectId(subjectData.id);
+              if (moduleData && moduleData.length > 0) {
+                moduleId = moduleData[0].id; // Use first module for this subject
+              }
+            }
+          }
+          
           return {
             ...r,
             questionText: question?.questionText || '',
@@ -362,9 +376,9 @@ export const appRouter = router({
             detailedExplanation: question?.detailedExplanation,
             difficulty: question?.difficulty,
             maxPoints: question?.points || 0,
-            moduleId: question?.moduleId, // Add question's moduleId for Practice Similar Questions
+            moduleId, // Dynamically resolved moduleId for Practice Similar Questions
           };
-        });
+        }));
 
         // AI analysis removed - now generated on-demand via separate API
 
@@ -1042,8 +1056,22 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
         const questionsMap = new Map(questionsData.map(q => [q.id, q]));
 
         // Get detailed response data with questions
-        const detailedResponses = responses.map((r: any) => {
+        const detailedResponses = await Promise.all(responses.map(async (r: any) => {
           const question = questionsMap.get(r.questionId);
+          
+          // Dynamically look up moduleId from question's subject
+          let moduleId = session.moduleId; // Use session's moduleId if available
+          if (!moduleId && question?.subject) {
+            // For challenge-based quizzes, look up moduleId from subject
+            const subjectData = await db.getSubjectByName(question.subject);
+            if (subjectData) {
+              const moduleData = await db.getModulesBySubjectId(subjectData.id);
+              if (moduleData && moduleData.length > 0) {
+                moduleId = moduleData[0].id; // Use first module for this subject
+              }
+            }
+          }
+          
           return {
             ...r,
             questionText: question?.questionText || '',
@@ -1055,9 +1083,9 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
             detailedExplanation: question?.detailedExplanation,
             difficulty: question?.difficulty,
             maxPoints: question?.points || 0,
-            moduleId: question?.moduleId, // Add question's moduleId for Practice Similar Questions
+            moduleId, // Dynamically resolved moduleId for Practice Similar Questions
           };
-        });
+        }));
 
         // AI analysis removed - now generated on-demand via separate API
 

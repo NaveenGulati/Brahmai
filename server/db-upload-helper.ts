@@ -89,7 +89,32 @@ export async function bulkUploadQuestionsUserFriendly(
 
   for (const q of questionsData) {
     try {
-      // Insert question directly with text fields
+      // Find moduleId for this question
+      let moduleId: number | null = null;
+      
+      try {
+        const subjectRecord = await db.select().from(subjects).where(eq(subjects.name, q.subject)).limit(1);
+        
+        if (subjectRecord.length > 0) {
+          const subjectId = subjectRecord[0].id;
+          
+          const moduleRecord = await db.select()
+            .from(modules)
+            .where(and(
+              eq(modules.subjectId, subjectId),
+              eq(modules.name, q.topic)
+            ))
+            .limit(1);
+          
+          if (moduleRecord.length > 0) {
+            moduleId = moduleRecord[0].id;
+          }
+        }
+      } catch (lookupError: any) {
+        console.warn(`[Upload] Could not find moduleId for ${q.subject} - ${q.topic}:`, lookupError.message);
+      }
+
+      // Insert question directly with text fields AND moduleId
       const result = await db.insert(questions).values({
         board: q.board,
         grade: q.grade,
@@ -109,6 +134,7 @@ export async function bulkUploadQuestionsUserFriendly(
         submittedBy,
         status: 'approved', // Auto-approve uploaded questions
         isActive: true,
+        moduleId, // Link to module
       }).returning({ id: questions.id });
 
       const questionId = result[0].id;
