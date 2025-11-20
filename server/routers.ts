@@ -362,6 +362,7 @@ export const appRouter = router({
             detailedExplanation: question?.detailedExplanation,
             difficulty: question?.difficulty,
             maxPoints: question?.points || 0,
+            moduleId: question?.moduleId, // Add question's moduleId for Practice Similar Questions
           };
         });
 
@@ -1054,6 +1055,7 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
             detailedExplanation: question?.detailedExplanation,
             difficulty: question?.difficulty,
             maxPoints: question?.points || 0,
+            moduleId: question?.moduleId, // Add question's moduleId for Practice Similar Questions
           };
         });
 

@@ -237,10 +237,12 @@ export default function QuizReview() {
   
   const handlePracticeSimilar = async (response: any) => {
     try {
-      // Validate moduleId exists
-      if (!session?.moduleId) {
-        toast.error('Module information not available. Please try again.');
-        console.error('Session moduleId is null:', session);
+      // Get moduleId from the question itself (works for both module-based and challenge-based quizzes)
+      const moduleId = response.moduleId;
+      
+      if (!moduleId) {
+        toast.error('Module information not available for this question.');
+        console.error('Question moduleId is null:', response);
         return;
       }
 
@@ -252,7 +254,7 @@ export default function QuizReview() {
         questionText: response.questionText,
         correctAnswer: response.correctAnswer,
         detailedExplanation,
-        moduleId: session.moduleId,
+        moduleId,
       });
       
       setPracticeQuestions(result.questions);
