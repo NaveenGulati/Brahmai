@@ -1554,6 +1554,68 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
         return db.deleteChapter(input.id);
       }),
 
+    // ===== PDF UPLOAD & PROCESSING =====
+    // Upload PDF and auto-generate chapters
+    uploadAndProcessPDF: qbAdminProcedure
+      .input(z.object({
+        textbookId: z.number(),
+        pdfBase64: z.string(),  // Base64 encoded PDF
+        fileName: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { processPDF } = await import('./pdf-processor');
+        const database = await getDb();
+        if (!database) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+        }
+
+        // Get textbook details
+        const textbooks = await db.getAllTextbooks();
+        const textbook = textbooks.find((t: any) => t.id === input.textbookId);
+        if (!textbook) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Textbook not found' });
+        }
+
+        // Decode base64 PDF
+        const pdfBuffer = Buffer.from(input.pdfBase64, 'base64');
+
+        // Process PDF
+        const result = await processPDF({
+          pdfBuffer,
+          fileName: input.fileName,
+          textbookId: input.textbookId,
+          textbookName: textbook.name,
+          board: textbook.board || 'CBSE',
+          grade: textbook.grade || 7,
+          subject: textbook.subject || 'General',
+        });
+
+        // Insert chapters into database
+        const insertedChapters = [];
+        for (const chapter of result.chapters) {
+          const chapterResult = await db.createChapter({
+            textbookId: input.textbookId,
+            chapterNumber: chapter.chapterNumber,
+            title: chapter.title,
+            pdfUrl: result.pdfUrl,
+            extractedText: chapter.extractedText,
+            topics: JSON.stringify(chapter.topics || []),
+            pageStart: chapter.pageStart,
+            pageEnd: chapter.pageEnd,
+            uploadedBy: ctx.user.id,
+          });
+          insertedChapters.push(chapterResult);
+        }
+
+        return {
+          pdfUrl: result.pdfUrl,
+          totalPages: result.totalPages,
+          chaptersCreated: insertedChapters.length,
+          chapters: insertedChapters,
+          isOCR: result.isOCR,
+        };
+      }),
+
     // ===== AI QUESTION GENERATION =====
     // Generate questions from chapter
     generateQuestionsFromChapter: qbAdminProcedure
@@ -1748,6 +1810,92 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
         }
 
         return { success: true, questionId: result.created > 0 ? result.created : null };
+      }),
+
+    // Bulk approve generated questions
+    bulkApproveGeneratedQuestions: qbAdminProcedure
+      .input(z.object({ 
+        generatedQuestionIds: z.array(z.number()),
+        reviewNotes: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const database = await getDb();
+        if (!database) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+        }
+
+        let successCount = 0;
+        let failedCount = 0;
+        const errors: string[] = [];
+
+        for (const questionId of input.generatedQuestionIds) {
+          try {
+            // Get the generated question
+            const genQuestions = await database
+              .select()
+              .from(generatedQuestions)
+              .where(eq(generatedQuestions.id, questionId));
+
+            if (genQuestions.length === 0) {
+              errors.push(`Question ID ${questionId}: Not found`);
+              failedCount++;
+              continue;
+            }
+
+            const genQuestion = genQuestions[0];
+            
+            // Skip if already approved
+            if (genQuestion.reviewStatus === 'approved') {
+              continue;
+            }
+
+            const questionData = JSON.parse(genQuestion.questionData as string);
+
+            // Insert into main question bank
+            await db.bulkUploadQuestionsUserFriendly(
+              [questionData],
+              ctx.user.id
+            );
+
+            // Update generated question status
+            await database
+              .update(generatedQuestions)
+              .set({
+                reviewStatus: 'approved',
+                reviewedBy: ctx.user.id,
+                reviewedAt: new Date(),
+                reviewNotes: input.reviewNotes,
+              })
+              .where(eq(generatedQuestions.id, questionId));
+
+            // Update job stats
+            const job = await database
+              .select()
+              .from(questionGenerationJobs)
+              .where(eq(questionGenerationJobs.id, genQuestion.jobId));
+
+            if (job.length > 0) {
+              await database
+                .update(questionGenerationJobs)
+                .set({
+                  approvedCount: (job[0].approvedCount || 0) + 1,
+                })
+                .where(eq(questionGenerationJobs.id, genQuestion.jobId));
+            }
+
+            successCount++;
+          } catch (error) {
+            errors.push(`Question ID ${questionId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            failedCount++;
+          }
+        }
+
+        return { 
+          success: true, 
+          successCount, 
+          failedCount,
+          errors: errors.length > 0 ? errors : undefined,
+        };
       }),
 
     // Reject generated question

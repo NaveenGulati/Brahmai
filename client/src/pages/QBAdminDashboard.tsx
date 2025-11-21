@@ -7,7 +7,7 @@ import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { BookOpen, BarChart3, FileQuestion, Plus, Library } from "lucide-react";
-import TextbookManager from "@/components/TextbookManager";
+import TextbookManagerV2 from "@/components/TextbookManagerV2";
 
 export default function QBAdminDashboard() {
   const { user, loading, isAuthenticated, logout } = useAuth();
@@ -238,7 +238,7 @@ export default function QBAdminDashboard() {
 
           {/* Textbooks Tab */}
           <TabsContent value="textbooks" className="space-y-4">
-            <TextbookManager />
+            <TextbookManagerV2 />
           </TabsContent>
         </Tabs>
       </div>

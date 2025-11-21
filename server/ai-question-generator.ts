@@ -61,15 +61,17 @@ ${request.chapterText}
 - Sub-Topic: ${request.subTopic}
 
 ✅ 1. QUESTION TYPES & DISTRIBUTION
-Generate 50+ questions for this sub-topic:
+Generate questions for this sub-topic:
+  • For Mathematics, Physics, Chemistry, or any numerical/calculation-based subjects: Generate 75+ questions
+  • For other subjects (History, Geography, Biology, etc.): Generate 50+ questions
   • 90% MCQs (multiple_choice)
   • 10% True/False (true_false)
 
 ✅ 2. DIFFICULTY MIX
 Every subtopic must include a mix of:
-  • Easy - 30%
-  • Medium - 40%
-  • Hard - 30%
+  • Easy - 30% (Basic recall and simple application)
+  • Medium - 40% (Harder than Easy, requires deeper understanding and multi-step reasoning)
+  • Hard - 30% (Significantly harder than Medium, just below Olympiad level, requires advanced problem-solving)
 
 ✅ 3. MANDATORY JSON SCHEMA (Strictly Follow This)
 Each question must contain the following fields:
@@ -144,9 +146,14 @@ All considered duplicates → not allowed.
 ❌ No deviation from schema
 
 ✅ 6. GENERAL PEDAGOGY RULES
-  • Follow ${request.board} + Grade ${request.grade} level + syllabus sequence.
-  • Use language appropriate for a Grade ${request.grade} student.
-  • Use real-life examples (money, measurement, sports, baking, school, etc.).
+  • Follow ${request.board} + Grade ${request.grade} level + Indian curriculum syllabus sequence.
+  • Use language and explanation complexity appropriate for the IQ level and cognitive development of a Grade ${request.grade} student in India.
+  • For Grade 1-3: Very simple language, concrete examples, visual thinking
+  • For Grade 4-6: Simple language, relatable examples, step-by-step logic
+  • For Grade 7-8: Age-appropriate language, abstract thinking, real-world connections
+  • For Grade 9-10: More sophisticated language, analytical thinking, application-based
+  • For Grade 11-12: Advanced language, critical thinking, complex problem-solving
+  • Use real-life examples relevant to Indian students (money in rupees, cricket, festivals, local measurements, etc.).
   • Ensure calculations and reasoning are 100% correct.
 
 ✅ 7. COVERAGE RULE

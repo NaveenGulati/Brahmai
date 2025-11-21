@@ -741,7 +741,7 @@ export const textbooks = pgTable("textbooks", {
   author: varchar("author", { length: 200 }),
   publisher: varchar("publisher", { length: 200 }),
   isbn: varchar("isbn", { length: 20 }).unique(),
-  board: varchar("board", { length: 50 }), // ICSE, CBSE, etc.
+  boards: text("boards"), // JSON array of boards: ["CBSE", "ICSE", "IB"]
   grade: integer("grade").default(7),
   subject: varchar("subject", { length: 100 }), // Physics, Chemistry, etc.
   coverImageUrl: text("coverImageUrl"),
