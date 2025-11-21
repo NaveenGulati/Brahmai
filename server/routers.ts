@@ -1348,6 +1348,17 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
         return db.getChildChallenges(childProfileId);
       }),
 
+    // Get challenge by ID (for reattempt functionality)
+    getChallengeById: publicProcedure
+      .input(z.object({ challengeId: z.number() }))
+      .query(async ({ input }) => {
+        const challenge = await db.getChallengeById(input.challengeId);
+        if (!challenge) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Challenge not found' });
+        }
+        return challenge;
+      }),
+
     // Complete challenge (public for local auth)
     completeChallenge: publicProcedure
       .input(z.object({ 

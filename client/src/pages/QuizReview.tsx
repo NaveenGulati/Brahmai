@@ -127,6 +127,12 @@ export default function QuizReview() {
   const actualReviewData = isChild ? childReviewData : reviewData;
   const actualLoading = isChild ? isChildLoading : isLoading;
 
+  // Fetch original challenge details if this quiz was from a challenge
+  const { data: originalChallenge } = trpc.child.getChallengeById.useQuery(
+    { challengeId: actualReviewData?.session.challengeId || 0 },
+    { enabled: !!actualReviewData?.session.challengeId && isChild }
+  );
+
   const { data: previousAttempt } = trpc.parent.getPreviousAttempt.useQuery(
     { 
       moduleId: actualReviewData?.session.moduleId || 0,
@@ -143,11 +149,13 @@ export default function QuizReview() {
   // Create self-challenge mutation for reattempt
   const createSelfChallengeMutation = trpc.child.createSelfChallenge.useMutation({
     onSuccess: (data) => {
-      // Store challenge ID and navigate to quiz
+      // Store challenge ID in localStorage (QuizPlay will read it on mount)
       localStorage.setItem('currentChallengeId', data.challengeId.toString());
       setShowReattemptDialog(false);
-      // Navigate to quiz page
-      setLocation(encryptedRoutes.quiz(actualReviewData?.session.moduleId || 0));
+      // Navigate to quiz page - it will auto-start with the challengeId from localStorage
+      toast.success('Starting quiz...');
+      const moduleId = actualReviewData?.session.moduleId || 0;
+      setLocation(encryptedRoutes.quiz(moduleId));
     },
     onError: (error) => {
       console.error('Failed to create challenge:', error);
@@ -342,9 +350,9 @@ export default function QuizReview() {
                 <span>{session.totalQuestions} questions</span>
               </div>
             </div>
-            {isChild && (
-              <div className="mt-4 flex justify-center">
-                <Button 
+            {isChild && session.moduleId && (
+              <div className="flex gap-2">
+                <Button
                   onClick={() => {
                     setReattemptParams({
                       questionCount: session.totalQuestions,
@@ -969,9 +977,17 @@ export default function QuizReview() {
             </Button>
             <Button 
               onClick={() => {
+                const moduleId = actualReviewData?.session.moduleId;
+                
+                // Validate moduleId before creating challenge
+                if (!moduleId || moduleId === 0) {
+                  toast.error('Cannot reattempt this quiz type. Please start a new quiz from the dashboard.');
+                  return;
+                }
+                
                 createSelfChallengeMutation.mutate({
                   childId: user?.id,
-                  moduleId: actualReviewData?.session.moduleId || 0,
+                  moduleId,
                   questionCount: reattemptParams.questionCount,
                   focusArea: reattemptParams.focusArea
                 });
