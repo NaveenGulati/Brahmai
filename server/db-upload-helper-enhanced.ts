@@ -1,5 +1,5 @@
 import { getDb } from './db';
-import { questions, modules, subjects, boards, grades, boardGradeSubjects, aiExplanationCache } from '../drizzle/schema';
+import { questions, modules, subjects, boards, grades, boardGradeSubjects, aiExplanationCache, subjectCategories } from '../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
 
 interface UserFriendlyQuestion {
@@ -101,7 +101,31 @@ export async function bulkUploadQuestionsEnhanced(
     }
   }
 
-  // Step 4: Create missing subjects
+  // Step 4: Ensure default subject category 'core' exists
+  try {
+    const categoryName = 'core';
+    const existing = await db.select().from(subjectCategories).where(eq(subjectCategories.name, categoryName)).limit(1);
+
+    if (existing.length === 0) {
+      await db.insert(subjectCategories).values({
+        name: categoryName,
+        description: 'Core academic subjects',
+        isActive: true,
+      });
+      console.log(`[Upload] ✅ Created subject category: ${categoryName}`);
+    }
+  } catch (error: any) {
+    console.error(`[Upload] ❌ FATAL Error creating subject category 'core':`, error.message);
+    errors.push(`FATAL: Failed to create subject category 'core' - ${error.message}`);
+    return {
+      success: false,
+      message: `Upload failed at critical step: Failed to create subject category 'core'.`,
+      stats,
+      errors,
+    };
+  }
+
+  // Step 5: Create missing subjects
   for (const subjectName of uniqueSubjects) {
     try {
       const existing = await db.select().from(subjects).where(eq(subjects.name, subjectName)).limit(1);
