@@ -38,7 +38,7 @@ export default function QuestionBankManager() {
   // Mutations
   const bulkUploadMutation = trpc.qbAdmin.bulkUploadQuestions.useMutation({
     onSuccess: (result) => {
-      toast.success(`Uploaded ${result.created} questions!`);
+      toast.success(`Uploaded ${result.stats?.questionsCreated || 0} questions!`);
       if (result.errors && result.errors.length > 0) {
         toast.error(`${result.errors.length} errors occurred. Check console for details.`);
         console.error("Upload errors:", result.errors);

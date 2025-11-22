@@ -107,9 +107,15 @@ export async function startQuizMutation(input: z.infer<typeof startQuizInput>, u
   }
 
   // Parse and shuffle options for MCQs
-  const parsedOptions = typeof firstQuestion.options === 'string' 
+  let parsedOptions = typeof firstQuestion.options === 'string' 
     ? JSON.parse(firstQuestion.options) 
     : firstQuestion.options;
+  
+  // Ensure options is always an array
+  if (!Array.isArray(parsedOptions)) {
+    parsedOptions = parsedOptions ? [parsedOptions] : [];
+  }
+  
   const shuffledOptions = firstQuestion.questionType === 'multiple_choice' && Array.isArray(parsedOptions)
     ? shuffleArray(parsedOptions)
     : parsedOptions;
@@ -305,9 +311,15 @@ export async function getNextQuestionMutation(input: z.infer<typeof getNextQuest
   }
 
   // Parse and shuffle options for MCQs
-  const parsedOptions = typeof selectedQuestion.options === 'string' 
+  let parsedOptions = typeof selectedQuestion.options === 'string' 
     ? JSON.parse(selectedQuestion.options) 
     : selectedQuestion.options;
+  
+  // Ensure options is always an array
+  if (!Array.isArray(parsedOptions)) {
+    parsedOptions = parsedOptions ? [parsedOptions] : [];
+  }
+  
   const shuffledOptions = selectedQuestion.questionType === 'multiple_choice' && Array.isArray(parsedOptions)
     ? shuffleArray(parsedOptions)
     : parsedOptions;
