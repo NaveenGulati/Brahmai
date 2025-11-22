@@ -1698,10 +1698,16 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
           difficulty: z.enum(['easy', 'medium', 'hard']),
           points: z.number().default(10),
           timeLimit: z.number().default(60),
+          submittedBy: z.number().optional(), // Optional: defaults to logged-in user
         }))
       }))
       .mutation(async ({ input, ctx }) => {
-        return db.bulkUploadQuestionsUserFriendly(input.questions, ctx.user.id);
+        // Map questions and use submittedBy from JSON if provided, otherwise use logged-in user
+        const questionsWithSubmittedBy = input.questions.map(q => ({
+          ...q,
+          submittedBy: q.submittedBy ?? ctx.user.id
+        }));
+        return db.bulkUploadQuestionsUserFriendly(questionsWithSubmittedBy, ctx.user.id);
       }),
 
     // Delete question permanently

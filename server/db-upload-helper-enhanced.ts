@@ -19,6 +19,7 @@ interface UserFriendlyQuestion {
   difficulty: 'easy' | 'medium' | 'hard';
   points: number;
   timeLimit: number;
+  submittedBy?: number; // Optional: will be set by the endpoint if not provided
 }
 
 /**
@@ -268,7 +269,7 @@ export async function bulkUploadQuestionsEnhanced(
         difficulty: q.difficulty,
         points: q.points,
         timeLimit: q.timeLimit,
-        submittedBy,
+        submittedBy: q.submittedBy || submittedBy, // Use from question or fallback to parameter
         status: 'approved',
         isActive: true,
       }).returning({ id: questions.id });
