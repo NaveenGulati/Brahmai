@@ -73,6 +73,9 @@ async function startServer() {
   app.use(passport.initialize());
   app.use(passport.session());
   
+  // Serve uploaded files (PDFs, images, etc.)
+  app.use('/uploads', express.static('uploads'));
+  
   // Google OAuth routes
   app.use('/api', googleAuthRoutes);
   // OAuth callback under /api/oauth/callback
