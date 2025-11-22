@@ -1707,7 +1707,9 @@ DO NOT use tables, markdown tables, or complex formatting. Use simple paragraphs
           ...q,
           submittedBy: q.submittedBy ?? ctx.user.id
         }));
-        return db.bulkUploadQuestionsUserFriendly(questionsWithSubmittedBy, ctx.user.id);
+        // Use the enhanced upload helper which automatically creates missing subjects, boards, grades, etc.
+        const { bulkUploadQuestionsEnhanced } = await import('./db-upload-helper-enhanced');
+        return bulkUploadQuestionsEnhanced(questionsWithSubmittedBy, ctx.user.id);
       }),
 
     // Delete question permanently
